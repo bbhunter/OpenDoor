@@ -39,6 +39,7 @@ class HttpRequest(RequestProvider, DebugProvider):
             self.__tpl = kwargs.get('tpl')
             RequestProvider.__init__(self, config, agent_list=kwargs.get('agent_list'))
             self.__headers = self._headers
+            self.__is_user_agent_managed = self.__headers.get('User-Agent') is None
             self.__connection_header = 'default'
             if True is config.keep_alive:
                 self.__connection_header = self._keep_alive
@@ -79,8 +80,11 @@ class HttpRequest(RequestProvider, DebugProvider):
         :return: urllib3.HTTPResponse
         """
 
-        if self.__headers.get('User-Agent') is None:
+        if True is self.__cfg.is_random_user_agent and True is self.__is_user_agent_managed:
             self.__headers.update({'User-Agent': self._user_agent})
+        elif self.__headers.get('User-Agent') is None:
+            self.__headers.update({'User-Agent': self._user_agent})
+            self.__is_user_agent_managed = True
         if self.__connection_header != 'default' and self.__headers.get('Connection') is None:
             self.__headers.update({'Connection': self.__connection_header})
 

@@ -3,7 +3,7 @@
 import socket
 import unittest
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError, ConnectTimeoutError, HostChangedError, ProxySchemeUnknown, SSLError
 from urllib3.response import HTTPResponse
@@ -53,6 +53,65 @@ class TestHttpRequest(unittest.TestCase):
 
         self.assertEqual(out.status, 200)
         pool.request.assert_called_once()
+
+    def test_request_refreshes_random_user_agent_for_each_http_request(self):
+        """HttpRequest.request() should refresh managed random User-Agent before every request."""
+
+        cfg = self.make_cfg(is_random_user_agent=True)
+        req = HttpRequest(cfg, SimpleNamespace(level=0), tpl=MagicMock(), agent_list=['UA-0'])
+
+        captured_headers = []
+
+        def fake_request(*args, **kwargs):
+            captured_headers.append(dict(kwargs['headers']))
+            return HTTPResponse(status=200, body=b'ok', headers={})
+
+        pool = MagicMock()
+        pool.request.side_effect = fake_request
+        req._HttpRequest__pool = pool
+
+        with patch.object(HttpRequest, '_user_agent', new_callable=PropertyMock, create=True) as user_agent_mock:
+            user_agent_mock.side_effect = ['UA-1', 'UA-2']
+
+            req.request('http://example.com/a')
+            req.request('http://example.com/b')
+
+        self.assertEqual(captured_headers[0]['User-Agent'], 'UA-1')
+        self.assertEqual(captured_headers[1]['User-Agent'], 'UA-2')
+        self.assertEqual(pool.request.call_count, 2)
+
+    def test_request_keeps_custom_user_agent_header_even_when_random_agent_enabled(self):
+        """HttpRequest.request() should not overwrite a user-provided User-Agent header."""
+
+        cfg = self.make_cfg(
+            is_random_user_agent=True,
+            headers=['User-Agent: Custom-UA'],
+            header=None,
+            cookies=None,
+            cookie=None,
+            request_body=None,
+        )
+        req = HttpRequest(cfg, SimpleNamespace(level=0), tpl=MagicMock(), agent_list=['UA-0'])
+
+        captured_headers = []
+
+        def fake_request(*args, **kwargs):
+            captured_headers.append(dict(kwargs['headers']))
+            return HTTPResponse(status=200, body=b'ok', headers={})
+
+        pool = MagicMock()
+        pool.request.side_effect = fake_request
+        req._HttpRequest__pool = pool
+
+        with patch.object(HttpRequest, '_user_agent', new_callable=PropertyMock, create=True) as user_agent_mock:
+            user_agent_mock.side_effect = ['UA-1', 'UA-2']
+
+            req.request('http://example.com/a')
+            req.request('http://example.com/b')
+
+        self.assertEqual(captured_headers[0]['User-Agent'], 'Custom-UA')
+        self.assertEqual(captured_headers[1]['User-Agent'], 'Custom-UA')
+        self.assertEqual(pool.request.call_count, 2)
 
     def test_request_subdomain_uses_poolmanager(self):
         """HttpRequest.request() should use PoolManager for subdomain scans."""
@@ -128,6 +187,65 @@ class TestHttpsRequest(unittest.TestCase):
         response = req._provide_ssl_auth_required()
 
         self.assertEqual(response.status, 496)
+
+    def test_request_refreshes_random_user_agent_for_each_https_request(self):
+        """HttpsRequest.request() should refresh managed random User-Agent before every request."""
+
+        cfg = self.make_cfg(is_random_user_agent=True)
+        req = HttpsRequest(cfg, SimpleNamespace(level=0), tpl=MagicMock(), agent_list=['UA-0'])
+
+        captured_headers = []
+
+        def fake_request(*args, **kwargs):
+            captured_headers.append(dict(kwargs['headers']))
+            return HTTPResponse(status=200, body=b'ok', headers={})
+
+        pool = MagicMock()
+        pool.request.side_effect = fake_request
+        req._HttpsRequest__pool = pool
+
+        with patch.object(HttpsRequest, '_user_agent', new_callable=PropertyMock, create=True) as user_agent_mock:
+            user_agent_mock.side_effect = ['UA-1', 'UA-2']
+
+            req.request('https://example.com/a')
+            req.request('https://example.com/b')
+
+        self.assertEqual(captured_headers[0]['User-Agent'], 'UA-1')
+        self.assertEqual(captured_headers[1]['User-Agent'], 'UA-2')
+        self.assertEqual(pool.request.call_count, 2)
+
+    def test_request_keeps_custom_user_agent_header_even_when_https_random_agent_enabled(self):
+        """HttpsRequest.request() should not overwrite a user-provided User-Agent header."""
+
+        cfg = self.make_cfg(
+            is_random_user_agent=True,
+            headers=['User-Agent: Custom-UA'],
+            header=None,
+            cookies=None,
+            cookie=None,
+            request_body=None,
+        )
+        req = HttpsRequest(cfg, SimpleNamespace(level=0), tpl=MagicMock(), agent_list=['UA-0'])
+
+        captured_headers = []
+
+        def fake_request(*args, **kwargs):
+            captured_headers.append(dict(kwargs['headers']))
+            return HTTPResponse(status=200, body=b'ok', headers={})
+
+        pool = MagicMock()
+        pool.request.side_effect = fake_request
+        req._HttpsRequest__pool = pool
+
+        with patch.object(HttpsRequest, '_user_agent', new_callable=PropertyMock, create=True) as user_agent_mock:
+            user_agent_mock.side_effect = ['UA-1', 'UA-2']
+
+            req.request('https://example.com/a')
+            req.request('https://example.com/b')
+
+        self.assertEqual(captured_headers[0]['User-Agent'], 'Custom-UA')
+        self.assertEqual(captured_headers[1]['User-Agent'], 'Custom-UA')
+        self.assertEqual(pool.request.call_count, 2)
 
     def test_request_directory_and_subdomain(self):
         """HttpsRequest.request() should support both directory and subdomain modes."""

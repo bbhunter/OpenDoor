@@ -30,16 +30,9 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
     - Directories: 122420
     - Subdomains: 255359
 
-##### v5.9.1 (27.04.2026)
+##### v5.9.2 (27.04.2026)
 
-- (enhancement) added `--waf-safe-mode` for cautious scanning after WAF detection
-- (enhancement) `--waf-safe-mode` automatically enables passive `--waf-detect`
-- (enhancement) safe mode serializes follow-up requests after WAF detection and applies cooldown between requests
-- (enhancement) blocked WAF responses no longer trigger recursive expansion while safe mode is active
-- (enhancement) WAF safe mode state is persisted in session checkpoints and restored on resume
-- (enhancement) added template warning for safe mode activation
-- (tests) expanded regression coverage for WAF safe mode runtime, session restore and Browser branches
-- (tests) full unittest suite passes after integration (`883` tests)
+- (enhancement) added Open Journal Systems to fingerprints
 
 #### [Changelog](CHANGELOG.md) (last changes)
 
