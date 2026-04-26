@@ -32,18 +32,20 @@ class FakeConfig(object):
     DEFAULT_HTTP_PORT = 80
     DEFAULT_SSL_PORT = 443
 
-    def __init__(self, host='example.com', scheme='http://', port=80):
+    def __init__(self, host='example.com', scheme='http://', port=80, prefix=''):
         """
         Init config.
 
         :param str host: target host
         :param str scheme: scheme
         :param int port: port
+        :param str prefix: optional scan prefix
         """
 
         self.host = host
         self.scheme = scheme
         self.port = port
+        self.prefix = prefix
         self._method = 'HEAD'
 
 
@@ -95,7 +97,7 @@ class FakeClient(object):
 class TestFingerprintFullCoverage(unittest.TestCase):
     """High-coverage tests for Fingerprint."""
 
-    def make_detector(self, responses=None, host='example.com', scheme='http://', port=80):
+    def make_detector(self, responses=None, host='example.com', scheme='http://', port=80, prefix=''):
         """
         Build a detector with fake config and client.
 
@@ -103,10 +105,11 @@ class TestFingerprintFullCoverage(unittest.TestCase):
         :param str host: target host
         :param str scheme: scheme
         :param int port: port
+        :param str prefix: optional scan prefix
         :return: tuple[Fingerprint, FakeConfig, FakeClient]
         """
 
-        config = FakeConfig(host=host, scheme=scheme, port=port)
+        config = FakeConfig(host=host, scheme=scheme, port=port, prefix=prefix)
         client = FakeClient(config=config, responses=responses or {})
         detector = Fingerprint(config=config, client=client)
         return detector, config, client
@@ -174,6 +177,9 @@ class TestFingerprintFullCoverage(unittest.TestCase):
 
         detector_custom, _, _ = self.make_detector(port=8080)
         self.assertEqual(detector_custom._build_base_url(), 'http://example.com:8080/')
+
+        detector_prefixed, _, _ = self.make_detector(scheme='https://', port=443, prefix='/index.php/fd/')
+        self.assertEqual(detector_prefixed._build_base_url(), 'https://example.com/index.php/fd/')
 
     def test_request_restores_original_method_after_override(self):
         """
@@ -841,6 +847,18 @@ class TestFingerprintFullCoverage(unittest.TestCase):
                         '<div class="mw-body"><h1 class="mw-page-title-main">Main Page</h1></div>'
                         '</body></html>',
                 'probes': {'/api.php': 200},
+            },
+            {
+                'name': 'Open Journal Systems',
+                'category': 'cms',
+                'generator': 'Open Journal Systems 3.2.1.2',
+                'body': '<html><body>'
+                        '<div class="pkp_structure_page pkp_page_index"></div>'
+                        '<link href="/plugins/themes/default/styles/index.less">'
+                        '<script src="/lib/pkp/js/lib/jquery/plugins/jquery.tag-it.js"></script>'
+                        '<a href="/index.php/fd/login">Login</a>'
+                        '</body></html>',
+                'probes': {'/index.php/index/login': 302},
             },
             {
                 'name': 'Moodle',

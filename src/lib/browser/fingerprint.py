@@ -76,6 +76,9 @@ class Fingerprint(object):
         '/contao/',
         '/api.php',
         '/login/index.php',
+        '/index.php/index/login',
+        '/index.php/index/search',
+        '/index.php/index/about',
         '/manager/',
         '/bolt',
     )
@@ -192,10 +195,13 @@ class Fingerprint(object):
         host = self.__config.host
         port = self.__config.port
 
+        prefix = str(getattr(self.__config, 'prefix', '') or '').strip('/')
+        suffix = '{0}/'.format(prefix) if prefix else ''
+
         if (scheme == 'http://' and port == self.__config.DEFAULT_HTTP_PORT) \
                 or (scheme == 'https://' and port == self.__config.DEFAULT_SSL_PORT):
-            return '{0}{1}/'.format(scheme, host)
-        return '{0}{1}:{2}/'.format(scheme, host, port)
+            return '{0}{1}/{2}'.format(scheme, host, suffix)
+        return '{0}{1}:{2}/{3}'.format(scheme, host, port, suffix)
 
     def _request(self, url, method='HEAD'):
         """
@@ -768,6 +774,27 @@ class Fingerprint(object):
             self._add_signal('MediaWiki', self.CMS_CATEGORY, 'asset', '/w/resources/|mw-body|mw-page-title-main', 6)
         if probe_statuses.get('/api.php') in [200, 301, 302, 401, 403]:
             self._add_signal('MediaWiki', self.CMS_CATEGORY, 'endpoint', '/api.php', 2)
+
+        # Open Journal Systems
+        ojs_text_hint = (
+                'open journal systems' in generator_lower
+                or 'open journal systems' in body_lower
+                or 'pkp_structure_' in body_lower
+        )
+
+        if 'open journal systems' in generator_lower:
+            self._add_signal('Open Journal Systems', self.CMS_CATEGORY, 'meta', 'generator={0}'.format(generator), 9)
+        if 'pkp_structure_' in body_lower or 'pkp_page_' in body_lower:
+            self._add_signal('Open Journal Systems', self.CMS_CATEGORY, 'markup', 'pkp_structure_*|pkp_page_*', 6)
+        if '/plugins/themes/' in body_lower and (
+                '/lib/pkp/' in body_lower or '/index.php/' in body_lower or ojs_text_hint):
+            self._add_signal('Open Journal Systems', self.CMS_CATEGORY, 'asset', '/plugins/themes/ + OJS hint', 5)
+        if any(probe_statuses.get(path) in [200, 301, 302, 401, 403] for path in [
+            '/index.php/index/login',
+            '/index.php/index/search',
+            '/index.php/index/about',
+        ]) and ojs_text_hint:
+            self._add_signal('Open Journal Systems', self.CMS_CATEGORY, 'endpoint', '/index.php/index/*', 3)
 
         # Moodle
         if 'moodle' in generator_lower:

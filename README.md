@@ -297,7 +297,7 @@ py -m pip install -e .
 #### Recognized systems by the heuristic fingerprint engine
 This is summarizing the platform families currently recognized by the heuristic fingerprint engine.
 
-##### CMS (26)
+##### CMS (27)
 
 - Bitrix
 - Bludit
@@ -313,6 +313,7 @@ This is summarizing the platform families currently recognized by the heuristic 
 - Joomla
 - Matomo
 - MediaWiki
+- Open Journal Systems
 - MODX
 - Moodle
 - Neos

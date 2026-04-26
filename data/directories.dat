@@ -7015,17 +7015,7 @@
 /wp-content/uploads/dump.sql
 :2080
 :2082
-?rest_route=/wp/v2/users
 ?view=log
-?wsdl
-@.php
-@debug
-@dmin
-@documentation
-@fs
-@fuck_youmama
-@index.php
-@vite/client
 \..\..\..\..\..\..\..\..\..\etc\passwd
 _
 _0.html
