@@ -99,10 +99,22 @@ class TestHttpResponsePluginsLowCoverage(unittest.TestCase):
         self.assertIsNone(plugin.process(response))
 
     def test_indexof_detects_index_of_title_case_insensitively(self):
-        """IndexofResponsePlugin should detect Index Of title case-insensitively."""
+        """IndexofResponsePlugin should detect real Index Of pages case-insensitively."""
 
         plugin = IndexofResponsePlugin(None)
-        response = self.make_response(status=200, body=b'<HTML><TITLE>index of /</TITLE></HTML>')
+        response = self.make_response(
+            status=200,
+            body=(
+                b'<HTML>'
+                b'<HEAD><TITLE>index of /backup/</TITLE></HEAD>'
+                b'<BODY>'
+                b'<H1>INDEX OF /backup/</H1>'
+                b'<A HREF="../">Parent Directory</A>'
+                b'<A HREF="dump.sql">dump.sql</A>'
+                b'</BODY>'
+                b'</HTML>'
+            )
+        )
 
         self.assertEqual(plugin.process(response), plugin.RESPONSE_INDEX)
 

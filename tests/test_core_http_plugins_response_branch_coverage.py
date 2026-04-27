@@ -82,12 +82,24 @@ class TestHttpResponsePluginsBranchCoverage(unittest.TestCase):
             '<a href="file.txt">file</a>'
             '<a href="dir/">dir</a>'
         )
-        self.assertEqual(plugin._count_listing_links(links_body.lower()), 3)
+        self.assertEqual(plugin._count_listing_links(links_body.lower()), 2)
 
         response = self.make_response(
-            body=b'<html><body><h1>Sign in</h1><form><input type="password" name="password"></form></body></html>'
+            body=(
+                b'<html>'
+                b'<head><title>Directory Listing -- /pub</title></head>'
+                b'<body>'
+                b'<h1>Directory Listing -- /pub</h1>'
+                b'<pre>'
+                b'<a href="../">../</a>'
+                b'<a href="logs/">logs/</a>'
+                b'<a href="backup.zip">backup.zip</a>'
+                b'</pre>'
+                b'</body>'
+                b'</html>'
+            )
         )
-        self.assertIsNone(plugin.process(response))
+        self.assertEqual(plugin.process(response), 'indexof')
 
         response = self.make_response(
             body=b'<html><body><a href="../">../</a><p>No listing metadata here</p></body></html>'

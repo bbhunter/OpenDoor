@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import re
 import unittest
 
 from src.core.http.plugins.response.indexof import IndexofResponsePlugin
@@ -19,6 +20,14 @@ class TestableIndexofResponsePlugin(IndexofResponsePlugin):
     """Plugin wrapper that injects the body directly for deterministic tests."""
 
     def process(self, response):
+        """
+        Process fake response without depending on provider body extraction.
+
+        :param FakeResponse response: fake HTTP response
+        :return: response index or None
+        :rtype: str | None
+        """
+
         if response.status not in self.DEFAULT_STATUSES:
             return None
 
@@ -32,19 +41,7 @@ class TestableIndexofResponsePlugin(IndexofResponsePlugin):
         if self._count_matches(self.DENY_PATTERNS, body) > 0:
             return None
 
-        title_hits = self._count_matches(self.STRONG_TITLE_PATTERNS, body)
-        strong_body_hits = self._count_matches(self.STRONG_BODY_PATTERNS, body)
-        medium_hits = self._count_matches(self.MEDIUM_PATTERNS, body)
-        listing_links = self._count_listing_links(body)
-
-        if title_hits > 0:
-            if strong_body_hits > 0 or medium_hits >= 1 or listing_links >= 2:
-                return self.RESPONSE_INDEX
-
-        if strong_body_hits > 0 and (medium_hits >= 1 or listing_links >= 2):
-            return self.RESPONSE_INDEX
-
-        if medium_hits >= 3 and listing_links >= 2:
+        if self._is_directory_listing(body):
             return self.RESPONSE_INDEX
 
         return None
@@ -67,6 +64,40 @@ class TestIndexofResponsePlugin(unittest.TestCase):
             '<a href="../">Parent Directory</a>'
             '<pre><a href="dump.sql">dump.sql</a>  Last modified  Size</pre>'
             '</body></html>'
+        )
+
+        self.assertEqual(plugin.process(response), 'indexof')
+
+    def test_detects_apache_table_index_of_listing(self):
+        """Should detect classic Apache table based autoindex pages."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'
+            '<html>'
+            '<head><title>Index of /soap</title></head>'
+            '<body>'
+            '<h1>Index of /soap</h1>'
+            '<table>'
+            '<tr>'
+            '<th><a href="?C=N;O=D">Name</a></th>'
+            '<th><a href="?C=M;O=A">Last modified</a></th>'
+            '<th><a href="?C=S;O=A">Size</a></th>'
+            '<th><a href="?C=D;O=A">Description</a></th>'
+            '</tr>'
+            '<tr>'
+            '<td><a href="/">Parent Directory</a></td>'
+            '</tr>'
+            '<tr>'
+            '<td><a href="client.php">client.php</a></td>'
+            '</tr>'
+            '<tr>'
+            '<td><a href="service.wsdl">service.wsdl</a></td>'
+            '</tr>'
+            '</table>'
+            '</body>'
+            '</html>'
         )
 
         self.assertEqual(plugin.process(response), 'indexof')
@@ -120,6 +151,40 @@ class TestIndexofResponsePlugin(unittest.TestCase):
 
         self.assertIsNone(plugin.process(response))
 
+    def test_returns_none_for_regular_gallery_page_with_index_links(self):
+        """Should not detect regular gallery pages with index.php links as directory listings."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<!DOCTYPE html>'
+            '<html>'
+            '<head>'
+            '<title>Фотогалерея Волжского - Волжский.ру</title>'
+            '<meta name="description" content="Фотогалерея Волжского" />'
+            '</head>'
+            '<body>'
+            '<!--noindex-->'
+            '<a href="/index.php?wx=16">Новости</a>'
+            '<a href="/index.php?wx=33">Погода</a>'
+            '<a href="/index.php?wx=49">Условия использования сайта</a>'
+            '<table width="500" border="0" cellspacing="5" cellpadding="5">'
+            '<tr>'
+            '<td style="font-size: 10px;">'
+            '<a href="photo.php?razdel=25">1 мая 2011 года</a>'
+            '<a href="photo.php?razdel=1">55-летие города</a>'
+            '<a href="photo.php?razdel=17">56-летие города</a>'
+            '<a href="add_image.php">Добавить фотографию</a>'
+            '</td>'
+            '</tr>'
+            '</table>'
+            '<!--/noindex-->'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertIsNone(plugin.process(response))
+
     def test_returns_none_for_login_page(self):
         """Should not detect login pages even if they mention parent directory text."""
 
@@ -155,6 +220,159 @@ class TestIndexofResponsePlugin(unittest.TestCase):
             404,
             '<html><head><title>Index of /backup/</title></head>'
             '<body><a href="../">Parent Directory</a></body></html>'
+        )
+
+        self.assertIsNone(plugin.process(response))
+
+    def test_count_listing_links_skips_empty_and_auth_links(self):
+        """Should cover listing link skip branches for empty and auth links."""
+
+        plugin = self.make_plugin()
+        plugin.LINK_PATTERN = re.compile(r'href=["\']([^"\']*)["\']', re.IGNORECASE)
+
+        body = (
+            '<a href="">empty</a>'
+            '<a href="logout.php">logout</a>'
+            '<a href="login.php">login</a>'
+            '<a href="file.txt">file.txt</a>'
+        )
+
+        self.assertEqual(plugin._count_listing_links(body), 1)
+
+    def test_detects_title_with_apache_sort_links(self):
+        """Should detect listing by title and Apache sort links."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<html>'
+            '<head><title>Index of /public/</title></head>'
+            '<body>'
+            '<table>'
+            '<tr>'
+            '<th><a href="?C=N;O=D">Name</a></th>'
+            '</tr>'
+            '</table>'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertEqual(plugin.process(response), 'indexof')
+
+    def test_detects_title_with_layout_and_relative_listing_link(self):
+        """Should detect listing by title, autoindex layout, and relative entry."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<html>'
+            '<head><title>Index of /files/</title></head>'
+            '<body>'
+            '<pre>'
+            '<a href="dump.sql">dump.sql</a>'
+            '</pre>'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertEqual(plugin.process(response), 'indexof')
+
+    def test_detects_body_header_with_parent_directory_without_title(self):
+        """Should detect listing by body Index Of header and parent directory."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<html>'
+            '<body>'
+            '<h1>Index of /files/</h1>'
+            '<a href="../">Parent Directory</a>'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertEqual(plugin.process(response), 'indexof')
+
+    def test_detects_parent_directory_with_apache_sort_without_title(self):
+        """Should detect listing by parent directory and Apache sort links."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<html>'
+            '<body>'
+            '<a href="../">Parent Directory</a>'
+            '<a href="?C=N;O=D">Name</a>'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertEqual(plugin.process(response), 'indexof')
+
+    def test_detects_parent_directory_with_headers_and_listing_link(self):
+        """Should detect listing by parent directory, headers, and relative entry."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<html>'
+            '<body>'
+            '<a href="../">Parent Directory</a>'
+            '<span>Last modified</span>'
+            '<span>Size</span>'
+            '<a href="backup.zip">backup.zip</a>'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertEqual(plugin.process(response), 'indexof')
+
+    def test_detects_apache_sort_with_headers_and_listing_link(self):
+        """Should detect listing by Apache sort links, headers, and relative entry."""
+
+        plugin = self.make_plugin()
+        response = FakeResponse(
+            200,
+            '<html>'
+            '<body>'
+            '<a href="?C=N;O=D">Name</a>'
+            '<span>Last modified</span>'
+            '<span>Size</span>'
+            '<a href="backup.zip">backup.zip</a>'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertEqual(plugin.process(response), 'indexof')
+
+    def test_is_directory_listing_returns_false_for_incomplete_listing_markers(self):
+        """Should return false when listing markers are incomplete."""
+
+        plugin = self.make_plugin()
+        body = (
+            '<html>'
+            '<body>'
+            '<span>Last modified</span>'
+            '<a href="backup.zip">backup.zip</a>'
+            '</body>'
+            '</html>'
+        )
+
+        self.assertFalse(plugin._is_directory_listing(body.lower()))
+
+    def test_real_process_returns_none_for_denied_page(self):
+        """Should cover deny branch in the real process implementation."""
+
+        plugin = IndexofResponsePlugin(None)
+        response = FakeResponse(
+            200,
+            '<html>'
+            '<head><title>Index of /private/</title></head>'
+            '<body>'
+            '<p>Access denied</p>'
+            '<a href="backup.zip">backup.zip</a>'
+            '</body>'
+            '</html>'
         )
 
         self.assertIsNone(plugin.process(response))

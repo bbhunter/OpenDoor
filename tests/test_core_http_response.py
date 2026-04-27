@@ -86,10 +86,21 @@ class TestResponsePlugins(unittest.TestCase):
         self.assertIsNone(plugin.process(response))
 
     def test_indexof_plugin_detects_index_page(self):
-        """IndexofResponsePlugin should detect Index Of pages."""
+        """IndexofResponsePlugin should detect real Index Of pages."""
 
         plugin = IndexofResponsePlugin(None)
-        response = self.make_response(body=b'<title>Index of /</title>')
+        response = self.make_response(
+            body=(
+                b'<html>'
+                b'<head><title>Index of /backup/</title></head>'
+                b'<body>'
+                b'<h1>Index of /backup/</h1>'
+                b'<a href="../">Parent Directory</a>'
+                b'<a href="dump.sql">dump.sql</a>'
+                b'</body>'
+                b'</html>'
+            )
+        )
 
         self.assertEqual(plugin.process(response), 'indexof')
 

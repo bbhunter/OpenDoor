@@ -29,26 +29,39 @@ class IndexofResponsePlugin(ResponsePluginProvider):
     DEFAULT_STATUSES = [100, 101, 200, 201, 202, 203, 204, 205, 206, 207, 208]
 
     STRONG_TITLE_PATTERNS = (
-        r'<title>\s*index of\s',
-        r'<title>\s*directory listing for\s',
-        r'<title>\s*directory listing --\s',
+        r'<title>\s*index\s+of\s+/?[^<]*</title>',
+        r'<title>\s*directory\s+listing\s+for\s+/?[^<]*</title>',
+        r'<title>\s*directory\s+listing\s+--\s+/?[^<]*</title>',
     )
 
     STRONG_BODY_PATTERNS = (
-        r'index of /',
-        r'directory listing for /',
-        r'parent directory.*last modified.*size',
+        r'<h1[^>]*>\s*index\s+of\s+/?[^<]*</h1>',
+        r'<h1[^>]*>\s*directory\s+listing\s+for\s+/?[^<]*</h1>',
+        r'<h1[^>]*>\s*directory\s+listing\s+--\s+/?[^<]*</h1>',
     )
 
-    MEDIUM_PATTERNS = (
-        r'parent directory',
-        r'href=["\']\.\./?["\']',
-        r'>\.\./?<',
-        r'last modified',
-        r'\bsize\b',
-        r'\bdescription\b',
-        r'<pre[^>]*>.*href=',
-        r'<table[^>]*>.*href=',
+    PARENT_DIRECTORY_PATTERNS = (
+        r'>\s*parent\s+directory\s*</a>',
+        r'href=["\']\.\./?["\'][^>]*>\s*\.\./?\s*</a>',
+    )
+
+    APACHE_SORT_PATTERNS = (
+        r'href=["\']\?C=(?:N|M|S|D);O=(?:A|D)["\']',
+    )
+
+    AUTO_INDEX_LAYOUT_PATTERNS = (
+        r'/icons/(?:blank|back|folder|unknown|text)\.gif',
+        r'<pre[^>]*>.*?</pre>',
+        r'<table[^>]*>.*?</table>',
+    )
+
+    LISTING_HEADER_PATTERNS = (
+        r'>\s*name\s*</a>',
+        r'>\s*last\s+modified\s*</a>',
+        r'>\s*size\s*</a>',
+        r'>\s*description\s*</a>',
+        r'>\s*last\s+modified\s*<',
+        r'>\s*size\s*<',
     )
 
     DENY_PATTERNS = (
@@ -61,11 +74,11 @@ class IndexofResponsePlugin(ResponsePluginProvider):
     )
 
     LINK_PATTERN = re.compile(r'href=["\']([^"\']+)["\']', re.IGNORECASE)
-    LINK_SKIP_PREFIXES = ('#', '?', 'javascript:', 'mailto:')
+    LINK_SKIP_PREFIXES = ('#', '?', '/', '//', 'javascript:', 'mailto:', 'tel:', 'data:')
 
     def __init__(self, void):
         """
-        ResponsePluginProvider constructor
+        ResponsePluginProvider constructor.
         """
 
         ResponsePluginProvider.__init__(self)
@@ -77,7 +90,8 @@ class IndexofResponsePlugin(ResponsePluginProvider):
 
         :param tuple patterns: regex patterns
         :param str body: normalized body
-        :return: int
+        :return: count of matched patterns
+        :rtype: int
         """
 
         hits = 0
@@ -88,13 +102,19 @@ class IndexofResponsePlugin(ResponsePluginProvider):
 
     def _count_listing_links(self, body):
         """
-        Count candidate file/directory links.
+        Count candidate file/directory links from server-generated listings.
+
+        Normal website navigation usually uses absolute paths, query strings,
+        anchors, JavaScript links, or full URLs. Real autoindex pages usually
+        expose plain relative entries like file.txt, client.php, folder/.
 
         :param str body: normalized body
-        :return: int
+        :return: number of unique candidate listing links
+        :rtype: int
         """
 
         links = []
+
         for match in self.LINK_PATTERN.findall(body):
             link = str(match).strip().lower()
 
@@ -104,19 +124,67 @@ class IndexofResponsePlugin(ResponsePluginProvider):
                 continue
             if link.startswith('http://') or link.startswith('https://'):
                 continue
-            if link.startswith('/logout') or link.startswith('/login'):
+            if '?' in link or '#' in link:
+                continue
+            if link in ('.', './', '..', '../'):
+                continue
+            if link.startswith('logout') or link.startswith('login'):
                 continue
 
             links.append(link)
 
         return len(set(links))
 
+    def _is_directory_listing(self, body):
+        """
+        Check if response body looks like a real directory listing.
+
+        :param str body: normalized body
+        :return: True if body contains directory listing structure
+        :rtype: bool
+        """
+
+        title_hits = self._count_matches(self.STRONG_TITLE_PATTERNS, body)
+        strong_body_hits = self._count_matches(self.STRONG_BODY_PATTERNS, body)
+        parent_hits = self._count_matches(self.PARENT_DIRECTORY_PATTERNS, body)
+        apache_sort_hits = self._count_matches(self.APACHE_SORT_PATTERNS, body)
+        layout_hits = self._count_matches(self.AUTO_INDEX_LAYOUT_PATTERNS, body)
+        header_hits = self._count_matches(self.LISTING_HEADER_PATTERNS, body)
+        listing_links = self._count_listing_links(body)
+
+        if title_hits > 0 and strong_body_hits > 0:
+            return True
+
+        if title_hits > 0 and parent_hits > 0:
+            return True
+
+        if title_hits > 0 and apache_sort_hits > 0:
+            return True
+
+        if title_hits > 0 and layout_hits > 0 and listing_links >= 1:
+            return True
+
+        if strong_body_hits > 0 and parent_hits > 0:
+            return True
+
+        if parent_hits > 0 and apache_sort_hits > 0:
+            return True
+
+        if parent_hits > 0 and header_hits >= 2 and listing_links >= 1:
+            return True
+
+        if apache_sort_hits > 0 and header_hits >= 2 and listing_links >= 1:
+            return True
+
+        return False
+
     def process(self, response):
         """
         Process data.
 
         :param response: HTTP response
-        :return: str | None
+        :return: response index or None
+        :rtype: str | None
         """
 
         if response.status not in self.DEFAULT_STATUSES:
@@ -132,19 +200,7 @@ class IndexofResponsePlugin(ResponsePluginProvider):
         if self._count_matches(self.DENY_PATTERNS, body) > 0:
             return None
 
-        title_hits = self._count_matches(self.STRONG_TITLE_PATTERNS, body)
-        strong_body_hits = self._count_matches(self.STRONG_BODY_PATTERNS, body)
-        medium_hits = self._count_matches(self.MEDIUM_PATTERNS, body)
-        listing_links = self._count_listing_links(body)
-
-        if title_hits > 0:
-            if strong_body_hits > 0 or medium_hits >= 1 or listing_links >= 2:
-                return self.RESPONSE_INDEX
-
-        if strong_body_hits > 0 and (medium_hits >= 1 or listing_links >= 2):
-            return self.RESPONSE_INDEX
-
-        if medium_hits >= 3 and listing_links >= 2:
+        if self._is_directory_listing(body):
             return self.RESPONSE_INDEX
 
         return None

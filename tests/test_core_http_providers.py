@@ -263,6 +263,148 @@ class TestHttpProviders(unittest.TestCase):
             provider.cookies_middleware(True, SimpleNamespace())
             fetch_mock.assert_not_called()
 
+    def test_cookies_provider_extract_cookie_pair_edges(self):
+        """CookiesProvider._extract_cookie_pair() should sanitize invalid Set-Cookie values."""
+
+        self.assertEqual(CookiesProvider._extract_cookie_pair(None), '')
+        self.assertEqual(CookiesProvider._extract_cookie_pair('   '), '')
+        self.assertEqual(CookiesProvider._extract_cookie_pair('HttpOnly; Path=/'), '')
+        self.assertEqual(CookiesProvider._extract_cookie_pair(' =value; Path=/'), '')
+        self.assertEqual(CookiesProvider._extract_cookie_pair(' sid = abc123 ; Path=/; HttpOnly'), 'sid=abc123')
+
+    def test_cookies_provider_get_set_cookie_values_from_getlist(self):
+        """CookiesProvider._get_set_cookie_values() should prefer getlist() values."""
+
+        class HeadersWithGetList(object):
+            """Fake urllib3-like headers with getlist support."""
+
+            def getlist(self, key):
+                """
+                Return Set-Cookie values.
+
+                :param str key: requested header key
+                :return: cookie values
+                :rtype: list[str]
+                """
+
+                if key == 'set-cookie':
+                    return ['sid=abc; Path=/', 'theme=dark; Path=/']
+
+                return []
+
+            def items(self):
+                """
+                Return fallback header items.
+
+                :return: fallback header items
+                :rtype: list[tuple[str, str]]
+                """
+
+                return [('set-cookie', 'fallback=value')]
+
+        values = CookiesProvider._get_set_cookie_values(HeadersWithGetList())
+
+        self.assertEqual(values, ['sid=abc; Path=/', 'theme=dark; Path=/'])
+
+    def test_cookies_provider_get_set_cookie_values_falls_back_to_items(self):
+        """CookiesProvider._get_set_cookie_values() should fall back when getlist() is empty."""
+
+        class HeadersWithEmptyGetList(object):
+            """Fake headers with empty getlist and regular items."""
+
+            def getlist(self, key):
+                """
+                Return no direct Set-Cookie values.
+
+                :param str key: requested header key
+                :return: empty list
+                :rtype: list
+                """
+
+                return []
+
+            def items(self):
+                """
+                Return case-insensitive Set-Cookie items.
+
+                :return: fallback header items
+                :rtype: list[tuple[str, str]]
+                """
+
+                return [
+                    ('Content-Type', 'text/html'),
+                    ('Set-Cookie', 'sid=abc; Path=/'),
+                    ('set-cookie', 'theme=dark; Path=/'),
+                ]
+
+        values = CookiesProvider._get_set_cookie_values(HeadersWithEmptyGetList())
+
+        self.assertEqual(values, ['sid=abc; Path=/', 'theme=dark; Path=/'])
+
+    def test_cookies_provider_get_set_cookie_values_handles_headerless_object(self):
+        """CookiesProvider._get_set_cookie_values() should handle objects without items()."""
+
+        class HeaderlessObject(object):
+            """Fake header object without getlist() and items()."""
+
+        self.assertEqual(CookiesProvider._get_set_cookie_values(HeaderlessObject()), [])
+
+    def test_cookies_provider_fetch_cookies_filters_invalid_cookie_values(self):
+        """CookiesProvider._fetch_cookies() should ignore invalid cookies and keep valid pairs."""
+
+        provider = CookiesProvider()
+
+        provider._fetch_cookies({
+            'set-cookie': None,
+            'Set-Cookie': ' sid = abc ; Path=/; HttpOnly',
+            'X-Test': 'ignored',
+        })
+
+        self.assertTrue(provider._is_cookie_fetched)
+        self.assertEqual(provider._push_cookies(), 'sid=abc')
+
+    def test_cookies_provider_fetch_cookies_should_not_mark_empty_cookie_set_as_fetched(self):
+        """CookiesProvider._fetch_cookies() should not store empty or invalid cookies."""
+
+        provider = CookiesProvider()
+
+        provider._fetch_cookies({
+            'Set-Cookie': 'HttpOnly; Secure',
+        })
+
+        self.assertFalse(provider._is_cookie_fetched)
+        self.assertEqual(provider._push_cookies(), '')
+
+    def test_cookies_provider_fetch_cookies_joins_multiple_getlist_values(self):
+        """CookiesProvider._fetch_cookies() should join multiple Set-Cookie values."""
+
+        class HeadersWithGetList(object):
+            """Fake urllib3-like headers with multiple Set-Cookie values."""
+
+            def getlist(self, key):
+                """
+                Return multiple Set-Cookie values.
+
+                :param str key: requested header key
+                :return: cookie values
+                :rtype: list[str]
+                """
+
+                if key == 'set-cookie':
+                    return [
+                        'sid=abc; Path=/; HttpOnly',
+                        'theme=dark; Path=/',
+                        'broken-cookie',
+                    ]
+
+                return []
+
+        provider = CookiesProvider()
+
+        provider._fetch_cookies(HeadersWithGetList())
+
+        self.assertTrue(provider._is_cookie_fetched)
+        self.assertEqual(provider._push_cookies(), 'sid=abc; theme=dark')
 
 if __name__ == '__main__':
     unittest.main()

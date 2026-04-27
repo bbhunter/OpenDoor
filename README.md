@@ -32,18 +32,21 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 
 ##### v5.9.2 (27.04.2026)
 
+- (dictionary) cleaned and normalized directories list
+- (dictionary) cleaned and normalized browser user agents list
 - (enhancement) added Open Journal Systems to fingerprints
 - (enhancement) browser-like HTTP defaults improved for normal scan requests
 - (enhancement) default `User-Agent` changed from `PostmanRuntime` to browser-like Chrome
 - (enhancement) default `Accept` and `Accept-Encoding` headers aligned with browser document navigation
 - (enhancement) generated `Referer` no longer includes default `:80` and `:443` ports
 - (enhancement) generated `Origin` is no longer added by default for `GET` and `HEAD` requests
+- (bugfix) `indexOf` sniffer: reduce false positives
 - (bugfix) user agent rotation now works correctly per request (`--random-agent`)
 - (bugfix) ResponseError: Unknown response status : `411`
+- (bugfix) ResponseError: Unknown response status : `509`
 - (bugfix) custom headers from `--header` and `--raw-request` are no longer overwritten by generated defaults
 - (bugfix) `--accept-cookies` now forwards only valid `name=value` cookie pairs from `Set-Cookie`
 - (bugfix) cookie attributes such as `Path`, `HttpOnly`, `Secure`, `SameSite`, `Expires`, and `Max-Age` are no longer routed as request cookies
-- (dictionary) cleaned and normalized browser user agents list
 - (tests) added regression coverage for browser-like headers, custom header preservation and cookie routing
 - (tests) full unittest suite passes after integration (`XXX` tests)
 
