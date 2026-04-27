@@ -27,14 +27,16 @@ class AcceptHeaderProvider(object):
         Init interface
         """
 
-        self.__accept = '*/*'
+        self.__accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
 
-        self.__accept_encoding = 'identity'
+        self.__accept_encoding = 'gzip, deflate'
 
         self.__accept_language = (
-            'en-US,en;q=0.5,ru-RU,ru;q=0.8',
-            'ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4,uk;q=0.2,es;q=0.2,pl;q=0.2',
-            'en,en-gb;q=0.8, en;q=0.7'
+            'en-US,en;q=0.9',
+            'en-US,en;q=0.9,ru;q=0.8,uk;q=0.7',
+            'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,uk;q=0.6',
+            'uk-UA,uk;q=0.9,en-US;q=0.8,en;q=0.7',
+            'en-GB,en;q=0.9,en-US;q=0.8'
         )
 
     @property

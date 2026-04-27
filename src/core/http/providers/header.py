@@ -51,6 +51,73 @@ class HeaderProvider(AcceptHeaderProvider, CacheControlProvider):
         self.__headers.update({key.strip(): value.strip()})
         return self
 
+    def _add_default_header(self, key, value):
+        """
+        Add default header only when it was not provided manually.
+
+        :param str key: header name
+        :param str value: header value
+        :return: HeaderProvider
+        """
+
+        if key not in self.__headers:
+            self.add_header(key, value)
+        return self
+
+    @staticmethod
+    def _is_default_port(scheme, port):
+        """
+        Check if port is the default port for selected scheme.
+
+        :param str scheme: request scheme
+        :param int|str port: request port
+        :return: bool
+        """
+
+        if port is None:
+            return True
+
+        try:
+            normalized_port = int(port)
+        except (TypeError, ValueError):
+            return False
+
+        if str(scheme).lower().startswith('https://'):
+            return normalized_port == 443
+
+        return normalized_port == 80
+
+    def _origin_base(self):
+        """
+        Build origin base without default ports.
+
+        :return: str
+        """
+
+        scheme = str(getattr(self.__cfg, 'scheme', 'http://'))
+        host = str(getattr(self.__cfg, 'host', ''))
+        port = getattr(self.__cfg, 'port', None)
+
+        origin = ''.join([scheme, host])
+        if self._is_default_port(scheme, port) is False:
+            origin = ':'.join([origin, str(port)])
+
+        return origin
+
+    def _request_method(self):
+        """
+        Resolve configured request method.
+
+        :return: str
+        """
+
+        method = getattr(self.__cfg, 'method', None)
+        if method is None:
+            method = getattr(self.__cfg, 'requested_method', None)
+        if method is None:
+            return 'HEAD'
+        return str(method).upper()
+
     @property
     def _headers(self):
         """
@@ -58,14 +125,19 @@ class HeaderProvider(AcceptHeaderProvider, CacheControlProvider):
         :return: dict headers
         """
 
-        origin = ''.join([self.__cfg.scheme, self.__cfg.host])
-        referer = ''.join([self.__cfg.scheme, self.__cfg.host]) + ':' + str(self.__cfg.port)
-        self.add_header('Accept', self._accept) \
-            .add_header('Accept-Encoding', self._accept_encoding) \
-            .add_header('Accept-Language', self._accept_language) \
-            .add_header('Origin', origin) \
-            .add_header('Referer', referer) \
-            .add_header('Cache-Control', self._cache_control) \
-            .add_header('Upgrade-Insecure-Requests', '1') \
-            .add_header('Pragma', 'no-cache')
+        origin = self._origin_base()
+        referer = origin + '/'
+        method = self._request_method()
+
+        self._add_default_header('Accept', self._accept) \
+            ._add_default_header('Accept-Encoding', self._accept_encoding) \
+            ._add_default_header('Accept-Language', self._accept_language) \
+            ._add_default_header('Referer', referer) \
+            ._add_default_header('Cache-Control', self._cache_control) \
+            ._add_default_header('Upgrade-Insecure-Requests', '1') \
+            ._add_default_header('Pragma', 'no-cache')
+
+        if method not in ('GET', 'HEAD'):
+            self._add_default_header('Origin', origin)
+
         return self.__headers

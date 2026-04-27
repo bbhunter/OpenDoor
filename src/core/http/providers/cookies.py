@@ -36,6 +36,56 @@ class CookiesProvider(object):
 
         return False if None is self._cookies else True
 
+    @staticmethod
+    def _extract_cookie_pair(raw_cookie):
+        """
+        Extract request-safe cookie pair from Set-Cookie header value.
+
+        :param str raw_cookie: raw Set-Cookie header value
+        :return: str
+        """
+
+        if raw_cookie is None:
+            return ''
+
+        cookie = str(raw_cookie).strip()
+        if not cookie:
+            return ''
+
+        cookie = cookie.split(';', 1)[0].strip()
+        if '=' not in cookie:
+            return ''
+
+        name, value = cookie.split('=', 1)
+        name = name.strip()
+        value = value.strip()
+
+        if not name:
+            return ''
+
+        return '='.join([name, value])
+
+    @staticmethod
+    def _get_set_cookie_values(headers):
+        """
+        Get Set-Cookie values from case-insensitive urllib3/dict headers.
+
+        :param dict headers: response headers
+        :return: list[str]
+        """
+
+        if hasattr(headers, 'getlist'):
+            values = headers.getlist('set-cookie')
+            if len(values) > 0:
+                return values
+
+        values = []
+        for key, value in getattr(headers, 'items', lambda: [])():
+            if str(key).lower() == 'set-cookie':
+                values.append(value)
+
+        return values
+
     def _fetch_cookies(self, headers):
         """
         Fetch cookies from response
@@ -43,8 +93,14 @@ class CookiesProvider(object):
         :return: None
         """
 
-        if 'set-cookie' in headers:
-            self._cookies = headers.get('set-cookie')
+        cookies = []
+        for raw_cookie in self._get_set_cookie_values(headers):
+            cookie = self._extract_cookie_pair(raw_cookie)
+            if cookie:
+                cookies.append(cookie)
+
+        if len(cookies) > 0:
+            self._cookies = '; '.join(cookies)
 
     def _push_cookies(self):
         """
@@ -52,4 +108,4 @@ class CookiesProvider(object):
         :return: str cookies
         """
 
-        return self._cookies.strip()
+        return '' if self._cookies is None else self._cookies.strip()

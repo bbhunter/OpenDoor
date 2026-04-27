@@ -19,40 +19,96 @@ class TestHttpProviders(unittest.TestCase):
     """TestHttpProviders class."""
 
     def test_accept_cache_and_connection_headers(self):
-        """Header providers should expose stable defaults."""
+        """Header providers should expose stable browser-like defaults."""
 
         accept = AcceptHeaderProvider()
         with patch('src.core.http.providers.accept.random.randrange', return_value=0):
-            self.assertEqual(accept._accept, '*/*')
-            self.assertEqual(accept._accept_encoding, 'identity')
-            self.assertIn('en-US', accept._accept_language)
+            self.assertEqual(
+                accept._accept,
+                'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+            )
+            self.assertEqual(accept._accept_encoding, 'gzip, deflate')
+            self.assertEqual(accept._accept_language, 'en-US,en;q=0.9')
 
         self.assertEqual(CacheControlProvider()._cache_control, 'max-age=0')
         self.assertEqual(ConnectionHeaderProvider(SimpleNamespace())._keep_alive, 'keep-alive')
 
     def test_cookies_provider_flow(self):
-        """CookiesProvider should fetch and push cookies."""
+        """CookiesProvider should fetch and push request-safe cookie pairs."""
 
         provider = CookiesProvider()
         self.assertFalse(provider._is_cookie_fetched)
 
-        provider._fetch_cookies({'set-cookie': ' token=value '})
+        provider._fetch_cookies({'set-cookie': ' token=value; Path=/; HttpOnly; SameSite=Lax '})
         self.assertTrue(provider._is_cookie_fetched)
         self.assertEqual(provider._push_cookies(), 'token=value')
+
+    def test_cookies_provider_should_collect_multiple_set_cookie_values(self):
+        """CookiesProvider should join multiple Set-Cookie headers as Cookie header pairs."""
+
+        class Headers(object):
+            def getlist(self, name):
+                if name == 'set-cookie':
+                    return [
+                        'sid=abc; Path=/; HttpOnly',
+                        'locale=en; Path=/; SameSite=Lax',
+                    ]
+                return []
+
+        provider = CookiesProvider()
+        provider._fetch_cookies(Headers())
+
+        self.assertEqual(provider._push_cookies(), 'sid=abc; locale=en')
 
     def test_header_provider_builds_default_headers(self):
         """HeaderProvider should build a default browser-like header set."""
 
-        cfg = SimpleNamespace(scheme='http://', host='example.com', port=80)
+        cfg = SimpleNamespace(scheme='http://', host='example.com', port=80, method='GET')
         provider = HeaderProvider(cfg)
 
         provider.add_header('X-Test', ' value ')
         headers = provider._headers
 
         self.assertEqual(headers['X-Test'], 'value')
-        self.assertEqual(headers['Origin'], 'http://example.com')
-        self.assertEqual(headers['Referer'], 'http://example.com:80')
+        self.assertNotIn('Origin', headers)
+        self.assertEqual(headers['Referer'], 'http://example.com/')
         self.assertEqual(headers['Cache-Control'], 'max-age=0')
+        self.assertEqual(headers['Accept-Encoding'], 'gzip, deflate')
+
+    def test_header_provider_should_set_origin_for_body_methods(self):
+        """HeaderProvider should add Origin for body-like methods and keep non-default ports."""
+
+        cfg = SimpleNamespace(scheme='https://', host='example.com', port=8443, method='POST')
+        provider = HeaderProvider(cfg)
+        headers = provider._headers
+
+        self.assertEqual(headers['Origin'], 'https://example.com:8443')
+        self.assertEqual(headers['Referer'], 'https://example.com:8443/')
+
+    def test_header_provider_should_not_override_custom_headers(self):
+        """HeaderProvider defaults should not overwrite custom/raw headers."""
+
+        cfg = SimpleNamespace(scheme='https://', host='example.com', port=443, method='POST')
+        provider = HeaderProvider(cfg)
+        provider.add_header('Accept', 'application/json')
+        provider.add_header('Accept-Encoding', 'identity')
+        provider.add_header('Accept-Language', 'uk-UA')
+        provider.add_header('Origin', 'https://custom-origin.test')
+        provider.add_header('Referer', 'https://custom-referer.test/path')
+        provider.add_header('Cache-Control', 'no-store')
+        provider.add_header('Pragma', 'no-cache-custom')
+        provider.add_header('Upgrade-Insecure-Requests', '0')
+
+        headers = provider._headers
+
+        self.assertEqual(headers['Accept'], 'application/json')
+        self.assertEqual(headers['Accept-Encoding'], 'identity')
+        self.assertEqual(headers['Accept-Language'], 'uk-UA')
+        self.assertEqual(headers['Origin'], 'https://custom-origin.test')
+        self.assertEqual(headers['Referer'], 'https://custom-referer.test/path')
+        self.assertEqual(headers['Cache-Control'], 'no-store')
+        self.assertEqual(headers['Pragma'], 'no-cache-custom')
+        self.assertEqual(headers['Upgrade-Insecure-Requests'], '0')
 
     def test_user_agent_provider_uses_random_or_default(self):
         """UserAgentHeaderProvider should return either the configured UA or a random one."""
@@ -69,9 +125,16 @@ class TestHttpProviders(unittest.TestCase):
     def test_request_provider_cookies_middleware(self):
         """RequestProvider.cookies_middleware() should propagate cookies only when enabled."""
 
-        cfg = SimpleNamespace(scheme='http://', host='example.com', port=80, is_random_user_agent=False, user_agent='UA')
+        cfg = SimpleNamespace(
+            scheme='http://',
+            host='example.com',
+            port=80,
+            method='GET',
+            is_random_user_agent=False,
+            user_agent='UA',
+        )
         provider = RequestProvider(cfg, ['UA'])
-        response = SimpleNamespace(headers={'set-cookie': ' token=value '})
+        response = SimpleNamespace(headers={'set-cookie': ' token=value; Path=/; HttpOnly '})
 
         provider.cookies_middleware(True, response)
         self.assertEqual(provider._headers['Cookie'], 'token=value')
@@ -107,6 +170,7 @@ class TestHttpProviders(unittest.TestCase):
             scheme='http://',
             host='example.com',
             port=80,
+            method='GET',
             is_random_user_agent=False,
             user_agent='UA',
             headers=None,
@@ -130,6 +194,7 @@ class TestHttpProviders(unittest.TestCase):
             scheme='http://',
             host='example.com',
             port=80,
+            method='GET',
             is_random_user_agent=False,
             user_agent='UA',
             headers=None,
@@ -143,6 +208,35 @@ class TestHttpProviders(unittest.TestCase):
 
         self.assertEqual(provider._headers['Cookie'], 'sid=abc; locale=en')
 
+    def test_request_provider_should_not_override_custom_browser_headers(self):
+        """RequestProvider should keep custom/raw browser headers over defaults."""
+
+        cfg = SimpleNamespace(
+            scheme='https://',
+            host='example.com',
+            port=443,
+            method='GET',
+            is_random_user_agent=False,
+            user_agent='UA',
+            headers=[
+                'Accept: application/json',
+                'Accept-Language: uk-UA',
+                'Referer: https://previous.example/path',
+            ],
+            header=None,
+            cookies=None,
+            cookie=None,
+            request_body=None,
+        )
+
+        provider = RequestProvider(cfg, ['UA'])
+        headers = provider._headers
+
+        self.assertEqual(headers['Accept'], 'application/json')
+        self.assertEqual(headers['Accept-Language'], 'uk-UA')
+        self.assertEqual(headers['Referer'], 'https://previous.example/path')
+        self.assertNotIn('Origin', headers)
+
     def test_request_provider_cookie_middleware_should_skip_non_accepted_or_headerless_responses(self):
         """RequestProvider.cookies_middleware() should not fetch cookies when preconditions are not met."""
 
@@ -150,6 +244,7 @@ class TestHttpProviders(unittest.TestCase):
             scheme='http://',
             host='example.com',
             port=80,
+            method='GET',
             is_random_user_agent=False,
             user_agent='UA',
             headers=None,
@@ -167,6 +262,7 @@ class TestHttpProviders(unittest.TestCase):
         with patch.object(provider, '_fetch_cookies') as fetch_mock:
             provider.cookies_middleware(True, SimpleNamespace())
             fetch_mock.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()
