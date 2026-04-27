@@ -48,7 +48,6 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 - (bugfix) `--accept-cookies` now forwards only valid `name=value` cookie pairs from `Set-Cookie`
 - (bugfix) cookie attributes such as `Path`, `HttpOnly`, `Secure`, `SameSite`, `Expires`, and `Max-Age` are no longer routed as request cookies
 - (tests) added regression coverage for browser-like headers, custom header preservation and cookie routing
-- (tests) full unittest suite passes after integration (`XXX` tests)
 
 #### [Changelog](CHANGELOG.md) (last changes)
 
