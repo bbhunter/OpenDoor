@@ -27,7 +27,7 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 [![CodeQL](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql)
 
 * *Built-in dictionaries*
-    - Directories: 122420
+    - Directories: 115154
     - Subdomains: 255359
 
 ##### v5.9.2 (27.04.2026)
@@ -87,7 +87,7 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 - ✅ dynamic request headers
     * custom request headers support
     * custom request cookies support
-    * cookie routing from responses
+    * cookies forwarding from responses
     * custom or randomized user-agent support
 - ✅ custom wordlists prefixes
 - ✅ custom wordlists, proxies, ignore lists
