@@ -89,7 +89,7 @@ SQLite is useful for:
 ```shell
 opendoor \
   --host https://example.com \
-  --reports std,json,html,sqlite \
+  --reports std,json,html,sqlite,csv \
   --reports-dir ./reports
 ```
 

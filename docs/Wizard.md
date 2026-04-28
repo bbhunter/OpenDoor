@@ -382,7 +382,7 @@ Never commit real OpenVPN profiles, WireGuard private keys, auth files, or produ
 Configure report formats:
 
 ```ini
-reports = std,json,html,sqlite
+reports = std,json,html,sqlite,csv
 ```
 
 Custom reports directory:
