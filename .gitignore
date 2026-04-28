@@ -61,3 +61,6 @@ data/wireguard-profiles/*.conf
 data/openvpn-profiles/*.ovpn
 data/openvpn-profiles/*.conf
 !data/openvpn-profiles/example.ovpn
+
+# Documentation local virtual environment
+.docs-venv/
