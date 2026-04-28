@@ -27,6 +27,13 @@ nav:
       - Proxy: transports/proxy.md
       - OpenVPN: transports/openvpn.md
       - WireGuard: transports/wireguard.md
+  - Examples:
+      - Basic scans: examples/basic-scans.md
+      - Batch scans: examples/batch-scans.md
+      - Authenticated scans: examples/authenticated-scans.md
+      - WAF-safe scans: examples/waf-safe-scans.md
+      - VPN transport scans: examples/vpn-transport-scans.md
+      - CI/CD: examples/ci-cd.md
   - Reference:
       - Sniffers: Sniffers.md
       - Wizard: Wizard.md
