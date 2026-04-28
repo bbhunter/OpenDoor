@@ -134,6 +134,10 @@ Do not replace the repository style with an unrelated template.
 
 ## Test rules
 
+- Use `unittest` as the default test runner.
+- Do not suggest `pytest` commands unless explicitly requested by the maintainer.
+- Use module-style unittest commands for targeted runs, for example:
+  `python -m unittest tests.test_lib_browser_waf_safe_mode`
 - Prefer `unittest.mock` over external `mock`.
 - Avoid tests that depend on real network, DNS, SSH, or shell environment when deterministic patching is possible.
 - When touching old tests, keep their intent unchanged unless the existing behavior is invalid under the new Python baseline.

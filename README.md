@@ -34,10 +34,18 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 
 - (dictionary) cleaned and normalized directories list
 - (enhancement) add CSV report plugin (`--reports csv`)
+- (enhancement) wizard configuration
+- (enhancement) increase WAF Safe Mode cooldown on blocked/challenge responses
+- (enhancement) react to 429 rate-limit responses
+- (enhancement) respect numeric Retry-After values for temporary 503 responses
+- (enhancement) avoid treating plain 403 Forbidden as rate limiting
+- (enhancement) gradually recover cooldown after clean responses
+- (enhancement) persist adaptive cooldown state in session checkpoints
+- (tests) add unittest coverage for adaptive cooldown behaviour
 
 #### [Changelog](CHANGELOG.md) (last changes)
 
-#### Main features
+#### FEATURES LIST
 
 - ✅ directories scanner
 - ✅ recursive directory scanner
@@ -57,8 +65,9 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
     * cautious runtime profile via `--waf-safe-mode`
     * safe mode automatically enables `--waf-detect`
     * serialize requests and apply cooldown after first WAF detection
+    * adaptively increase cooldown for blocked and challenge responses
     * suspend recursive expansion for blocked responses while safe mode is active
-    * persist WAF safe mode state in session checkpoints
+    * persist WAF safe mode state and adaptive cooldown recovery state in session checkpoints
 - ✅ session control
     * runtime pause / resume session
     * persistent scan sessions
@@ -85,11 +94,11 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 - ✅ custom config wizard (use random techniques)
 - ✅ scans reporting
     * console reports
-    * JSON reports
-    * TXT reports
-    * CSV reports
-    * HTML reports
-    * SQLITE reports
+    * json reports
+    * txt reports
+    * csv reports
+    * html reports
+    * sqlite reports
 - ✅ analyze techniques:
     * detect redirects
     * detect index of/ Apache

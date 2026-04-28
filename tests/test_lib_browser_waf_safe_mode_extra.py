@@ -114,6 +114,7 @@ class TestBrowserWafSafeModeExtra(unittest.TestCase):
                 'vendor': 'Cloudflare',
                 'confidence': 92,
                 'delay': 0.75,
+                'recoveryCount': 3,
             }
         }
 
@@ -124,7 +125,145 @@ class TestBrowserWafSafeModeExtra(unittest.TestCase):
         self.assertEqual(getattr(br, '_Browser__waf_safe_confidence'), 92)
         self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 0.75)
         self.assertEqual(getattr(br, '_Browser__waf_safe_next_at'), 0.0)
+        self.assertEqual(getattr(br, '_Browser__waf_safe_recovery_count'), 3)
 
+    def test_adaptive_backoff_increases_delay_for_blocked_response(self):
+        """Blocked responses should increase safe-mode cooldown."""
+
+        br = self.make_browser()
+        br._Browser__client.request.return_value = SimpleNamespace(status=403, headers={})
+
+        setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
+
+        with patch('src.lib.browser.browser.tpl.warning'):
+            br._Browser__http_request('http://example.com/login', depth=0)
+
+        self.assertTrue(getattr(br, '_Browser__waf_safe_active'))
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 1.5)
+        self.assertEqual(getattr(br, '_Browser__waf_safe_recovery_count'), 0)
+
+    def test_adaptive_backoff_does_not_penalize_plain_403_forbidden(self):
+        """Plain 403 Forbidden should not be treated as rate limiting."""
+
+        br = self.make_browser()
+        br._Browser__client.request.return_value = SimpleNamespace(status=403, headers={})
+        br._Browser__response.handle.return_value = (
+            'forbidden',
+            'http://example.com/admin',
+            '10B',
+            '403'
+        )
+
+        setattr(br, '_Browser__waf_safe_active', True)
+        setattr(br, '_Browser__waf_safe_delay', 2.0)
+        setattr(br, '_Browser__waf_safe_recovery_count', 0)
+        setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
+
+        br._Browser__http_request('http://example.com/admin', depth=0)
+
+        self.assertTrue(getattr(br, '_Browser__waf_safe_active'))
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 2.0)
+        self.assertEqual(getattr(br, '_Browser__waf_safe_recovery_count'), 1)
+
+    def test_adaptive_backoff_activates_for_429_rate_limit(self):
+        """429 responses should activate safe mode and increase cooldown."""
+
+        br = self.make_browser()
+        br._Browser__client.request.return_value = SimpleNamespace(status=429, headers={})
+        br._Browser__response.handle.return_value = (
+            'failed',
+            'http://example.com/admin',
+            '10B',
+            '429'
+        )
+
+        setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
+
+        with patch('src.lib.browser.browser.tpl.warning'):
+            br._Browser__http_request('http://example.com/admin', depth=0)
+
+        self.assertTrue(getattr(br, '_Browser__waf_safe_active'))
+        self.assertEqual(getattr(br, '_Browser__waf_safe_vendor'), 'Rate limit')
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 1.5)
+
+    def test_adaptive_backoff_uses_retry_after_for_503(self):
+        """503 with Retry-After should activate safe mode and use Retry-After delay."""
+
+        br = self.make_browser()
+        br._Browser__client.request.return_value = SimpleNamespace(
+            status=503,
+            headers={'Retry-After': '4'}
+        )
+        br._Browser__response.handle.return_value = (
+            'failed',
+            'http://example.com/admin',
+            '10B',
+            '503'
+        )
+
+        setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
+
+        with patch('src.lib.browser.browser.tpl.warning'):
+            br._Browser__http_request('http://example.com/admin', depth=0)
+
+        self.assertTrue(getattr(br, '_Browser__waf_safe_active'))
+        self.assertEqual(getattr(br, '_Browser__waf_safe_vendor'), 'Temporary response')
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 4.0)
+
+    def test_adaptive_backoff_clamps_retry_after_to_max_delay(self):
+        """Retry-After should not push safe-mode cooldown above the max delay."""
+
+        br = self.make_browser()
+        br._Browser__client.request.return_value = SimpleNamespace(
+            status=503,
+            headers={'Retry-After': '120'}
+        )
+        br._Browser__response.handle.return_value = (
+            'failed',
+            'http://example.com/admin',
+            '10B',
+            '503'
+        )
+
+        setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
+
+        with patch('src.lib.browser.browser.tpl.warning'):
+            br._Browser__http_request('http://example.com/admin', depth=0)
+
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 8.0)
+
+    def test_adaptive_backoff_recovers_after_clean_responses(self):
+        """Clean responses should gradually reduce safe-mode cooldown."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__waf_safe_active', True)
+        setattr(br, '_Browser__waf_safe_delay', 4.0)
+        setattr(br, '_Browser__waf_safe_recovery_count', 0)
+
+        response = SimpleNamespace(status=200, headers={})
+        response_data = ('success', 'http://example.com/admin', '10B', '200')
+
+        for _ in range(5):
+            br._Browser__update_waf_safe_backoff(response, response_data)
+
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 2.0)
+        self.assertEqual(getattr(br, '_Browser__waf_safe_recovery_count'), 0)
+
+    def test_adaptive_backoff_does_not_recover_on_failed_5xx_without_retry_after(self):
+        """Failed 5xx responses without Retry-After should not recover safe-mode cooldown."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__waf_safe_active', True)
+        setattr(br, '_Browser__waf_safe_delay', 4.0)
+        setattr(br, '_Browser__waf_safe_recovery_count', 0)
+
+        response = SimpleNamespace(status=502, headers={})
+        response_data = ('failed', 'http://example.com/admin', '10B', '502')
+
+        br._Browser__update_waf_safe_backoff(response, response_data)
+
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 4.0)
+        self.assertEqual(getattr(br, '_Browser__waf_safe_recovery_count'), 0)
 
 if __name__ == '__main__':
     unittest.main()

@@ -181,6 +181,80 @@ class TestCsvReportPlugin(unittest.TestCase):
 
         info_mock.assert_called_once()
 
+    def test_csv_format_list_handles_none_and_scalar_values(self):
+        """CsvReportPlugin.__format_list() should normalize None and scalar values."""
+
+        self.assertEqual(CsvReportPlugin._CsvReportPlugin__format_list(None), '')
+        self.assertEqual(CsvReportPlugin._CsvReportPlugin__format_list('single-signal'), 'single-signal')
+        self.assertEqual(CsvReportPlugin._CsvReportPlugin__format_list(123), '123')
+
+    def test_csv_plugin_handles_non_dict_fingerprint_infrastructure(self):
+        """CsvReportPlugin.process() should fallback to empty infrastructure fields for non-dict data."""
+
+        data = {
+            'items': {
+                'success': ['http://example.com/ojs'],
+            },
+            'report_items': {
+                'success': [
+                    {
+                        'url': 'http://example.com/ojs',
+                        'size': '12B',
+                        'code': '200',
+                    }
+                ],
+            },
+            'fingerprint': {
+                'category': 'cms',
+                'name': 'Open Journal Systems',
+                'confidence': 95,
+                'infrastructure': 'Cloudflare',
+            },
+        }
+
+        plugin = CsvReportPlugin(self.target, data, directory=self.base_dir + os.path.sep)
+        plugin.process()
+
+        rows = self.read_report_rows()
+
+        self.assertEqual(rows[0]['fingerprint_category'], 'cms')
+        self.assertEqual(rows[0]['fingerprint_name'], 'Open Journal Systems')
+        self.assertEqual(rows[0]['fingerprint_confidence'], '95')
+        self.assertEqual(rows[0]['infrastructure_provider'], '')
+        self.assertEqual(rows[0]['infrastructure_confidence'], '')
+
+    def test_csv_plugin_supports_non_dict_report_items(self):
+        """CsvReportPlugin.process() should support legacy non-dict detailed report items."""
+
+        data = {
+            'items': {
+                'success': ['http://example.com/legacy'],
+            },
+            'report_items': {
+                'success': ['http://example.com/legacy'],
+            },
+        }
+
+        plugin = CsvReportPlugin(self.target, data, directory=self.base_dir + os.path.sep)
+        plugin.process()
+
+        rows = self.read_report_rows()
+
+        self.assertEqual(rows[0]['target'], self.target)
+        self.assertEqual(rows[0]['status'], 'success')
+        self.assertEqual(rows[0]['url'], 'http://example.com/legacy')
+        self.assertEqual(rows[0]['code'], '-')
+        self.assertEqual(rows[0]['size'], '0B')
+
+    def test_csv_plugin_wraps_open_errors(self):
+        """CsvReportPlugin.process() should wrap file write failures."""
+
+        plugin = CsvReportPlugin(self.target, self.data, directory=self.base_dir + os.path.sep)
+
+        with patch('builtins.open', side_effect=OSError('boom')):
+            with self.assertRaises(Exception):
+                plugin.process()
+
 
 if __name__ == '__main__':
     unittest.main()

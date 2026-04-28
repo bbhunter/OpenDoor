@@ -406,5 +406,72 @@ class TestHttpProviders(unittest.TestCase):
         self.assertTrue(provider._is_cookie_fetched)
         self.assertEqual(provider._push_cookies(), 'sid=abc; theme=dark')
 
+    def test_header_provider_default_port_helper_handles_none_and_invalid_ports(self):
+        """HeaderProvider._is_default_port() should handle None and invalid ports."""
+
+        self.assertTrue(HeaderProvider._is_default_port('http://', None))
+        self.assertFalse(HeaderProvider._is_default_port('http://', 'broken'))
+        self.assertTrue(HeaderProvider._is_default_port('http://', '80'))
+        self.assertFalse(HeaderProvider._is_default_port('http://', '8080'))
+        self.assertTrue(HeaderProvider._is_default_port('https://', '443'))
+        self.assertFalse(HeaderProvider._is_default_port('https://', '8443'))
+
+    def test_header_provider_origin_base_includes_only_non_default_ports(self):
+        """HeaderProvider should include only non-default ports in origin and referer."""
+
+        default_http = HeaderProvider(SimpleNamespace(
+            scheme='http://',
+            host='example.com',
+            port=80,
+            method='GET',
+        ))
+        default_http_headers = default_http._headers
+
+        self.assertEqual(default_http_headers['Referer'], 'http://example.com/')
+        self.assertNotIn('Origin', default_http_headers)
+
+        custom_https = HeaderProvider(SimpleNamespace(
+            scheme='https://',
+            host='example.com',
+            port=8443,
+            method='POST',
+        ))
+        custom_https_headers = custom_https._headers
+
+        self.assertEqual(custom_https_headers['Referer'], 'https://example.com:8443/')
+        self.assertEqual(custom_https_headers['Origin'], 'https://example.com:8443')
+
+    def test_header_provider_uses_requested_method_when_method_is_missing(self):
+        """HeaderProvider should fallback to requested_method when method is unavailable."""
+
+        cfg = SimpleNamespace(
+            scheme='http://',
+            host='example.com',
+            port=80,
+            method=None,
+            requested_method='POST',
+        )
+        provider = HeaderProvider(cfg)
+
+        headers = provider._headers
+
+        self.assertEqual(headers['Origin'], 'http://example.com')
+        self.assertEqual(headers['Referer'], 'http://example.com/')
+
+    def test_header_provider_defaults_to_head_when_method_fields_are_missing(self):
+        """HeaderProvider should default to HEAD when method and requested_method are missing."""
+
+        cfg = SimpleNamespace(
+            scheme='http://',
+            host='example.com',
+            port=80,
+        )
+        provider = HeaderProvider(cfg)
+
+        headers = provider._headers
+
+        self.assertEqual(headers['Referer'], 'http://example.com/')
+        self.assertNotIn('Origin', headers)
+
 if __name__ == '__main__':
     unittest.main()

@@ -42,6 +42,16 @@ from .threadpool import ThreadPool
 class Browser(Filter):
     """ Browser class """
 
+    WAF_SAFE_MIN_DELAY = 0.75
+    WAF_SAFE_MAX_DELAY = 8.0
+    WAF_SAFE_BACKOFF_FACTOR = 2.0
+    WAF_SAFE_RECOVERY_FACTOR = 2.0
+    WAF_SAFE_RECOVERY_THRESHOLD = 5
+    WAF_SAFE_RATE_LIMIT_STATUSES = (429,)
+    WAF_SAFE_RETRY_AFTER_STATUSES = (429, 503)
+    WAF_SAFE_RETRY_AFTER_HEADER = 'retry-after'
+    WAF_SAFE_RECOVERY_STATUSES = ('success', 'redirect', 'auth', 'forbidden', 'bad', 'certificate')
+
     def __init__(self, params):
         """
         Browser constructor
@@ -63,9 +73,11 @@ class Browser(Filter):
             self.__waf_safe_lock = threading.RLock()
             self.__waf_safe_active = False
             self.__waf_safe_next_at = 0.0
-            self.__waf_safe_delay = 0.75
+            self.__waf_safe_delay = self.WAF_SAFE_MIN_DELAY
+            self.__waf_safe_recovery_count = 0
             self.__waf_safe_vendor = None
             self.__waf_safe_confidence = None
+
             requested_method = str(getattr(self.__config, '_method', '') or '').upper()
             effective_method = str(getattr(self.__config, 'method', '') or '').upper()
 
@@ -315,6 +327,249 @@ class Browser(Filter):
             delay=self.__waf_safe_delay
         )
 
+    @staticmethod
+    def __extract_response_code(response, response_data):
+        """
+        Resolve numeric HTTP response code from response object or handled response data.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :param tuple|None response_data:
+        :return: int | None
+        """
+
+        try:
+            return int(response.status)
+        except (AttributeError, TypeError, ValueError):
+            pass
+
+        try:
+            return int(response_data[3])
+        except (IndexError, TypeError, ValueError):
+            return None
+
+    @classmethod
+    def __get_header_value(cls, response, header_name):
+        """
+        Resolve response header value using case-insensitive lookup.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :param str header_name:
+        :return: str | None
+        """
+
+        try:
+            headers = response.headers
+        except AttributeError:
+            return None
+
+        expected = str(header_name).lower()
+
+        try:
+            value = headers.get(header_name)
+            if value is not None:
+                return str(value)
+        except AttributeError:
+            pass
+
+        try:
+            value = headers.get(expected)
+            if value is not None:
+                return str(value)
+        except AttributeError:
+            pass
+
+        try:
+            for key, value in headers.items():
+                if str(key).lower() == expected:
+                    return str(value)
+        except AttributeError:
+            return None
+
+        return None
+
+    def __get_retry_after_delay(self, response):
+        """
+        Resolve Retry-After delay in seconds.
+
+        This intentionally supports only numeric Retry-After values.
+        HTTP-date based Retry-After values are ignored to keep safe-mode behaviour predictable.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :return: float | None
+        """
+
+        value = self.__get_header_value(response, self.WAF_SAFE_RETRY_AFTER_HEADER)
+        if value is None:
+            return None
+
+        try:
+            delay = float(str(value).strip())
+        except (TypeError, ValueError):
+            return None
+
+        if delay < 0:
+            return None
+
+        return delay
+
+    def __is_explicit_waf_safe_backoff_signal(self, response, response_data):
+        """
+        Detect explicit rate-limit / temporary-response signals that can activate WAF safe mode.
+
+        Plain 403 is intentionally not treated as a backoff signal.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :param tuple response_data:
+        :return: bool
+        """
+
+        response_code = self.__extract_response_code(response, response_data)
+
+        if response_code in self.WAF_SAFE_RATE_LIMIT_STATUSES:
+            return True
+
+        if response_code in self.WAF_SAFE_RETRY_AFTER_STATUSES:
+            return self.__get_retry_after_delay(response) is not None
+
+        return False
+
+    def __build_waf_safe_backoff_detection(self, response, response_data):
+        """
+        Build synthetic safe-mode activation metadata for rate-limit / temporary responses.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :param tuple response_data:
+        :return: dict
+        """
+
+        response_code = self.__extract_response_code(response, response_data)
+        signals = ['status:{0}'.format(response_code)]
+
+        if self.__get_retry_after_delay(response) is not None:
+            signals.append('header:retry-after')
+
+        if response_code == 429:
+            name = 'Rate limit'
+            confidence = 85
+        else:
+            name = 'Temporary response'
+            confidence = 75
+
+        return {
+            'name': name,
+            'confidence': confidence,
+            'signals': signals,
+        }
+
+    def __should_penalize_waf_safe_backoff(self, response, response_status, response_code):
+        """
+        Decide whether current response should increase WAF safe-mode cooldown.
+
+        Plain 403 Forbidden is not a penalty. It becomes a penalty only when response
+        classification is already "blocked", meaning WAF/challenge detection matched.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :param str response_status:
+        :param int|None response_code:
+        :return: bool
+        """
+
+        if response_status == 'blocked':
+            return True
+
+        if response_code in self.WAF_SAFE_RATE_LIMIT_STATUSES:
+            return True
+
+        if response_code in self.WAF_SAFE_RETRY_AFTER_STATUSES:
+            return self.__get_retry_after_delay(response) is not None
+
+        return False
+
+    def __increase_waf_safe_backoff(self, response):
+        """
+        Increase WAF safe-mode cooldown using exponential backoff or Retry-After.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :return: None
+        """
+
+        retry_after_delay = self.__get_retry_after_delay(response)
+
+        if retry_after_delay is not None:
+            next_delay = retry_after_delay
+        else:
+            next_delay = self.__waf_safe_delay * self.WAF_SAFE_BACKOFF_FACTOR
+
+        self.__waf_safe_delay = min(
+            max(float(next_delay), self.WAF_SAFE_MIN_DELAY),
+            self.WAF_SAFE_MAX_DELAY
+        )
+        self.__waf_safe_recovery_count = 0
+        self.__waf_safe_next_at = time.monotonic() + self.__waf_safe_delay
+
+    def __recover_waf_safe_backoff(self):
+        """
+        Gradually reduce WAF safe-mode cooldown after clean responses.
+
+        :return: None
+        """
+
+        if self.__waf_safe_delay <= self.WAF_SAFE_MIN_DELAY:
+            self.__waf_safe_recovery_count = 0
+            return
+
+        self.__waf_safe_recovery_count += 1
+
+        if self.__waf_safe_recovery_count < self.WAF_SAFE_RECOVERY_THRESHOLD:
+            return
+
+        self.__waf_safe_delay = max(
+            self.__waf_safe_delay / self.WAF_SAFE_RECOVERY_FACTOR,
+            self.WAF_SAFE_MIN_DELAY
+        )
+        self.__waf_safe_recovery_count = 0
+
+    def __should_recover_waf_safe_backoff(self, response_status):
+        """
+        Decide whether current response can be treated as a clean recovery signal.
+
+        :param str response_status:
+        :return: bool
+        """
+
+        return response_status in self.WAF_SAFE_RECOVERY_STATUSES
+
+    def __update_waf_safe_backoff(self, response, response_data):
+        """
+        Update adaptive WAF safe-mode cooldown after response classification.
+
+        :param urllib3.response.HTTPResponse|object response:
+        :param tuple|None response_data:
+        :return: None
+        """
+
+        self.__ensure_session_runtime_state()
+
+        if True is not getattr(self.__config, 'is_waf_safe_mode', False):
+            return
+
+        if response_data is None:
+            return
+
+        response_status = str(response_data[0])
+        response_code = self.__extract_response_code(response, response_data)
+
+        with self.__waf_safe_lock:
+            if True is not self.__waf_safe_active:
+                return
+
+            if self.__should_penalize_waf_safe_backoff(response, response_status, response_code):
+                self.__increase_waf_safe_backoff(response)
+                return
+
+            if self.__should_recover_waf_safe_backoff(response_status):
+                self.__recover_waf_safe_backoff()
+
     def __should_suspend_recursive_expansion(self, response_status):
         """
         Do not let blocked responses amplify recursive scans in WAF safe mode.
@@ -354,14 +609,23 @@ class Browser(Filter):
 
             if None is response_data:
                 self.__catch_report_data('ignored', url)
-            elif False is self.__is_response_allowed(resp, response_data):
+                return
+
+            waf_detection = None
+
+            if response_data[0] == 'blocked':
+                waf_detection = getattr(self.__response, 'waf_detection', None)
+                self.__activate_waf_safe_mode(waf_detection)
+            elif self.__is_explicit_waf_safe_backoff_signal(resp, response_data):
+                self.__activate_waf_safe_mode(
+                    self.__build_waf_safe_backoff_detection(resp, response_data)
+                )
+
+            self.__update_waf_safe_backoff(resp, response_data)
+
+            if False is self.__is_response_allowed(resp, response_data):
                 self.__catch_report_data('ignored', response_data[1], response_data[2], response_data[3])
             else:
-                waf_detection = None
-                if response_data[0] == 'blocked':
-                    waf_detection = getattr(self.__response, 'waf_detection', None)
-                    self.__activate_waf_safe_mode(waf_detection)
-
                 self.__catch_report_data(
                     response_data[0],
                     response_data[1],
@@ -729,6 +993,7 @@ class Browser(Filter):
                 'vendor': self.__waf_safe_vendor,
                 'confidence': self.__waf_safe_confidence,
                 'delay': self.__waf_safe_delay,
+                'recoveryCount': self.__waf_safe_recovery_count,
             },
         }
 
@@ -832,7 +1097,8 @@ class Browser(Filter):
         self.__waf_safe_active = bool(waf_safe.get('active', False))
         self.__waf_safe_vendor = waf_safe.get('vendor')
         self.__waf_safe_confidence = waf_safe.get('confidence')
-        self.__waf_safe_delay = float(waf_safe.get('delay', 0.75))
+        self.__waf_safe_delay = float(waf_safe.get('delay', self.WAF_SAFE_MIN_DELAY))
+        self.__waf_safe_recovery_count = int(waf_safe.get('recoveryCount', 0))
         self.__waf_safe_next_at = 0.0
         self.__session_dirty = False
 
@@ -938,7 +1204,10 @@ class Browser(Filter):
             self.__waf_safe_next_at = 0.0
 
         if not hasattr(self, '_Browser__waf_safe_delay'):
-            self.__waf_safe_delay = 0.75
+            self.__waf_safe_delay = self.WAF_SAFE_MIN_DELAY
+
+        if not hasattr(self, '_Browser__waf_safe_recovery_count'):
+            self.__waf_safe_recovery_count = 0
 
         if not hasattr(self, '_Browser__waf_safe_vendor'):
             self.__waf_safe_vendor = None
