@@ -1,88 +1,633 @@
-Wizard
-======
-The Wizard allows you to select individual settings for each target.
-See example:
+# ⚙️ Wizard
 
-Configure
----------------------------
-`opendoor.conf`
+The OpenDoor wizard runs a scan from a configuration file.
+
+It is useful when you want repeatable scan profiles, shared team presets, CI-friendly configuration, or target-specific settings without passing many CLI flags every time.
+
+---
+
+## 🚀 Run the wizard
+
+Use the default configuration file:
+
+```shell
+opendoor --wizard
+```
+
+By default, OpenDoor reads:
+
+```text
+opendoor.conf
+```
+
+Use a custom configuration file:
+
+```shell
+opendoor --wizard ./configs/example.com.conf
+```
+
+This is useful when you maintain different profiles for different environments, targets, or scan strategies.
+
+---
+
+## 🧭 When to use the wizard
+
+Use `--wizard` when you want to:
+
+- keep scan configuration in a file;
+- reuse the same options across multiple runs;
+- create low-noise profiles for specific targets;
+- keep CI/CD commands shorter;
+- separate scan behavior from shell scripts;
+- maintain team-approved scan presets.
+
+For one-off scans, direct CLI flags are usually faster:
+
+```shell
+opendoor --host https://example.com --auto-calibrate --reports json,html
+```
+
+For repeatable scans, prefer a config file:
+
+```shell
+opendoor --wizard ./configs/example.com.conf
+```
+
+---
+
+## 🧾 Minimal configuration
+
+A minimal directory scan configuration:
 
 ```ini
 [general]
 
-# Use ssl <bool>
-ssl    = False
+host = example.com
+scheme = https://
+ssl = True
+port = 443
 
-# Target scheme <string>
-scheme = http://
-
-# Target host (ip) <string>
-host    = example.com
-
-# Custom port (Default 80) <int>
-port    = 80
-
-# HTTP method (use HEAD as default) <string>
-method = HEAD
-
-# Delay between request's threads <int>
-delay = 0
-
-# Request timeout (30 sec default) <int>
-timeout = 60
-
-# Max retries to reconnect (default 3) <int>
-retries = 10
-
-# Using built-in proxylist <boolean>
-tor = False
-
-# Path to custom proxylist <string|None>
-torlist = None
-
-# Custom permanent proxy server <string|None>
-proxy = None
-
-# Randomize user-agent per request <boolean>
-random-agent = False
-
-# Debug level 1 - 3 <int>
-debug = 0
-
-# Allowed threads <int>
-threads = 1
-
-# Response sniff plugins (indexof,collation,file,skipempty) <string>
-sniff = None
-
-# Scan type scan=directories or scan=subdomains <string>
 scan = directories
-
-# Path to custom wordlist <string|None>
-wordlist = None
-
-# Shuffle scan list <boolean>
-random-list = False
-
-# Append path prefix to scan host <string|None>
-prefix = None
-
-# Force use selected extensions for scan session -e php,json e.g <string|None>
-extensions = None
-
-#  Force ignore extensions for scan session -i aspx,jsp e.g <string|None>
-ignore_extensions = None
-
-# Scan reports (json,std,txt,html) <string>
-reports = std
-
-# Path to custom reports dir <string|None>
-reports-dir = None
+method = HEAD
+threads = 10
+reports = std,json
 ```
 
-Usage
------
+Run it:
+
 ```shell
-opendoor --wizard # get default config from opendoor.conf
-opendoor --wizard /usr/local/projects/mytarget.com.conf
+opendoor --wizard ./configs/example.com.conf
 ```
+
+---
+
+## 🎯 Target settings
+
+Target-related options define what OpenDoor scans.
+
+```ini
+[general]
+
+host = example.com
+scheme = https://
+ssl = True
+port = 443
+scan = directories
+```
+
+Common scan modes:
+
+```ini
+scan = directories
+```
+
+```ini
+scan = subdomains
+```
+
+Use `directories` for web path discovery and `subdomains` for domain enumeration.
+
+---
+
+## 🌐 Request settings
+
+Request settings control how OpenDoor talks to the target.
+
+```ini
+[general]
+
+method = HEAD
+delay = 0
+timeout = 30
+retries = 3
+threads = 10
+keep_alive = None
+accept_cookies = None
+```
+
+Notes:
+
+- `HEAD` is faster for status/size-oriented discovery.
+- `GET` is better when body-based filters or body-oriented sniffers are required.
+- `timeout` and `retries` should be increased for slow or unstable targets.
+- `delay` can be used to reduce request pressure.
+- `threads` controls concurrency.
+
+For body-based analysis:
+
+```ini
+method = GET
+```
+
+---
+
+## 🧬 Fingerprinting
+
+Enable fingerprint detection before scanning:
+
+```ini
+fingerprint = True
+```
+
+Fingerprinting attempts to identify probable CMS, frameworks, application stacks, static-site tooling, and infrastructure providers.
+
+Use it when you want to adjust scan strategy based on detected technologies.
+
+---
+
+## 🛡️ WAF detection and safe mode
+
+Enable passive WAF detection:
+
+```ini
+waf_detect = True
+```
+
+Enable cautious WAF-aware behavior:
+
+```ini
+waf_safe_mode = True
+```
+
+Safe mode automatically enables WAF detection in runtime configuration.
+
+Use it for authorized targets protected by CDN, WAF, or anti-bot infrastructure.
+
+---
+
+## 🧠 Auto-calibration
+
+Auto-calibration helps reduce soft-404, wildcard, and catch-all noise.
+
+```ini
+auto_calibrate = True
+calibration_samples = 5
+calibration_threshold = 0.92
+```
+
+Use auto-calibration when invalid paths return successful-looking or repetitive responses.
+
+Example:
+
+```ini
+method = GET
+auto_calibrate = True
+calibration_samples = 8
+calibration_threshold = 0.85
+```
+
+---
+
+## 📚 Wordlists and extensions
+
+Use a custom wordlist:
+
+```ini
+wordlist = ./wordlists/custom.txt
+```
+
+Shuffle scan order:
+
+```ini
+random_list = True
+```
+
+Add a path prefix:
+
+```ini
+prefix = admin/
+```
+
+Force extensions:
+
+```ini
+extensions = php,json,txt
+```
+
+Ignore extensions:
+
+```ini
+ignore_extensions = aspx,jsp,do
+```
+
+---
+
+## 🔁 Recursive scan
+
+Enable recursive directory discovery:
+
+```ini
+recursive = True
+recursive_depth = 2
+recursive_status = 200,301,302,307,308,403
+recursive_exclude = jpg,jpeg,png,gif,svg,css,js,ico,woff,woff2,ttf,map,pdf,zip,gz,tar
+```
+
+Use recursion when discovered directories should become new scan roots.
+
+Keep recursion depth controlled to avoid overly large scans.
+
+---
+
+## 🔍 Sniffers
+
+Sniffers are built-in response analysis plugins.
+
+```ini
+sniff = skipempty,collation,indexof,file
+```
+
+Known false-positive response sizes:
+
+```ini
+sniff = skipempty,skipsizes=24:41:50
+```
+
+Common values:
+
+| Sniffer | Purpose |
+|---|---|
+| `skipempty` | Skip empty responses |
+| `skipsizes=NUM:NUM...` | Skip known false-positive body sizes |
+| `indexof` | Detect directory listings |
+| `file` | Detect downloadable or interesting files |
+| `collation` | Detect repeated fallback responses |
+
+For details, see [Sniffers](Sniffers.md).
+
+---
+
+## 🧹 Response filters
+
+Response filters keep or remove responses by status, size, text, regex, and body length.
+
+```ini
+include_status = 200-299,301,302,403
+exclude_status = 404,429,500-599
+exclude_size = 0,1234
+exclude_size_range = 0-256,1024-2048
+min_response_length = 100
+max_response_length = 50000
+```
+
+Body-based filters:
+
+```ini
+match_text = Dashboard
+exclude_text = Not Found
+match_regex = admin|login|dashboard
+exclude_regex = 404|not found
+```
+
+Body-based filters are most useful with:
+
+```ini
+method = GET
+```
+
+---
+
+## 🌐 Proxy and transport settings
+
+### Proxy
+
+Use a permanent proxy:
+
+```ini
+proxy = socks5://127.0.0.1:9050
+```
+
+Use the built-in proxy list:
+
+```ini
+tor = True
+```
+
+Use a custom proxy list:
+
+```ini
+torlist = ./proxies.txt
+```
+
+### Network transport
+
+Direct mode:
+
+```ini
+transport = direct
+```
+
+Proxy transport:
+
+```ini
+transport = proxy
+proxy = socks5://127.0.0.1:9050
+```
+
+OpenVPN transport:
+
+```ini
+transport = openvpn
+transport_profile = ./vpn/profile.ovpn
+openvpn_auth = ./vpn/auth.txt
+```
+
+WireGuard transport:
+
+```ini
+transport = wireguard
+transport_profile = ./vpn/profile.conf
+```
+
+Multiple profiles:
+
+```ini
+transport_profiles = ./vpn/profiles.txt
+transport_rotate = per-target
+```
+
+Transport timeout and healthcheck:
+
+```ini
+transport_timeout = 30
+transport_healthcheck_url = https://ifconfig.me
+```
+
+Never commit real OpenVPN profiles, WireGuard private keys, auth files, or production transport credentials to a public repository.
+
+---
+
+## 📊 Reports
+
+Configure report formats:
+
+```ini
+reports = std,json,html,sqlite
+```
+
+Custom reports directory:
+
+```ini
+reports_dir = ./reports
+```
+
+Common formats:
+
+| Format | Purpose |
+|---|---|
+| `std` | Terminal output |
+| `txt` | Plain text output |
+| `json` | Machine-readable output |
+| `html` | Human-readable report |
+| `sqlite` | Structured local database for post-processing |
+
+If your local build supports additional report plugins, use the formats shown by:
+
+```shell
+opendoor --help
+```
+
+---
+
+## 🔁 Sessions
+
+Save scan state:
+
+```ini
+session_save = ./sessions/example.session
+session_autosave_sec = 20
+session_autosave_items = 200
+```
+
+Resume from a checkpoint:
+
+```ini
+session_load = ./sessions/example.session
+```
+
+Sessions are useful for large scans, unstable networks, recursive discovery, and transport-based workflows.
+
+---
+
+## 🧪 CI/CD fail-on rules
+
+Enable CI/CD fail-on behavior by selected result buckets:
+
+```ini
+fail_on_bucket = success,auth,forbidden,blocked
+```
+
+When at least one selected bucket is found, OpenDoor exits with code `1`.
+
+This is useful for:
+
+- security gates;
+- nightly exposure checks;
+- release pipelines;
+- regression tests.
+
+---
+
+## 🐞 Debugging
+
+Debug levels:
+
+```ini
+debug = 0
+```
+
+Common values:
+
+| Value | Meaning |
+|---:|---|
+| `-1` | Silent mode |
+| `0` | Default output |
+| `1` | Basic debug |
+| `2` | More verbose debug |
+| `3` | Maximum debug |
+
+Use debug output when validating request behavior, filters, reports, sessions, or transport startup.
+
+---
+
+## ✅ Example: low-noise directory scan
+
+```ini
+[general]
+
+host = example.com
+scheme = https://
+ssl = True
+port = 443
+
+scan = directories
+method = GET
+threads = 10
+timeout = 30
+retries = 3
+
+auto_calibrate = True
+calibration_samples = 8
+calibration_threshold = 0.85
+
+include_status = 200-299,301,302,403
+exclude_status = 404,429,500-599
+exclude_size_range = 0-256
+
+sniff = skipempty,collation,indexof,file
+
+reports = std,json,html
+reports_dir = ./reports
+```
+
+Run:
+
+```shell
+opendoor --wizard ./configs/example.com.conf
+```
+
+---
+
+## ✅ Example: WAF-safe scan
+
+```ini
+[general]
+
+host = example.com
+scheme = https://
+ssl = True
+port = 443
+
+scan = directories
+method = GET
+threads = 3
+delay = 1
+timeout = 60
+retries = 5
+
+waf_safe_mode = True
+auto_calibrate = True
+
+reports = std,json
+```
+
+Run:
+
+```shell
+opendoor --wizard ./configs/waf-safe-example.conf
+```
+
+---
+
+## ✅ Example: OpenVPN transport scan
+
+```ini
+[general]
+
+host = example.com
+scheme = https://
+ssl = True
+port = 443
+
+scan = directories
+method = HEAD
+threads = 5
+
+transport = openvpn
+transport_profile = ./vpn/profile.ovpn
+openvpn_auth = ./vpn/auth.txt
+transport_timeout = 60
+transport_healthcheck_url = https://ifconfig.me
+
+reports = std,json,sqlite
+```
+
+Run:
+
+```shell
+opendoor --wizard ./configs/openvpn-example.conf
+```
+
+---
+
+## ✅ Example: CI/CD profile
+
+```ini
+[general]
+
+host = example.com
+scheme = https://
+ssl = True
+port = 443
+
+scan = directories
+method = GET
+
+auto_calibrate = True
+include_status = 200-299,301,302,403
+exclude_status = 404,429,500-599
+
+reports = json,sqlite
+reports_dir = ./reports
+
+fail_on_bucket = success,auth,forbidden
+```
+
+Run:
+
+```shell
+opendoor --wizard ./configs/ci-example.conf
+```
+
+---
+
+## ⚠️ Configuration notes
+
+Some options use `None` as the disabled value in configuration files.
+
+Recommended disabled value:
+
+```ini
+keep_alive = None
+accept_cookies = None
+random_list = None
+```
+
+Recommended enabled value:
+
+```ini
+keep_alive = True
+accept_cookies = True
+random_list = True
+```
+
+Avoid storing secrets in configuration files committed to Git.
+
+Do not commit:
+
+- real VPN private keys;
+- OpenVPN auth files;
+- production proxy credentials;
+- authenticated cookies;
+- bearer tokens;
+- customer-specific target lists.
