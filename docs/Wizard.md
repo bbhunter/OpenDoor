@@ -393,12 +393,13 @@ reports_dir = ./reports
 
 Common formats:
 
-| Format | Purpose |
-|---|---|
-| `std` | Terminal output |
-| `txt` | Plain text output |
-| `json` | Machine-readable output |
-| `html` | Human-readable report |
+| Format   | Purpose                                       |
+|----------|-----------------------------------------------|
+| `std`    | Terminal output                               |
+| `txt`    | Plain text output                             |
+| `json`   | Machine-readable output                       |
+| `html`   | Human-readable report                         |
+| `csv`    | Column-separated report                       |
 | `sqlite` | Structured local database for post-processing |
 
 If your local build supports additional report plugins, use the formats shown by:
