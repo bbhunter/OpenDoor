@@ -11,7 +11,7 @@ The current repository state is being modernized for the 2026 Python ecosystem w
 
 ## Current project goals
 
-The current major line is **5.0.0**.
+The current major line is **5.x.x**.
 
 Primary goals of this upgrade line:
 - keep the scanner runnable and releasable on modern Python
@@ -203,11 +203,6 @@ Important benchmark policy:
 - performance changes must preserve scanner correctness and existing test
 
 ---
-
-## Maintainer context
-
-Primary maintainer:
-- `@stanislav-web`
 
 Contributors and agents should optimize for:
 - stability

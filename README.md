@@ -27,27 +27,13 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 [![CodeQL](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql)
 
 * *Built-in dictionaries*
-    - Directories: 115154
+    - Directories: 115274
     - Subdomains: 255359
 
-##### v5.9.2 (27.04.2026)
+##### v5.9.3 (28.04.2026)
 
 - (dictionary) cleaned and normalized directories list
-- (dictionary) cleaned and normalized browser user agents list
-- (enhancement) added Open Journal Systems to fingerprints
-- (enhancement) browser-like HTTP defaults improved for normal scan requests
-- (enhancement) default `User-Agent` changed from `PostmanRuntime` to browser-like Chrome
-- (enhancement) default `Accept` and `Accept-Encoding` headers aligned with browser document navigation
-- (enhancement) generated `Referer` no longer includes default `:80` and `:443` ports
-- (enhancement) generated `Origin` is no longer added by default for `GET` and `HEAD` requests
-- (bugfix) `indexOf` sniffer: reduce false positives
-- (bugfix) user agent rotation now works correctly per request (`--random-agent`)
-- (bugfix) ResponseError: Unknown response status : `411`
-- (bugfix) ResponseError: Unknown response status : `509`
-- (bugfix) custom headers from `--header` and `--raw-request` are no longer overwritten by generated defaults
-- (bugfix) `--accept-cookies` now forwards only valid `name=value` cookie pairs from `Set-Cookie`
-- (bugfix) cookie attributes such as `Path`, `HttpOnly`, `Secure`, `SameSite`, `Expires`, and `Max-Age` are no longer routed as request cookies
-- (tests) added regression coverage for browser-like headers, custom header preservation and cookie routing
+- (enhancement) add CSV report plugin (`--reports csv`)
 
 #### [Changelog](CHANGELOG.md) (last changes)
 
@@ -101,6 +87,7 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
     * console reports
     * JSON reports
     * TXT reports
+    * CSV reports
     * HTML reports
     * SQLITE reports
 - ✅ analyze techniques:
@@ -474,7 +461,7 @@ usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session
 | Response filters | `--exclude-regex EXCLUDE_REGEX` | Exclude responses whose body matches the given regex. Repeatable |
 | Response filters | `--min-response-length MIN_RESPONSE_LENGTH` | Keep only responses whose size is at least `N` bytes |
 | Response filters | `--max-response-length MAX_RESPONSE_LENGTH` | Keep only responses whose size is at most `N` bytes |
-| Reports tools | `--reports REPORTS` | Scan reports (`json,std,txt,html,sqlite`) |
+| Reports tools | `--reports REPORTS` | Scan reports (`json,std,txt,csv,html,sqlite`) |
 | Reports tools | `--reports-dir REPORTS_DIR` | Path to custom reports directory |
 | Request tools | `-p, --port PORT` | Custom port (default `80`) |
 | Request tools | `-m, --method METHOD` | Request method (`HEAD` by default) |

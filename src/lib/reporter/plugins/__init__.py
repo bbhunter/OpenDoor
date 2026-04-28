@@ -26,3 +26,5 @@ from .json import JsonReportPlugin as json
 from .html import HtmlReportPlugin as html
 # noinspection PyPep8Naming
 from .sqlite import SqliteReportPlugin as sqlite
+# noinspection PyPep8Naming
+from .csv import CsvReportPlugin as csv
