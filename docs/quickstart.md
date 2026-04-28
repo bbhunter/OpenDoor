@@ -1,10 +1,10 @@
-# Quickstart
+# 🚀 Quickstart
 
 This page shows the fastest way to install OpenDoor and run common scans.
 
 ---
 
-## Install
+## 📦 Install
 
 Recommended installation for most CLI users:
 
@@ -18,7 +18,7 @@ Alternative installation with pip:
 python3 -m pip install --upgrade opendoor
 ```
 
-On macOS, OpenDoor can also be installed with Homebrew after the formula is available:
+On macOS, OpenDoor can also be installed with Homebrew when the formula is available:
 
 ```shell
 brew install opendoor
@@ -33,7 +33,7 @@ opendoor --help
 
 ---
 
-## Run a basic directory scan
+## 🔎 Run a basic directory scan
 
 ```shell
 opendoor --host https://example.com
@@ -43,7 +43,7 @@ By default, OpenDoor runs a directory discovery scan using the built-in director
 
 ---
 
-## Scan subdomains
+## 🌍 Scan subdomains
 
 ```shell
 opendoor --host example.com --scan subdomains
@@ -53,7 +53,7 @@ Use a domain name for subdomain discovery.
 
 ---
 
-## Use a custom wordlist
+## 📚 Use a custom wordlist
 
 ```shell
 opendoor --host https://example.com --wordlist ./wordlist.txt
@@ -61,7 +61,7 @@ opendoor --host https://example.com --wordlist ./wordlist.txt
 
 ---
 
-## Scan multiple targets from a file
+## 🎯 Scan multiple targets from a file
 
 Create `targets.txt`:
 
@@ -79,7 +79,7 @@ opendoor --hostlist targets.txt
 
 ---
 
-## Read targets from stdin
+## 🔗 Read targets from stdin
 
 ```shell
 cat targets.txt | opendoor --stdin
@@ -89,7 +89,7 @@ This is useful for pipelines and automation.
 
 ---
 
-## Save reports
+## 📊 Save reports
 
 ```shell
 opendoor --host https://example.com --reports std,json,html --reports-dir ./reports
@@ -106,7 +106,7 @@ Common report formats:
 
 ---
 
-## Reduce false positives
+## 🧹 Reduce false positives
 
 Use response filters:
 
@@ -125,7 +125,7 @@ Auto-calibration helps classify soft-404, wildcard, and catch-all responses.
 
 ---
 
-## Detect technologies
+## 🧬 Detect technologies
 
 ```shell
 opendoor --host https://example.com --fingerprint
@@ -135,7 +135,7 @@ Fingerprinting attempts to identify probable CMS, frameworks, application stacks
 
 ---
 
-## Detect WAF behavior
+## 🛡️ Detect WAF behavior
 
 ```shell
 opendoor --host https://example.com --waf-detect
@@ -151,7 +151,9 @@ Safe mode is designed to reduce aggressive behavior after WAF or anti-bot signal
 
 ---
 
-## Resume interrupted scans
+## 🔁 Resume interrupted scans
+
+Save progress:
 
 ```shell
 opendoor --host https://example.com --session-save scan.session
@@ -165,7 +167,7 @@ opendoor --session-load scan.session
 
 ---
 
-## Use a proxy
+## 🌐 Use a proxy
 
 ```shell
 opendoor --host https://example.com --proxy socks5://127.0.0.1:9050
@@ -179,7 +181,7 @@ opendoor --host https://example.com --transport proxy --proxy socks5://127.0.0.1
 
 ---
 
-## Use OpenVPN transport
+## 🔐 Use OpenVPN transport
 
 ```shell
 opendoor \
@@ -200,7 +202,7 @@ opendoor \
 
 ---
 
-## Use WireGuard transport
+## 🧵 Use WireGuard transport
 
 ```shell
 opendoor \
@@ -213,7 +215,7 @@ Never commit real VPN private keys or credentials to the repository.
 
 ---
 
-## CI/CD example
+## 🧪 CI/CD example
 
 ```shell
 opendoor \
@@ -226,6 +228,6 @@ OpenDoor will complete the scan and return exit code `1` only if selected result
 
 ---
 
-## Next steps
+## ➡️ Next steps
 
 Read the full [Usage](Usage.md) page for all CLI options.

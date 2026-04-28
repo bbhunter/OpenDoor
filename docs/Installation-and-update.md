@@ -1,201 +1,315 @@
-Installation and update
-=======================
+# 📦 Installation and update
 
-OpenDoor is distributed as a standard Python package and can be installed in several ways depending on your use case.
+OpenDoor is distributed as a Python CLI application. It can be installed with Homebrew, pipx, pip, or run directly from a source checkout.
 
-#### Supported Python
-- Python 3.12
-- Python 3.13
-- Python 3.14
+For most users, the recommended installation methods are:
 
-#### PyPI installation
-Recommended if you want the package available as a normal Python CLI tool.
+| Environment | Recommended method |
+|---|---|
+| macOS | Homebrew |
+| General CLI usage | pipx |
+| Existing Python environment | pip |
+| Development | editable source install |
+| Package verification | source build |
 
-##### Linux / macOS
+---
+
+## 🍺 Homebrew
+
+Homebrew is the recommended installation method for macOS users when the formula is available.
+
 ```shell
-python3 -m pip install --upgrade opendoor
-opendoor --host http://www.example.com
+brew install opendoor
 ```
 
-##### Windows (PowerShell)
-```powershell
-winget install Python.Python.3.14
-py -m pip install --upgrade pip
-py -m pip install --upgrade opendoor
+Verify the installation:
 
-opendoor --host http://www.example.com
+```shell
+opendoor --version
+opendoor --help
 ```
 
-#### pipx installation
-Recommended for end users who want an isolated CLI installation.
+Update OpenDoor with Homebrew:
 
-##### macOS / Homebrew
 ```shell
-brew install pipx
-pipx ensurepath
+brew update
+brew upgrade opendoor
+```
+
+If you maintain or use a custom tap, installation may look like this:
+
+```shell
+brew install stanislav-web/opendoor/opendoor
+```
+
+---
+
+## 🧰 pipx
+
+`pipx` installs Python CLI applications into isolated environments and exposes their commands globally. This is the recommended method for most non-Homebrew CLI users.
+
+### Linux and macOS
+
+```shell
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
 pipx install opendoor
-
-opendoor --host http://www.example.com
 ```
 
-##### Linux / generic environments
-Install `pipx` using your system package manager or preferred Python tooling, then:
+Verify:
 
 ```shell
-pipx ensurepath
-pipx install opendoor
-
-opendoor --host http://www.example.com
+opendoor --version
 ```
 
-##### Windows (PowerShell)
-```powershell
-winget install Python.Python.3.14
-py -m pip install --user pipx
-py -m pipx ensurepath
+Update:
 
-# Reopen PowerShell after ensurepath
-pipx install opendoor
-
-opendoor --host http://www.example.com
-```
-
-#### Local run from repository
-Use this mode if you want to run OpenDoor directly from source without installing it globally.
-
-##### Linux / macOS
-```shell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor/
-python3 -m pip install -r requirements.txt
-chmod +x opendoor.py
-
-python3 opendoor.py --host http://www.example.com
-```
-
-##### Windows (PowerShell)
-```powershell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor
-py -m pip install -r requirements.txt
-
-py opendoor.py --host http://www.example.com
-```
-
-#### Local development installation
-Use this mode if you are developing, testing, or changing the project locally.
-
-##### Linux / macOS
-```shell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor/
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements-dev.txt
-python -m pip install -e .
-
-opendoor --host http://www.example.com
-```
-
-##### Windows (PowerShell)
-```powershell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements-dev.txt
-python -m pip install -e .
-
-opendoor --host http://www.example.com
-```
-
-#### Build from source
-Recommended for Linux distribution maintainers and release packaging.
-
-##### Linux / macOS
-```shell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor/
-python3 -m pip install --upgrade build
-python3 -m build
-```
-
-##### Windows (PowerShell)
-```powershell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor
-py -m pip install --upgrade build
-py -m build
-```
-
-Generated artifacts:
-
-```shell
-dist/opendoor-<version>.tar.gz
-dist/opendoor-<version>-py3-none-any.whl
-```
-
-#### Manual installation from a built wheel
-
-##### Linux / macOS
-```shell
-python3 -m pip install dist/opendoor-5.0.1-py3-none-any.whl
-opendoor --host http://www.example.com
-```
-
-##### Windows (PowerShell)
-```powershell
-py -m pip install dist/opendoor-5.0.1-py3-none-any.whl
-opendoor --host http://www.example.com
-```
-
-Update
-======
-
-#### Update a PyPI installation
-
-##### Linux / macOS
-```shell
-python3 -m pip install --upgrade opendoor
-```
-
-##### Windows (PowerShell)
-```powershell
-py -m pip install --upgrade opendoor
-```
-
-#### Update a pipx installation
 ```shell
 pipx upgrade opendoor
 ```
 
-#### Update a source checkout
+Uninstall:
 
-##### Linux / macOS
 ```shell
-git pull
-python3 -m pip install -e .
+pipx uninstall opendoor
 ```
 
-##### Windows (PowerShell)
+### Windows PowerShell
+
+Install Python first if it is not already available:
+
 ```powershell
-git pull
-py -m pip install -e .
+winget install Python.Python.3
 ```
 
-#### Built-in update command
-The built-in command does not modify the local source tree in place anymore.
-It now prints update instructions for modern package-based environments.
+Install pipx:
+
+```powershell
+py -m pip install --user pipx
+py -m pipx ensurepath
+```
+
+Reopen PowerShell, then install OpenDoor:
+
+```powershell
+pipx install opendoor
+opendoor --version
+```
+
+Update:
+
+```powershell
+pipx upgrade opendoor
+```
+
+---
+
+## 🐍 pip
+
+Use `pip` when you intentionally want OpenDoor installed into the current Python environment.
+
+### Linux and macOS
 
 ```shell
-opendoor --update
+python3 -m pip install --upgrade opendoor
+opendoor --version
 ```
 
-#### Notes for maintainers
-OpenDoor now follows a standard Python packaging flow:
-- `pyproject.toml` is present
-- `setup.py` remains compatible
-- source distributions and wheels are produced through `python -m build`
-- packaging is suitable for Linux distribution maintainers
+Update:
+
+```shell
+python3 -m pip install --upgrade opendoor
+```
+
+Uninstall:
+
+```shell
+python3 -m pip uninstall opendoor
+```
+
+### Windows PowerShell
+
+```powershell
+py -m pip install --upgrade pip
+py -m pip install --upgrade opendoor
+opendoor --version
+```
+
+Update:
+
+```powershell
+py -m pip install --upgrade opendoor
+```
+
+---
+
+## 🧾 Run from source
+
+Use this mode if you want to run OpenDoor directly from a source checkout without installing it as a package.
+
+### Linux and macOS
+
+```shell
+git clone https://github.com/stanislav-web/OpenDoor.git
+cd OpenDoor
+
+python3 -m pip install -r requirements.txt
+python3 opendoor.py --version
+python3 opendoor.py --host https://example.com
+```
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/stanislav-web/OpenDoor.git
+cd OpenDoor
+
+py -m pip install -r requirements.txt
+py opendoor.py --version
+py opendoor.py --host https://example.com
+```
+
+---
+
+## 🛠️ Development installation
+
+Use an editable installation when contributing to OpenDoor, running tests, or validating changes locally.
+
+### Linux and macOS
+
+```shell
+git clone https://github.com/stanislav-web/OpenDoor.git
+cd OpenDoor
+
+python3 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
+
+opendoor --version
+opendoor --help
+```
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/stanislav-web/OpenDoor.git
+cd OpenDoor
+
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
+
+opendoor --version
+opendoor --help
+```
+
+---
+
+## 🏗️ Build from source
+
+This flow is useful for maintainers, package builders, and release verification.
+
+```shell
+python3 -m pip install --upgrade build
+python3 -m build
+```
+
+Generated artifacts are written to:
+
+```text
+dist/
+```
+
+Install a locally built wheel:
+
+```shell
+python3 -m pip install dist/opendoor-*.whl
+```
+
+Install a locally built source archive:
+
+```shell
+python3 -m pip install dist/opendoor-*.tar.gz
+```
+
+Do not hardcode old wheel filenames in scripts or documentation. Use the generated artifact names from `dist/`.
+
+---
+
+## 🧪 Verify runtime assets
+
+A packaged OpenDoor installation should include the built-in configuration and dictionaries.
+
+Useful verification commands:
+
+```shell
+opendoor --version
+opendoor --help
+```
+
+For package maintainers, also verify that the installed package includes runtime assets such as:
+
+```text
+opendoor.conf
+data/directories.dat
+data/subdomains.dat
+data/useragents.dat
+data/proxies.dat
+data/ignored.dat
+```
+
+Transport profile examples are examples only. Never distribute real OpenVPN or WireGuard credentials, private keys, or production profiles.
+
+---
+
+## 🔄 Update strategy
+
+Use the same package manager that installed OpenDoor.
+
+| Installed with | Update command |
+|---|---|
+| Homebrew | `brew update && brew upgrade opendoor` |
+| pipx | `pipx upgrade opendoor` |
+| pip | `python3 -m pip install --upgrade opendoor` |
+| Source checkout | `git pull` and reinstall dependencies if needed |
+
+---
+
+## 🧯 Common issues
+
+### `mkdocs: command not found`
+
+This is relevant only when building documentation locally. Install documentation dependencies in a virtual environment:
+
+```shell
+python3 -m venv .docs-venv
+source .docs-venv/bin/activate
+python -m pip install -r docs/requirements.txt
+python -m mkdocs build --strict
+```
+
+### `externally-managed-environment`
+
+Some Python distributions, including Homebrew Python, prevent global `pip install` into the system environment.
+
+Use a virtual environment, pipx, or Homebrew instead of forcing installation into the system Python.
+
+Do not use `--break-system-packages` unless you fully understand the risk.
+
+### Command not found after installation
+
+Check that your package manager's binary directory is in `PATH`.
+
+For pipx:
+
+```shell
+python3 -m pipx ensurepath
+```
+
+Then reopen the terminal.

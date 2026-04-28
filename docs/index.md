@@ -2,29 +2,29 @@
 
 **OpenDoor** is an open-source CLI scanner for authorized web reconnaissance, directory discovery, and exposure assessment.
 
-It helps security researchers, penetration testers, bug bounty hunters, and developers identify exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets.
+It helps security researchers, penetration testers, bug bounty hunters, DevSecOps engineers, and developers identify exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets.
 
 OpenDoor supports single-target and batch scanning, custom wordlists, response filtering, recursive discovery, fingerprint detection, passive WAF detection, smart auto-calibration, resumable sessions, CI/CD fail-on rules, multiple report formats, and optional network transport profiles for proxy, OpenVPN, and WireGuard workflows.
 
-> OpenDoor must be used only on systems you own or have explicit permission to test.
+> Use OpenDoor only on systems you own or have explicit permission to test.
 
 ![OpenDoor](img/open-door.png)
 
 ---
 
-Supported Python versions:
+## 🚀 Start here
 
-| Python | Status |
+| Page | Purpose |
 |---|---|
-| 3.12 | Supported |
-| 3.13 | Supported |
-| 3.14 | Supported |
+| [Quickstart](quickstart.md) | Install OpenDoor and run common scans quickly. |
+| [Installation and update](Installation-and-update.md) | Install with Homebrew, pipx, pip, or from source. |
+| [Usage](Usage.md) | Full CLI usage and option reference. |
+| [Sniffers](Sniffers.md) | Built-in response analysis and false-positive reduction. |
+| [Wizard](Wizard.md) | Interactive configuration workflow. |
 
 ---
 
-## Key capabilities
-
-### Target input
+## 🎯 Target input
 
 OpenDoor can scan a single target, a target file, or targets from standard input.
 
@@ -34,14 +34,20 @@ opendoor --hostlist targets.txt
 cat targets.txt | opendoor --stdin
 ```
 
-### Directory and subdomain discovery
+This makes OpenDoor usable both as an interactive scanner and as a batch-oriented CLI tool for larger target sets.
+
+---
+
+## 🔎 Discovery
+
+OpenDoor supports directory discovery and subdomain discovery.
 
 ```shell
 opendoor --host https://example.com --scan directories
 opendoor --host example.com --scan subdomains
 ```
 
-### Custom wordlists and extensions
+You can use the built-in dictionaries or provide your own wordlists.
 
 ```shell
 opendoor --host https://example.com --wordlist ./paths.txt
@@ -49,7 +55,13 @@ opendoor --host https://example.com --extensions php,json,txt
 opendoor --host https://example.com --ignore-extensions aspx,jsp
 ```
 
-### Response filtering
+---
+
+## 🧹 Filtering and false-positive reduction
+
+Modern web applications often return noisy responses: soft-404 pages, wildcard routes, CDN error pages, login redirects, and synthetic success pages.
+
+OpenDoor provides several ways to reduce noise:
 
 ```shell
 opendoor --host https://example.com --include-status 200-299,301,302,403
@@ -58,24 +70,36 @@ opendoor --host https://example.com --exclude-size-range 0-256,1024-2048
 opendoor --host https://example.com --match-regex "admin|login|dashboard"
 ```
 
-### Smart auto-calibration
+---
 
-Auto-calibration helps reduce noise from soft-404, wildcard, and catch-all responses.
+## 🧠 Auto-calibration
+
+Auto-calibration helps classify soft-404, wildcard, and catch-all responses before the main scan produces noisy results.
 
 ```shell
 opendoor --host https://example.com --auto-calibrate
 opendoor --host https://example.com --auto-calibrate --calibration-samples 8 --calibration-threshold 0.85
 ```
 
-### Fingerprint detection
+Use it when the target returns similar pages for valid and invalid paths.
+
+---
+
+## 🧬 Fingerprint detection
+
+OpenDoor can identify probable application stacks, CMS platforms, frameworks, static-site tooling, and infrastructure providers.
 
 ```shell
 opendoor --host https://example.com --fingerprint
 ```
 
-OpenDoor can identify probable application stacks, CMS platforms, frameworks, site builders, static-site tooling, and infrastructure providers.
+Fingerprinting is useful for understanding what kind of system you are scanning before deeper testing.
 
-### WAF detection and safe mode
+---
+
+## 🛡️ WAF detection and safe mode
+
+OpenDoor can passively detect probable WAF or anti-bot behavior.
 
 ```shell
 opendoor --host https://example.com --waf-detect
@@ -84,16 +108,24 @@ opendoor --host https://example.com --waf-safe-mode
 
 Safe mode enables a more cautious runtime profile after probable WAF or anti-bot behavior is detected.
 
-### Resumable sessions
+---
+
+## 🔁 Resumable sessions
+
+Long-running scans can be saved and resumed later.
 
 ```shell
 opendoor --host https://example.com --session-save scan.session
 opendoor --session-load scan.session
 ```
 
-Sessions allow long scans to be resumed after interruption.
+Sessions are useful for large wordlists, unstable networks, batch scans, and transport-based workflows.
 
-### Network transport profiles
+---
+
+## 🌐 Network transports
+
+OpenDoor supports direct, proxy, OpenVPN, and WireGuard transport modes.
 
 ```shell
 opendoor --host https://example.com --transport direct
@@ -102,16 +134,18 @@ opendoor --host https://example.com --transport openvpn --transport-profile ./pr
 opendoor --host https://example.com --transport wireguard --transport-profile ./profile.conf
 ```
 
-OpenDoor supports direct, proxy, OpenVPN, and WireGuard transport modes.
+Transport profiles are local runtime files. Never commit real VPN private keys, OpenVPN credentials, or production profiles to a public repository.
 
-### Reports
+---
+
+## 📊 Reports
+
+OpenDoor can write results in multiple formats.
 
 ```shell
 opendoor --host https://example.com --reports std,json,html
 opendoor --host https://example.com --reports json,sqlite --reports-dir ./reports
 ```
-
-Supported report formats include:
 
 | Format | Purpose |
 |---|---|
@@ -122,30 +156,22 @@ Supported report formats include:
 | `html` | Human-readable report |
 | `sqlite` | Structured local database for post-processing |
 
-### CI/CD fail-on rules
+---
+
+## 🧪 CI/CD fail-on rules
+
+OpenDoor can be used as a pipeline gate.
 
 ```shell
 opendoor --host https://example.com --fail-on-bucket success,auth,forbidden
 ```
 
-This allows OpenDoor to return exit code `1` only when selected result buckets are found.
+This allows OpenDoor to complete the scan and return exit code `1` only when selected result buckets are found.
 
 ---
 
-## Recommended reading
-
-Start here:
-
-1. [Quickstart](quickstart.md)
-2. [Installation and update](Installation-and-update.md)
-3. [Usage](Usage.md)
-4. [Sniffers](Sniffers.md)
-5. [Wizard](Wizard.md)
-
----
-
-## Responsible use
+## ⚖️ Responsible use
 
 OpenDoor is a security testing tool. Use it only against systems where you have authorization.
 
-Do not use OpenDoor to scan third-party infrastructure, commercial systems, public services, or organizations without explicit permission.
+Do not use OpenDoor to scan third-party infrastructure, public services, organizations, or commercial systems without explicit permission.
