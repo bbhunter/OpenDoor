@@ -1,7 +1,16 @@
-OWASP WEB Directory Scanner [![Twitter](https://img.shields.io/twitter/url/https/github.com/stanislav-web/OpenDoor.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https://github.com/stanislav-web/OpenDoor)
-===============================================================================================================================================================================================================================
+# OpenDoor — OWASP Web Directory Scanner
 
-![OpenDoor OWASP](https://raw.githubusercontent.com/stanislav-web/OpenDoor/master/logo.png)
+![OpenDoor](https://raw.githubusercontent.com/stanislav-web/OpenDoor/master/logo.png)
+
+**OpenDoor** is an open-source CLI scanner for authorized web reconnaissance, directory discovery, subdomain enumeration, fingerprint detection, WAF detection, response filtering, reporting, and transport-based scanning workflows.
+
+It helps security researchers, penetration testers, bug bounty hunters, DevSecOps engineers, and developers identify exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets.
+
+> Use OpenDoor only on systems you own or have explicit permission to test.
+
+---
+
+## ✅ CI status
 
 | Python | Linux | macOS | Windows |
 |---|---|---|---|
@@ -9,578 +18,296 @@ OWASP WEB Directory Scanner [![Twitter](https://img.shields.io/twitter/url/https
 | 3.13 | [![CI Linux Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py313.yml) | [![CI macOS Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py313.yml) | [![CI Windows Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py313.yml) |
 | 3.14 | [![CI Linux Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py314.yml) | [![CI macOS Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py314.yml) | [![CI Windows Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py314.yml) |
 
-**OpenDoor** is an open-source CLI scanner for web reconnaissance, directory discovery, and exposure assessment.
-It detects exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets using built-in or custom wordlists. OpenDoor is built for authorized security testing and supports flexible scan configuration, proxy-based traffic routing, reporting, filtering, and fingerprint detection.
-The project is released under the GPL license, maintained by the community, and available in [BlackArch Linux](https://blackarch.org/webapp.html).
-
-[![Contributors](https://img.shields.io/github/contributors/stanislav-web/Opendoor)](https://github.com/stanislav-web/OpenDoor/graphs/contributors)
-[![PyPI - Version](https://img.shields.io/pypi/v/opendoor)](https://pypi.org/project/opendoor/)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%20%2B-green.svg)](https://www.python.org/) [![codecov](https://codecov.io/github/stanislav-web/OpenDoor/graph/badge.svg?token=dyBxutYBso)](https://codecov.io/github/stanislav-web/OpenDoor)
-
 [![Documentation Status](https://app.readthedocs.org/projects/opendoor/badge/?version=latest)](https://opendoor.readthedocs.io/en/latest/)
+[![PyPI - Version](https://img.shields.io/pypi/v/opendoor)](https://pypi.org/project/opendoor/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-green.svg)](https://www.python.org/)
+[![codecov](https://codecov.io/github/stanislav-web/OpenDoor/graph/badge.svg?token=dyBxutYBso)](https://codecov.io/github/stanislav-web/OpenDoor)
 [![Codacy Security Scan](https://github.com/stanislav-web/OpenDoor/actions/workflows/codacy.yml/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/codacy.yml)
 [![Dependency Review](https://github.com/stanislav-web/OpenDoor/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/dependency-review.yml)
 [![CodeQL](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-* *Built-in dictionaries*
-    - Directories: 114803
-    - Subdomains: 1507134
+---
 
-##### v5.12.0 (28.04.2026)
+## 🚀 Quick links
 
-- (feature) added Network Transport Profiles via `--transport`
-- (feature) added common transport profile interface via `--transport-profile`
-- (feature) added transport profile list support via `--transport-profiles`
-- (feature) added sequential per-target VPN rotation via `--transport-rotate per-target`
-- (feature) added OpenVPN transport support through `openvpn --config`
-- (feature) added optional OpenVPN `auth-user-pass` support via `--openvpn-auth`
-- (feature) added WireGuard transport support through `wg-quick up/down`
-- (feature) added OS-level VPN tunnel routing for scan traffic
-- (enhancement) existing HTTP/SOCKS proxy mode remains backward-compatible
-- (enhancement) VPN transports can be combined with existing proxy and proxy-list workflows
-- (enhancement) tunnel mode starts before `ping`, `fingerprint`, `auto-calibrate`, `scan` and `done`
-- (enhancement) transport cleanup is guaranteed through `try/finally` on normal completion and scan errors
-- (enhancement) multi-target scans can use one shared transport session when rotation is disabled
-- (enhancement) per-target rotation runs targets sequentially to avoid unsafe parallel VPN route switching
-- (enhancement) wizard and session resume flows preserve explicit transport CLI overrides
-- (enhancement) added terminal notifications for transport start and stop events
-- (enhancement) added transport options to `opendoor.conf`
-- (enhancement) added `direct`, `proxy`, `openvpn`, and `wireguard` transport validation
-- (enhancement) added mocked process runner for safe CI coverage without real VPN dependencies
-- (tests) added unittest coverage for transport options, validation, adapters and process lifecycle
-- (tests) added controller regression coverage for transport start/stop, scan failure cleanup and per-target rotation
-- (tests) added filter regression coverage for transport/session/wizard option handling
-- (tests) full unittest suite passes after integration (`1082` tests)
-- (tests) coverage gate raised and passes at `99%`
+- [Documentation](https://opendoor.readthedocs.io/)
+- [Quickstart](https://opendoor.readthedocs.io/en/latest/quickstart/)
+- [Installation and update](https://opendoor.readthedocs.io/en/latest/Installation-and-update/)
+- [Usage guide](https://opendoor.readthedocs.io/en/latest/Usage/)
+- [Practical examples](https://opendoor.readthedocs.io/en/latest/examples/basic-scans/)
+- [Changelog](CHANGELOG.md)
+- [PyPI package](https://pypi.org/project/opendoor/)
+- [Issues](https://github.com/stanislav-web/OpenDoor/issues)
 
-#### [Changelog](CHANGELOG.md) (last changes)
+---
 
-#### FEATURES LIST
+## ✨ Features
 
-- ✅ directories scanner
-- ✅ recursive directory scanner
-- ✅ subdomains scanner
-- ✅ target input sources
-    * single target via `--host`
-    * multi-target file via `--hostlist`
-    * standard input via `--stdin`
-- ✅ CI/CD pipeline controls
-    * optional fail-on result buckets via `--fail-on-bucket`
-    * supports buckets such as `success`, `auth`, `forbidden`, `blocked`
-    * returns exit code `1` only when configured fail-on buckets are found
-    * keeps default scan exit behaviour unchanged without fail-on rules
-    * scans all targets before returning the final CI/CD exit code
-- ✅ smart auto-calibration
-    * opt-in baseline filtering via `--auto-calibrate`
-    * configurable random probes via `--calibration-samples`
-    * configurable match strictness via `--calibration-threshold`
-    * filters soft-404, wildcard and catch-all responses into the `calibrated` bucket
-    * uses normalized body hash, HTML skeleton hash, title, redirect target, stable headers, size, word count and line count
-    * normalizes dynamic tokens such as UUIDs, timestamps, long numeric IDs, nonce and CSRF-like values
-    * stores calibration score and reason in detailed report items
-    * persists calibration baseline in session checkpoints
-    * stays compatible with CI/CD fail-on rules
-- ✅ technology fingerprinting
-    * heuristic application stack detection via `--fingerprint`
-    * identify probable CMS, ecommerce platforms, frameworks, site builders, and static-site tooling
-    * detect infrastructure providers such as AWS, Cloudflare, Vercel, Netlify, GitHub Pages, GitLab Pages, Heroku, Azure, Google Cloud, Fastly, Akamai, and OpenResty
-    * print application and infrastructure confidence in the standard report
-- ✅ WAF detection and safe mode
-    * passive WAF / anti-bot recognition via `--waf-detect`
-    * detect probable vendors such as Anubis, Cloudflare, Sucuri, Akamai, Imperva, Distil, F5 BIG-IP ASM, AWS WAF, Azure Front Door, Fastly, ModSecurity, DataDome, PerimeterX / HUMAN, Kasada, Barracuda, Radware, FortiWeb, Reblaze, NetScaler / Citrix WAF, AppTrana, and Huawei Cloud WAF
-    * cautious runtime profile via `--waf-safe-mode`
-    * safe mode automatically enables `--waf-detect`
-    * serialize requests and apply cooldown after first WAF detection
-    * adaptively increase cooldown for blocked and challenge responses
-    * suspend recursive expansion for blocked responses while safe mode is active
-    * persist WAF safe mode state and adaptive cooldown recovery state in session checkpoints
-- ✅ session control
-    * runtime pause / resume session
-    * persistent scan sessions
-    * checkpoint autosave
-    * session snapshot validation
-    * atomic session writes
-    * restore flow
-- ✅ HTTP(S) (PORT) support
-- ✅ Keep-alive long pooling
-- ✅ Invalid certificates scan
-- ✅ HTTP(S)/SOCKS proxies
-- ✅ dynamic request headers
-    * custom request headers support
-    * custom request cookies support
-    * cookies forwarding from responses
-    * custom or randomized user-agent support
-- ✅ network transport profiles
-    * OS-level transport selection via `--transport direct|proxy|openvpn|wireguard`
-    * OpenVPN tunnel support via `--transport openvpn --transport-profile profile.ovpn`
-    * WireGuard tunnel support via `--transport wireguard --transport-profile profile.conf`
-    * sequential per-target VPN rotation via `--transport-profiles` and `--transport-rotate per-target`
-    * optional OpenVPN auth-user-pass file via `--openvpn-auth`
-    * safe transport cleanup after scan completion or scan errors
-    * compatible with `--fingerprint`, `--auto-calibrate`, `--waf-safe-mode`, reports and CI/CD fail-on rules
-    * VPN tunnel mode can be layered with existing `--proxy`, `--tor`, and `--torlist` workflows
-- ✅ custom wordlists prefixes
-- ✅ custom wordlists, proxies, ignore lists
-- ✅ debug levels (1-3)
-    * silent mode
-    * info
-    * raw mode
-- ✅ extensions filters
-- ✅ custom config wizard (use random techniques)
-- ✅ scans reporting
-    * console reports
-    * json reports
-    * txt reports
-    * csv reports
-    * html reports
-    * sqlite reports
-- ✅ analyze techniques:
-    * detect redirects
-    * detect index of/ Apache
-    * detect large files
-    * skip 200 OK redirects
-    * skip empty pages
-    * cookie routing (reusing cookies)
-    * heuristic detect invalid pages (false 404)
-    * blank success page filter
-    * certificate required pages
-- ✅ randomization techniques:
-    * random user-agent per request
-    * random proxy per request
-    * wordlists shuffling
-    * wordlists filters
-- ✅ response filters
-    * include/exclude HTTP status codes
-    * HTTP status ranges, e.g. `200-299,301,302,403`
-    * exclude exact response sizes
-    * exclude inclusive response size ranges
-    * match or exclude body text fragments
-    * match or exclude body regex patterns
-    * min/max response length filters
-    * automatic `HEAD` -> `GET` override for body-required filters
-- ✅ raw-request templates
-    * load raw HTTP requests via `--raw-request request.txt`
-    * resolve relative request lines with `--scheme http|https`
-    * parse method, host, port, headers, cookies, and request body
-    * derive prefix automatically from raw request path
-    * allow CLI host/header/cookie/method/prefix overrides on top of the template
+- directory discovery;
+- recursive directory discovery;
+- subdomain enumeration;
+- single target, target file, and stdin input modes;
+- custom wordlists, prefixes, and extension filters;
+- custom request headers, cookies, and raw HTTP request templates;
+- response filters by status, size, text, regex, and body length;
+- smart auto-calibration for soft-404, wildcard, and catch-all responses;
+- technology fingerprint detection;
+- passive WAF detection and WAF-safe scan mode;
+- resumable scan sessions with checkpoint autosave;
+- CI/CD fail-on result bucket rules;
+- reports in terminal, text, JSON, HTML, and SQLite formats;
+- proxy, OpenVPN, and WireGuard transport profiles;
+- sequential per-target transport rotation for batch workflows;
+- configuration wizard for repeatable scan profiles.
 
-#### Install PIP
+---
+
+## 📦 Installation
+
+### pipx
+
+Recommended for most CLI users:
+
 ```bash
-python3 -m ensurepip --upgrade
-python3 -m pip install --upgrade pip
+pipx install opendoor
 ```
 
-#### Global installation from PyPI
-Use this if you want the package available as a normal Python CLI tool.
+### pip
 
-##### Linux / macOS
 ```bash
 python3 -m pip install --upgrade opendoor
-opendoor --host http://www.example.com
 ```
 
-##### Windows (PowerShell)
-```powershell
-winget install Python.Python.3.14
-py -m pip install --upgrade pip
-py -m pip install --upgrade opendoor
+### Homebrew
 
-opendoor --host http://www.example.com
-```
-
-#### Global installation with pipx (recommended for end users)
-
-##### macOS / Homebrew
-```bash
-brew install pipx
-pipx ensurepath
-pipx install opendoor
-
-opendoor --host http://www.example.com
-```
-
-##### Linux / generic environments
-Install `pipx` with your system package manager or preferred Python tooling, then:
+When the Homebrew formula is available:
 
 ```bash
-pipx ensurepath
-pipx install opendoor
-
-opendoor --host http://www.example.com
+brew install opendoor
 ```
 
-##### Windows (PowerShell)
-```powershell
-winget install Python.Python.3.14
-py -m pip install --user pipx
-py -m pipx ensurepath
+### From source
 
-# Reopen PowerShell after ensurepath
-pipx install opendoor
-
-opendoor --host http://www.example.com
-```
-
-`pipx` is the preferred option when you want an isolated CLI installation without managing a project virtual environment manually.
-
-#### Local installation and run
-Use this mode if you want to run OpenDoor directly from the repository without installing it globally.
-
-##### Linux / macOS
 ```bash
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor/
-python3 -m pip install -r requirements.txt
-chmod +x opendoor.py
-
-python3 opendoor.py --host http://www.example.com
-```
-
-##### Windows (PowerShell)
-```powershell
 git clone https://github.com/stanislav-web/OpenDoor.git
 cd OpenDoor
-py -m pip install -r requirements.txt
 
-py opendoor.py --host http://www.example.com
+python3 -m pip install -r requirements.txt
+python3 opendoor.py --help
 ```
 
-#### Local development installation
-Use this mode if you are developing, testing, or changing the project locally.
+See the full [installation guide](https://opendoor.readthedocs.io/en/latest/Installation-and-update/).
 
-##### Linux / macOS
+---
+
+## 🚀 Quick usage
+
+### Basic directory scan
+
 ```bash
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor/
+opendoor --host https://example.com
+```
+
+### Subdomain scan
+
+```bash
+opendoor --host example.com --scan subdomains
+```
+
+### Target list
+
+```bash
+opendoor --hostlist targets.txt
+```
+
+### Standard input
+
+```bash
+cat targets.txt | opendoor --stdin
+```
+
+### Low-noise scan
+
+```bash
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --auto-calibrate \
+  --include-status 200-299,301,302,403 \
+  --exclude-status 404,429,500-599 \
+  --exclude-size-range 0-256 \
+  --sniff skipempty,collation,indexof,file \
+  --reports std,json
+```
+
+### Authenticated scan from raw request
+
+```bash
+opendoor \
+  --raw-request request.txt \
+  --scheme https \
+  --method GET \
+  --auto-calibrate \
+  --reports json,html
+```
+
+### WAF-safe scan
+
+```bash
+opendoor \
+  --host https://example.com \
+  --waf-safe-mode \
+  --timeout 60 \
+  --retries 5 \
+  --delay 0.5
+```
+
+### OpenVPN transport
+
+```bash
+opendoor \
+  --host https://example.com \
+  --transport openvpn \
+  --transport-profile ./profile.ovpn
+```
+
+### WireGuard transport
+
+```bash
+opendoor \
+  --host https://example.com \
+  --transport wireguard \
+  --transport-profile ./profile.conf
+```
+
+More examples:
+
+- [Basic scans](https://opendoor.readthedocs.io/en/latest/examples/basic-scans/)
+- [Batch scans](https://opendoor.readthedocs.io/en/latest/examples/batch-scans/)
+- [Authenticated scans](https://opendoor.readthedocs.io/en/latest/examples/authenticated-scans/)
+- [WAF-safe scans](https://opendoor.readthedocs.io/en/latest/examples/waf-safe-scans/)
+- [VPN transport scans](https://opendoor.readthedocs.io/en/latest/examples/vpn-transport-scans/)
+- [CI/CD examples](https://opendoor.readthedocs.io/en/latest/examples/ci-cd/)
+
+---
+
+## 📚 Documentation
+
+The full documentation is available on ReadTheDocs:
+
+- [Home](https://opendoor.readthedocs.io/)
+- [Quickstart](https://opendoor.readthedocs.io/en/latest/quickstart/)
+- [Installation and update](https://opendoor.readthedocs.io/en/latest/Installation-and-update/)
+- [Usage guide](https://opendoor.readthedocs.io/en/latest/Usage/)
+- [Target input](https://opendoor.readthedocs.io/en/latest/concepts/target-input/)
+- [Reports](https://opendoor.readthedocs.io/en/latest/concepts/reports/)
+- [Fingerprinting](https://opendoor.readthedocs.io/en/latest/detection/fingerprinting/)
+- [WAF detection and safe mode](https://opendoor.readthedocs.io/en/latest/detection/waf-detection/)
+- [Auto-calibration](https://opendoor.readthedocs.io/en/latest/detection/auto-calibration/)
+- [Network transports](https://opendoor.readthedocs.io/en/latest/transports/overview/)
+- [OpenVPN transport](https://opendoor.readthedocs.io/en/latest/transports/openvpn/)
+- [WireGuard transport](https://opendoor.readthedocs.io/en/latest/transports/wireguard/)
+- [Practical examples](https://opendoor.readthedocs.io/en/latest/examples/basic-scans/)
+- [Testing](https://opendoor.readthedocs.io/en/latest/Testing/)
+- [Contribution](https://opendoor.readthedocs.io/en/latest/Contribution/)
+
+---
+
+## 🧪 Development
+
+Install development dependencies:
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
+
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements-dev.txt
 python -m pip install -e .
-
-opendoor --host http://www.example.com
 ```
 
-##### Windows (PowerShell)
-```powershell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements-dev.txt
-python -m pip install -e .
-
-opendoor --host http://www.example.com
-```
-
-#### Installation from source for OS distributions / maintainers
-This flow is intended for Linux distributions, package maintainers, and release pipelines.
-
-##### Linux / macOS
-```bash
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor/
-python3 -m pip install --upgrade build
-python3 -m build
-```
-
-##### Windows (PowerShell)
-```powershell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor
-py -m pip install --upgrade build
-py -m build
-```
-
-This flow is preferable for Linux distributions and package maintainers because:
-- source package and wheel are generated through the standard Python build backend
-- installation can be managed by the distribution package manager
-- updates can be delivered together with OS package updates
-- no legacy `setup.py install` flow is required
-
-The package is already present in BlackArch Linux, and this build layout is intended to make packaging for other Linux distributions easier as well.
-
-##### PyPI installation
-
-Linux / macOS:
-```bash
-python3 -m pip install --upgrade opendoor
-```
-
-Windows:
-```powershell
-py -m pip install --upgrade opendoor
-```
-
-##### pipx installation
-```bash
-pipx upgrade opendoor
-```
-
-##### Source checkout
-
-Linux / macOS:
-```bash
-git pull
-python3 -m pip install -e .
-```
-
-Windows:
-```powershell
-git pull
-py -m pip install -e .
-```
-
-#### Recognized systems by the heuristic fingerprint engine
-This is summarizing the platform families currently recognized by the heuristic fingerprint engine.
-
-##### CMS (27)
-
-- Bitrix
-- Bludit
-- Bolt CMS
-- Concrete CMS
-- Contao
-- Craft CMS
-- Directus
-- Discourse
-- Drupal
-- Ghost
-- GravCMS
-- Joomla
-- Matomo
-- MediaWiki
-- Open Journal Systems
-- MODX
-- Moodle
-- Neos
-- Nextcloud
-- OctoberCMS
-- ownCloud
-- phpBB
-- phpMyAdmin
-- Pimcore
-- TYPO3
-- Umbraco
-- WordPress
-
-##### E-commerce (7)
-
-- Magento
-- nopCommerce
-- OpenCart
-- PrestaShop
-- Shopify
-- Shopware
-- WooCommerce
-
-##### Frameworks / app platforms (24)
-
-- Angular
-- ASP.NET
-- Astro
-- Django
-- Express
-- FastAPI
-- Fastify
-- Flask
-- Gatsby
-- Hapi
-- Koa
-- Laravel
-- NestJS
-- Next.js
-- Nuxt
-- Phoenix
-- React
-- Remix
-- Ruby on Rails
-- Spring
-- Strapi
-- SvelteKit
-- Symfony
-- Vue
-
-##### Site builders (4)
-
-- Squarespace
-- Tilda
-- Webflow
-- Wix
-
-##### Static / docs generators (5)
-
-- Docusaurus
-- Hugo
-- Jekyll
-- MkDocs
-- VitePress
-
-##### Infrastructure providers / hosting edge signals (21)
-
-- AWS
-- AWS API Gateway
-- AWS Amplify
-- AWS CloudFront
-- AWS ELB / ALB
-- AWS S3
-- Akamai
-- Cloudflare
-- Fastly
-- GitHub Pages
-- GitLab Pages
-- Google App Engine
-- Google Cloud
-- Google Cloud / Google Frontend
-- Google Cloud Run
-- Heroku
-- Microsoft Azure
-- Microsoft Azure App Service
-- Netlify
-- OpenResty
-- Vercel
-
-##### WAF / anti-bot / edge protection systems (21)
-
-- Akamai
-- Anubis
-- AppTrana
-- AWS WAF
-- Azure Front Door
-- Barracuda
-- Cloudflare
-- DataDome
-- Distil
-- F5 BIG-IP ASM
-- Fastly
-- FortiWeb
-- Huawei Cloud WAF
-- Imperva
-- Kasada
-- ModSecurity
-- NetScaler / Citrix WAF
-- PerimeterX / HUMAN
-- Radware
-- Reblaze
-- Sucuri
-
-#### Help
-
-##### Usage
+Run tests:
 
 ```bash
-usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session-load SESSION_LOAD] [-p PORT] [-m METHOD] [--scheme SCHEME] [--raw-request RAW_REQUEST] [--session-save SESSION_SAVE]
-                   [--session-autosave-sec SESSION_AUTOSAVE_SEC] [--session-autosave-items SESSION_AUTOSAVE_ITEMS] [-t THREADS] [-d DELAY] [--timeout TIMEOUT] [-r RETRIES] [--keep-alive] [--header HEADER]
-                   [--cookie COOKIE] [--accept-cookies] [--fingerprint] [--waf-detect] [--waf-safe-mode] [--debug DEBUG] [--tor] [--torlist TORLIST] [--proxy PROXY]
-                   [--transport TRANSPORT] [--transport-profile TRANSPORT_PROFILE] [--transport-profiles TRANSPORT_PROFILES] [--transport-rotate TRANSPORT_ROTATE] [--transport-timeout TRANSPORT_TIMEOUT]
-                   [--transport-healthcheck-url TRANSPORT_HEALTHCHECK_URL] [--openvpn-auth OPENVPN_AUTH] [-s SCAN] [-w WORDLIST] [--fail-on-bucket FAIL_ON_BUCKET] [--auto-calibrate]
-                   [--calibration-samples CALIBRATION_SAMPLES] [--calibration-threshold CALIBRATION_THRESHOLD] [--reports REPORTS] [--reports-dir REPORTS_DIR] [--random-agent] [--random-list]
-                   [--prefix PREFIX] [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive] [--recursive-depth RECURSIVE_DEPTH] [--recursive-status RECURSIVE_STATUS]
-                   [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF] [--include-status INCLUDE_STATUS] [--exclude-status EXCLUDE_STATUS] [--exclude-size EXCLUDE_SIZE]
-                   [--exclude-size-range EXCLUDE_SIZE_RANGE] [--match-text MATCH_TEXT] [--exclude-text EXCLUDE_TEXT] [--match-regex MATCH_REGEX] [--exclude-regex EXCLUDE_REGEX]
-                   [--min-response-length MIN_RESPONSE_LENGTH] [--max-response-length MAX_RESPONSE_LENGTH] [--update] [--version] [--examples] [--docs] [--wizard [WIZARD]]
+python -m unittest
 ```
 
-##### Options
+Run coverage:
 
-| Group | Option | Description |
-|---|---|---|
-| General | `-h, --help` | show this help message and exit |
-| Required named options | `--host HOST` | Target host; example: `--host http://example.com` |
-| Required named options | `--hostlist HOSTLIST` | Path to file with targets, one per line |
-| Required named options | `--stdin` | Read targets from STDIN, one per line |
-| Required named options | `--session-load SESSION_LOAD` | Resume a scan from a saved session file |
-| Application tools | `--update` | Show package update instructions |
-| Application tools | `--version` | Show current version |
-| Application tools | `--examples` | Show usage examples |
-| Application tools | `--docs` | Open documentation |
-| Application tools | `--wizard [WIZARD]` | Run scanner wizard from your config |
-| Debug tools | `--debug DEBUG` | Debug level `-1` (silent), `1 - 3` |
-| CI/CD tools | `--fail-on-bucket FAIL_ON_BUCKET` | Exit with code `1` when selected result buckets are found, e.g. `success,auth,forbidden,blocked` |
-| Auto-calibration tools | `--auto-calibrate` | Enable smart baseline filtering for soft-404, wildcard and catch-all responses |
-| Auto-calibration tools | `--calibration-samples CALIBRATION_SAMPLES` | Number of random calibration probes before scan |
-| Auto-calibration tools | `--calibration-threshold CALIBRATION_THRESHOLD` | Auto-calibration match threshold from `0.01` to `1.0` |
-| Response filters | `--include-status INCLUDE_STATUS` | Include only response codes, e.g. `200-299,301,302,403` |
-| Response filters | `--exclude-status EXCLUDE_STATUS` | Exclude response codes, e.g. `404,429,500-599` |
-| Response filters | `--exclude-size EXCLUDE_SIZE` | Exclude exact response sizes in bytes, e.g. `0,1234` |
-| Response filters | `--exclude-size-range EXCLUDE_SIZE_RANGE` | Exclude response size ranges in bytes, e.g. `0-256,1024-2048` |
-| Response filters | `--match-text MATCH_TEXT` | Keep only responses whose body contains the given text. Repeatable |
-| Response filters | `--exclude-text EXCLUDE_TEXT` | Exclude responses whose body contains the given text. Repeatable |
-| Response filters | `--match-regex MATCH_REGEX` | Keep only responses whose body matches the given regex. Repeatable |
-| Response filters | `--exclude-regex EXCLUDE_REGEX` | Exclude responses whose body matches the given regex. Repeatable |
-| Response filters | `--min-response-length MIN_RESPONSE_LENGTH` | Keep only responses whose size is at least `N` bytes |
-| Response filters | `--max-response-length MAX_RESPONSE_LENGTH` | Keep only responses whose size is at most `N` bytes |
-| Reports tools | `--reports REPORTS` | Scan reports (`json,std,txt,csv,html,sqlite`) |
-| Reports tools | `--reports-dir REPORTS_DIR` | Path to custom reports directory |
-| Request tools | `-p, --port PORT` | Custom port (default `80`) |
-| Request tools | `-m, --method METHOD` | Request method (`HEAD` by default) |
-| Request tools | `--scheme SCHEME` | Raw-request scheme when request line uses a relative path (`http` or `https`) |
-| Request tools | `--raw-request RAW_REQUEST` | Path to raw HTTP request file exported from a proxy or repeater |
-| Request tools | `-d, --delay DELAY` | Delay between threaded requests |
-| Request tools | `--timeout TIMEOUT` | Request timeout (`30` sec default) |
-| Request tools | `-r, --retries RETRIES` | Maximum reconnect retries (default `3`) |
-| Request tools | `--keep-alive` | Use keep-alive connection |
-| Request tools | `--header HEADER` | Add custom request header, e.g. `--header 'X-Test: 1'` |
-| Request tools | `--cookie COOKIE` | Add custom cookie, e.g. `--cookie 'sid=abc123'` |
-| Request tools | `--accept-cookies` | Accept and route cookies from responses |
-| Request tools | `--fingerprint` | Detect probable CMS, framework or custom stack before the scan |
-| Request tools | `--waf-detect` | Passively detect probable WAF or anti-bot protections before classifying a response |
-| Request tools | `--waf-safe-mode` | Automatically switch to a cautious scan profile after WAF detection |
-| Request tools | `--tor` | Use built-in proxy list |
-| Request tools | `--torlist TORLIST` | Path to custom proxy list |
-| Request tools | `--proxy PROXY` | Custom permanent proxy server |
-| Request tools | `--random-agent` | Randomize user-agent per request |
-| Network transport tools | `--transport TRANSPORT` | Network transport mode: `direct`, `proxy`, `openvpn`, `wireguard` |
-| Network transport tools | `--transport-profile TRANSPORT_PROFILE` | Single transport profile path. OpenVPN uses `*.ovpn`, WireGuard uses `*.conf` |
-| Network transport tools | `--transport-profiles TRANSPORT_PROFILES` | Text file with transport profile paths, one per line |
-| Network transport tools | `--transport-rotate TRANSPORT_ROTATE` | Transport rotation mode: `none` or `per-target` |
-| Network transport tools | `--transport-timeout TRANSPORT_TIMEOUT` | Seconds to wait for transport commands |
-| Network transport tools | `--transport-healthcheck-url TRANSPORT_HEALTHCHECK_URL` | Reserved optional URL for transport connectivity checks |
-| Network transport tools | `--openvpn-auth OPENVPN_AUTH` | Optional auth-user-pass file for OpenVPN transport only |
-| Session tools | `--session-save SESSION_SAVE` | Persist scan state to a checkpoint file |
-| Session tools | `--session-autosave-sec SESSION_AUTOSAVE_SEC` | Autosave session checkpoint every `N` seconds (default `20`) |
-| Session tools | `--session-autosave-items SESSION_AUTOSAVE_ITEMS` | Autosave session checkpoint after `N` processed items (default `200`) |
-| Sniff tools | `--sniff SNIFF` | Response sniff plugins (`indexof,collation,file,skipempty,skipsizes=NUM:NUM...`) |
-| Stream tools | `-t, --threads THREADS` | Allowed threads |
-| Wordlist tools | `-s, --scan SCAN` | Scan type: `directories` or `subdomains` |
-| Wordlist tools | `-w, --wordlist WORDLIST` | Path to custom wordlist |
-| Wordlist tools | `--random-list` | Shuffle scan list |
-| Wordlist tools | `--prefix PREFIX` | Append path prefix to scan host |
-| Wordlist tools | `-e, --extensions EXTENSIONS` | Force selected extensions for the scan session, e.g. `php,json` |
-| Wordlist tools | `-i, --ignore-extensions IGNORE_EXTENSIONS` | Ignore selected extensions for the scan session, e.g. `aspx,jsp` |
-| Wordlist tools | `--recursive` | Enable recursive directory scan |
-| Wordlist tools | `--recursive-depth RECURSIVE_DEPTH` | Maximum recursive scan depth |
-| Wordlist tools | `--recursive-status RECURSIVE_STATUS` | HTTP status codes allowed for recursive expansion |
-| Wordlist tools | `--recursive-exclude RECURSIVE_EXCLUDE` | File extensions excluded from recursive expansion |
-
-### Tests
 ```bash
-python3 -m pip install -r requirements-dev.txt
-python3 -m unittest
+coverage run -m unittest discover -s tests -p "test_*.py"
+coverage report -m
 ```
 
-### Build
+Build documentation:
+
 ```bash
-python3 -m pip install -r requirements-dev.txt
-python3 -m build
+python3 -m venv .docs-venv
+source .docs-venv/bin/activate
+python -m pip install -r docs/requirements.txt
+python -m mkdocs build --strict
 ```
 
-### Lint
+Build package artifacts:
+
 ```bash
-python3 -m pip install -r requirements-dev.txt
-ruff check .
+python -m build
 ```
 
-### Contributors
-If you like to contribute to the development of the project, in that case, pull requests are open for you.
-Also, you can suggest ideas and create a task in my track list.
+See the full [testing guide](https://opendoor.readthedocs.io/en/latest/Testing/) and [contribution guide](https://opendoor.readthedocs.io/en/latest/Contribution/).
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stanislav-web/OpenDoor) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+---
 
-### Documentation
-- [Read The Docs](https://opendoor.readthedocs.io/)
-- [Opendoor OWASP CookBook](https://github.com/stanislav-web/OpenDoor/wiki)
-- [Issues](https://github.com/stanislav-web/OpenDoor/issues)
-- [PyPI package](https://pypi.org/project/opendoor/)
+## 🔐 Security and secret hygiene
+
+Do not commit real secrets or private transport profiles.
+
+Never publish:
+
+- real OpenVPN profiles;
+- WireGuard private keys;
+- auth-user-pass files;
+- cookies;
+- bearer tokens;
+- customer target lists;
+- private scan reports;
+- sensitive CI artifacts.
+
+Use placeholder examples only.
+
+---
+
+## ⚖️ Responsible use
+
+OpenDoor is a security testing tool.
+
+Use it only against systems you own or have explicit permission to test.
+
+The project does not grant permission to scan third-party systems, organizations, commercial services, or public infrastructure without authorization.
+
+---
+
+## 🧾 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) and [GitHub Releases](https://github.com/stanislav-web/OpenDoor/releases).
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome.
+
+Before contributing, read the [contribution guide](https://opendoor.readthedocs.io/en/latest/Contribution/) and run the relevant tests.
+
+---
+
+## 📄 License
+
+OpenDoor is released under the GNU General Public License v3.0 only.
+
+See [LICENSE](LICENSE).
+
+---
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stanislav-web/OpenDoor)
