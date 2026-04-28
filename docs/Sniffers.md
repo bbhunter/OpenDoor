@@ -1,71 +1,315 @@
-Sniff Tools
-===========
-Allows you to apply different filters depending on the server response.
-Also, you can support the project and add own filters to the repository. 
-Pull requests always open for you.
+# 🔍 Sniffers
 
-**NOTICE**: All these filters work with GET request method by default.
+Sniffers are built-in response analysis plugins used to reduce false positives and classify interesting responses during directory discovery.
 
-Usage
------
-
-**--sniff file** - Allows you to detect large files from the server response.
-*Force scan method:* HEAD
-*Positive:* all success pages which contains more than 1mb fall under this filter
+They are configured with:
 
 ```shell
-opendoor --host www.example.com --sniff file
+opendoor --host https://example.com --sniff <plugins>
 ```
 
-**--sniff indexof** - Allows you to detect empty (Index Of/) Apache directories.
-*Force scan method:* GET
-*Positive:* all success pages which contains title:(IndexOf|i):title fall under this filter
+Multiple sniffers can be combined with commas:
 
 ```shell
-opendoor --host www.example.com --sniff indexof
+opendoor --host https://example.com --sniff skipempty,file,collation,indexof
 ```
 
-**--sniff skipempty** - Allows you to skip blank success pages to select correct result
-*Force scan method:* GET
-*Positive:* all success pages which contain less than 1000b are ignored for success
+Some sniffers accept parameters:
 
 ```shell
-opendoor --host www.example.com --sniff skipempty
+opendoor --host https://example.com --sniff skipsizes=24:41:50
 ```
 
-**--sniff collation** - Heuristic detection of invalid success pages. This is might be when the page has success response but really hasn't meaningful value
-*Force scan method:* GET
-*Positive:* all successfully loaded pages are compared among themselves, and those that are very similar, fall under this filter and are excluded
-*Notice:* The behavior of this filter may vary depending on the source data
+---
+
+## 🧭 When to use sniffers
+
+Use sniffers when the target returns noisy or repetitive responses.
+
+Common cases:
+
+| Case | Useful sniffer |
+|---|---|
+| Empty success pages | `skipempty` |
+| Known false-positive response sizes | `skipsizes` |
+| Directory listings | `indexof` |
+| Large downloadable files | `file` |
+| Redirect-like or duplicated fallback responses | `collation` |
+
+Sniffers are especially useful when combined with response filters and auto-calibration.
+
+---
+
+## 🧩 Sniffers vs filters vs auto-calibration
+
+OpenDoor has several layers for response classification.
+
+| Layer | Purpose |
+|---|---|
+| Response filters | Explicit user-defined rules, such as status, size, text, and regex filters. |
+| Sniffers | Built-in heuristics for common false positives and interesting response types. |
+| Auto-calibration | Baseline-based classification for soft-404, wildcard, and catch-all responses. |
+
+A practical low-noise scan often uses all three:
 
 ```shell
-opendoor --host www.example.com --sniff collation
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --auto-calibrate \
+  --exclude-status 404,429,500-599 \
+  --exclude-size-range 0-256 \
+  --sniff skipempty,file,collation,indexof
 ```
 
-**--sniff skipsizes=NUM:NUM:NUM..** - Identifies pages of the specified size (in kb) as false positive for scan. 
-This is might be useful when the page has success response or redirect to 200
-*Force scan method:* GET
-*Positive:* all success pages which contain skipsizes=NUM:NUM kb are ignored for success
+---
+
+## 🧼 `skipempty`
+
+Skips empty or blank responses.
 
 ```shell
-opendoor --host www.example.com --sniff skipsizes=25:50:87....
+opendoor --host https://example.com --sniff skipempty
 ```
 
-How would this work?
----------------------
-Also, you can combine these filters as you prefer.
+Use it when the target returns successful HTTP statuses with an empty response body.
+
+Example:
+
 ```shell
-opendoor --host www.example.com --sniff skipempty,file,collation,indexof,skipsizes=24:41:50 --debug 1
-
-[23:16:04] debug:   Starting debug level 1. Using scan method: GET ...
-[23:16:04] debug:   Load sniffer: File (detect large files)
-[23:16:04] debug:   Load sniffer: IndexOf (detect Index Of/ Apache directories)
-[23:16:04] debug:   Load sniffer: Collation (detect and ignore false positive success pages)
-[23:16:04] debug:   Load sniffer: SkipEmpty (skip empty success pages)
-[23:16:04] debug:   Load sniffer: SkipSize (skip target size of page +-2000 bytes added)
-[23:16:04] info:    Wait, please, checking connect to -> www.example.com:80 ...
-[23:16:05] info:    Server www.example.com:80 (93.184.216.34) is online!
-[23:16:05] debug:   Read 36312 directories list by line
-[23:16:05] debug:   Creating queue with 5 thread(s)...
-[23:16:05] info:    Scanning www.example.com ...
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --sniff skipempty
 ```
+
+`skipempty` is useful for removing blank success pages that do not represent real content.
+
+---
+
+## 📏 `skipsizes`
+
+Skips responses with known false-positive body sizes.
+
+```shell
+opendoor --host https://example.com --sniff skipsizes=24:41:50
+```
+
+The value is a colon-separated list of response sizes.
+
+Use it when a target returns the same body size for many invalid paths.
+
+Example workflow:
+
+1. Run a small scan.
+2. Identify repetitive false-positive response sizes.
+3. Add those sizes to `skipsizes`.
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --sniff skipsizes=24:41:50
+```
+
+For wider ranges, prefer response filters:
+
+```shell
+opendoor --host https://example.com --exclude-size-range 0-256,1024-2048
+```
+
+---
+
+## 📂 `indexof`
+
+Detects directory listing pages.
+
+```shell
+opendoor --host https://example.com --sniff indexof
+```
+
+Directory listings often expose files, backups, logs, generated assets, or deployment artifacts.
+
+Example:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --sniff indexof
+```
+
+Use this sniffer when you want OpenDoor to highlight directory index pages such as:
+
+```text
+Index of /
+Index of /backup/
+Index of /uploads/
+```
+
+---
+
+## 📦 `file`
+
+Detects responses that look like downloadable or interesting files.
+
+```shell
+opendoor --host https://example.com --sniff file
+```
+
+Use it when you want to identify assets such as archives, backups, dumps, logs, database exports, or other non-HTML resources.
+
+Example:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --sniff file
+```
+
+This sniffer is useful when scanning wordlists that include file names or backup extensions.
+
+---
+
+## 🔀 `collation`
+
+Detects repeated or redirect-like fallback responses that can create false positives.
+
+```shell
+opendoor --host https://example.com --sniff collation
+```
+
+Use it when the target appears to return visually similar or structurally repeated pages for many invalid paths.
+
+Example:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --sniff collation
+```
+
+For modern targets with soft-404 behavior, `collation` usually works best together with auto-calibration:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --auto-calibrate \
+  --sniff collation
+```
+
+---
+
+## 🧪 Common combinations
+
+### General low-noise scan
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --auto-calibrate \
+  --sniff skipempty,file,collation,indexof
+```
+
+### Known false-positive sizes
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --sniff skipempty,skipsizes=24:41:50
+```
+
+### Directory listing focused scan
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --sniff indexof,file
+```
+
+### Batch scan with sniffers
+
+```shell
+opendoor \
+  --hostlist targets.txt \
+  --method GET \
+  --auto-calibrate \
+  --sniff skipempty,file,collation,indexof \
+  --reports json,sqlite
+```
+
+---
+
+## ⚙️ Recommended usage
+
+For most modern targets:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --auto-calibrate \
+  --sniff skipempty,file,collation,indexof
+```
+
+For fast scans where response body analysis is not required, keep the default request method and use status/size filters instead.
+
+---
+
+## 🧯 Troubleshooting
+
+### Too many false positives
+
+Add auto-calibration and stricter filters:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --auto-calibrate \
+  --exclude-status 404,429,500-599 \
+  --exclude-size-range 0-256 \
+  --sniff skipempty,collation
+```
+
+### Missing interesting body matches
+
+Use `GET` instead of `HEAD`:
+
+```shell
+opendoor --host https://example.com --method GET --sniff indexof,file
+```
+
+Body-based analysis is more useful with `GET` requests.
+
+### Known repetitive page size
+
+Use `skipsizes` for exact sizes:
+
+```shell
+opendoor --host https://example.com --sniff skipsizes=1234:5678
+```
+
+Use `--exclude-size-range` for ranges:
+
+```shell
+opendoor --host https://example.com --exclude-size-range 1000-2000
+```
+
+---
+
+## ✅ Summary
+
+| Sniffer | Purpose |
+|---|---|
+| `skipempty` | Skip empty or blank responses |
+| `skipsizes=NUM:NUM...` | Skip known false-positive body sizes |
+| `indexof` | Detect directory listing pages |
+| `file` | Detect downloadable or interesting files |
+| `collation` | Detect repeated fallback or redirect-like responses |
