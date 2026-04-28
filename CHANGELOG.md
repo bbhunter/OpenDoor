@@ -1,6 +1,33 @@
 CHANGELOG
 =======
 
+v5.12.0 (28.04.2026)
+---------------------------
+- (feature) added Network Transport Profiles via `--transport`
+- (feature) added common transport profile interface via `--transport-profile`
+- (feature) added transport profile list support via `--transport-profiles`
+- (feature) added sequential per-target VPN rotation via `--transport-rotate per-target`
+- (feature) added OpenVPN transport support through `openvpn --config`
+- (feature) added optional OpenVPN `auth-user-pass` support via `--openvpn-auth`
+- (feature) added WireGuard transport support through `wg-quick up/down`
+- (feature) added OS-level VPN tunnel routing for scan traffic
+- (enhancement) existing HTTP/SOCKS proxy mode remains backward-compatible
+- (enhancement) VPN transports can be combined with existing proxy and proxy-list workflows
+- (enhancement) tunnel mode starts before `ping`, `fingerprint`, `auto-calibrate`, `scan` and `done`
+- (enhancement) transport cleanup is guaranteed through `try/finally` on normal completion and scan errors
+- (enhancement) multi-target scans can use one shared transport session when rotation is disabled
+- (enhancement) per-target rotation runs targets sequentially to avoid unsafe parallel VPN route switching
+- (enhancement) wizard and session resume flows preserve explicit transport CLI overrides
+- (enhancement) added terminal notifications for transport start and stop events
+- (enhancement) added transport options to `opendoor.conf`
+- (enhancement) added `direct`, `proxy`, `openvpn`, and `wireguard` transport validation
+- (enhancement) added mocked process runner for safe CI coverage without real VPN dependencies
+- (tests) added unittest coverage for transport options, validation, adapters and process lifecycle
+- (tests) added controller regression coverage for transport start/stop, scan failure cleanup and per-target rotation
+- (tests) added filter regression coverage for transport/session/wizard option handling
+- (tests) full unittest suite passes after integration (`1082` tests)
+- (tests) coverage gate raised and passes at `99%`
+
 v5.11.0 (28.04.2026)
 ---------------------------
 - (feature) added smart auto-calibration via `--auto-calibrate`

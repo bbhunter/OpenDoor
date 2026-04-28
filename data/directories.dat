@@ -74894,7 +74894,11 @@ openui.log
 openurl.asp
 openvmps
 openvpn
+openvpn.conf
+openvpn.dat
+openvpn.md
 openvpn.ovpn
+openvpn.txt
 openvpnadmin
 openwall
 openwares
@@ -111099,6 +111103,9 @@ wire
 wire.html
 wire.php
 wireframe
+wireguard.conf
+wireguard.md
+wireguard.txt
 wireless
 wireless1
 wireless.aspx

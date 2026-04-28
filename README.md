@@ -24,12 +24,35 @@ The project is released under the GPL license, maintained by the community, and 
 [![CodeQL](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql)
 
 * *Built-in dictionaries*
-    - Directories: 114796
+    - Directories: 114803
     - Subdomains: 1507134
 
 ##### v5.12.0 (28.04.2026)
 
-
+- (feature) added Network Transport Profiles via `--transport`
+- (feature) added common transport profile interface via `--transport-profile`
+- (feature) added transport profile list support via `--transport-profiles`
+- (feature) added sequential per-target VPN rotation via `--transport-rotate per-target`
+- (feature) added OpenVPN transport support through `openvpn --config`
+- (feature) added optional OpenVPN `auth-user-pass` support via `--openvpn-auth`
+- (feature) added WireGuard transport support through `wg-quick up/down`
+- (feature) added OS-level VPN tunnel routing for scan traffic
+- (enhancement) existing HTTP/SOCKS proxy mode remains backward-compatible
+- (enhancement) VPN transports can be combined with existing proxy and proxy-list workflows
+- (enhancement) tunnel mode starts before `ping`, `fingerprint`, `auto-calibrate`, `scan` and `done`
+- (enhancement) transport cleanup is guaranteed through `try/finally` on normal completion and scan errors
+- (enhancement) multi-target scans can use one shared transport session when rotation is disabled
+- (enhancement) per-target rotation runs targets sequentially to avoid unsafe parallel VPN route switching
+- (enhancement) wizard and session resume flows preserve explicit transport CLI overrides
+- (enhancement) added terminal notifications for transport start and stop events
+- (enhancement) added transport options to `opendoor.conf`
+- (enhancement) added `direct`, `proxy`, `openvpn`, and `wireguard` transport validation
+- (enhancement) added mocked process runner for safe CI coverage without real VPN dependencies
+- (tests) added unittest coverage for transport options, validation, adapters and process lifecycle
+- (tests) added controller regression coverage for transport start/stop, scan failure cleanup and per-target rotation
+- (tests) added filter regression coverage for transport/session/wizard option handling
+- (tests) full unittest suite passes after integration (`1082` tests)
+- (tests) coverage gate raised and passes at `99%`
 
 #### [Changelog](CHANGELOG.md) (last changes)
 
@@ -88,6 +111,15 @@ The project is released under the GPL license, maintained by the community, and 
     * custom request cookies support
     * cookies forwarding from responses
     * custom or randomized user-agent support
+- ✅ network transport profiles
+    * OS-level transport selection via `--transport direct|proxy|openvpn|wireguard`
+    * OpenVPN tunnel support via `--transport openvpn --transport-profile profile.ovpn`
+    * WireGuard tunnel support via `--transport wireguard --transport-profile profile.conf`
+    * sequential per-target VPN rotation via `--transport-profiles` and `--transport-rotate per-target`
+    * optional OpenVPN auth-user-pass file via `--openvpn-auth`
+    * safe transport cleanup after scan completion or scan errors
+    * compatible with `--fingerprint`, `--auto-calibrate`, `--waf-safe-mode`, reports and CI/CD fail-on rules
+    * VPN tunnel mode can be layered with existing `--proxy`, `--tor`, and `--torlist` workflows
 - ✅ custom wordlists prefixes
 - ✅ custom wordlists, proxies, ignore lists
 - ✅ debug levels (1-3)
@@ -442,13 +474,14 @@ This is summarizing the platform families currently recognized by the heuristic 
 ```bash
 usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session-load SESSION_LOAD] [-p PORT] [-m METHOD] [--scheme SCHEME] [--raw-request RAW_REQUEST] [--session-save SESSION_SAVE]
                    [--session-autosave-sec SESSION_AUTOSAVE_SEC] [--session-autosave-items SESSION_AUTOSAVE_ITEMS] [-t THREADS] [-d DELAY] [--timeout TIMEOUT] [-r RETRIES] [--keep-alive] [--header HEADER]
-                   [--cookie COOKIE] [--accept-cookies] [--fingerprint] [--waf-detect] [--waf-safe-mode] [--debug DEBUG] [--tor] [--torlist TORLIST] [--proxy PROXY] [-s SCAN] [-w WORDLIST]
-                   [--fail-on-bucket FAIL_ON_BUCKET] [--auto-calibrate] [--calibration-samples CALIBRATION_SAMPLES] [--calibration-threshold CALIBRATION_THRESHOLD] [--reports REPORTS]
-                   [--reports-dir REPORTS_DIR] [--random-agent] [--random-list] [--prefix PREFIX] [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive] [--recursive-depth RECURSIVE_DEPTH]
-                   [--recursive-status RECURSIVE_STATUS] [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF] [--include-status INCLUDE_STATUS] [--exclude-status EXCLUDE_STATUS]
-                   [--exclude-size EXCLUDE_SIZE] [--exclude-size-range EXCLUDE_SIZE_RANGE] [--match-text MATCH_TEXT] [--exclude-text EXCLUDE_TEXT] [--match-regex MATCH_REGEX]
-                   [--exclude-regex EXCLUDE_REGEX] [--min-response-length MIN_RESPONSE_LENGTH] [--max-response-length MAX_RESPONSE_LENGTH] [--update] [--version] [--examples] [--docs]
-                   [--wizard [WIZARD]]
+                   [--cookie COOKIE] [--accept-cookies] [--fingerprint] [--waf-detect] [--waf-safe-mode] [--debug DEBUG] [--tor] [--torlist TORLIST] [--proxy PROXY]
+                   [--transport TRANSPORT] [--transport-profile TRANSPORT_PROFILE] [--transport-profiles TRANSPORT_PROFILES] [--transport-rotate TRANSPORT_ROTATE] [--transport-timeout TRANSPORT_TIMEOUT]
+                   [--transport-healthcheck-url TRANSPORT_HEALTHCHECK_URL] [--openvpn-auth OPENVPN_AUTH] [-s SCAN] [-w WORDLIST] [--fail-on-bucket FAIL_ON_BUCKET] [--auto-calibrate]
+                   [--calibration-samples CALIBRATION_SAMPLES] [--calibration-threshold CALIBRATION_THRESHOLD] [--reports REPORTS] [--reports-dir REPORTS_DIR] [--random-agent] [--random-list]
+                   [--prefix PREFIX] [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive] [--recursive-depth RECURSIVE_DEPTH] [--recursive-status RECURSIVE_STATUS]
+                   [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF] [--include-status INCLUDE_STATUS] [--exclude-status EXCLUDE_STATUS] [--exclude-size EXCLUDE_SIZE]
+                   [--exclude-size-range EXCLUDE_SIZE_RANGE] [--match-text MATCH_TEXT] [--exclude-text EXCLUDE_TEXT] [--match-regex MATCH_REGEX] [--exclude-regex EXCLUDE_REGEX]
+                   [--min-response-length MIN_RESPONSE_LENGTH] [--max-response-length MAX_RESPONSE_LENGTH] [--update] [--version] [--examples] [--docs] [--wizard [WIZARD]]
 ```
 
 ##### Options
@@ -500,6 +533,13 @@ usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session
 | Request tools | `--torlist TORLIST` | Path to custom proxy list |
 | Request tools | `--proxy PROXY` | Custom permanent proxy server |
 | Request tools | `--random-agent` | Randomize user-agent per request |
+| Network transport tools | `--transport TRANSPORT` | Network transport mode: `direct`, `proxy`, `openvpn`, `wireguard` |
+| Network transport tools | `--transport-profile TRANSPORT_PROFILE` | Single transport profile path. OpenVPN uses `*.ovpn`, WireGuard uses `*.conf` |
+| Network transport tools | `--transport-profiles TRANSPORT_PROFILES` | Text file with transport profile paths, one per line |
+| Network transport tools | `--transport-rotate TRANSPORT_ROTATE` | Transport rotation mode: `none` or `per-target` |
+| Network transport tools | `--transport-timeout TRANSPORT_TIMEOUT` | Seconds to wait for transport commands |
+| Network transport tools | `--transport-healthcheck-url TRANSPORT_HEALTHCHECK_URL` | Reserved optional URL for transport connectivity checks |
+| Network transport tools | `--openvpn-auth OPENVPN_AUTH` | Optional auth-user-pass file for OpenVPN transport only |
 | Session tools | `--session-save SESSION_SAVE` | Persist scan state to a checkpoint file |
 | Session tools | `--session-autosave-sec SESSION_AUTOSAVE_SEC` | Autosave session checkpoint every `N` seconds (default `20`) |
 | Session tools | `--session-autosave-items SESSION_AUTOSAVE_ITEMS` | Autosave session checkpoint after `N` processed items (default `200`) |
