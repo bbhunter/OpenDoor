@@ -43,6 +43,7 @@ class Options(object):
             'wordlist': "Wordlist tools",
             'sniff': "Sniff tools",
             'session': "Session tools",
+            'calibration': "Auto-calibration tools",
             'ci': "CI/CD tools",
             'report': "Reports tools",
             'filter': "Response filters",
@@ -274,6 +275,33 @@ class Options(object):
                 "action": "store",
                 "help": "Exit with code 1 when selected result buckets are found, e.g. success,auth,forbidden,blocked",
                 "type": str
+            },
+            {
+                "group": "calibration",
+                "args": None,
+                "argl": "--auto-calibrate",
+                "default": False,
+                "action": "store_true",
+                "help": "Enable smart baseline filtering for soft-404, wildcard and catch-all responses",
+                "type": bool
+            },
+            {
+                "group": "calibration",
+                "args": None,
+                "argl": "--calibration-samples",
+                "default": None,
+                "action": "store",
+                "help": "Number of random calibration probes before scan",
+                "type": int
+            },
+            {
+                "group": "calibration",
+                "args": None,
+                "argl": "--calibration-threshold",
+                "default": None,
+                "action": "store",
+                "help": "Auto-calibration match threshold from 0.01 to 1.0",
+                "type": float
             },
             {
                 "group": "report",

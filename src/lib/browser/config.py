@@ -65,6 +65,11 @@ class Config(object):
         self._is_fingerprint = params.get('fingerprint') is True
         self._is_waf_safe_mode = params.get('waf_safe_mode') is True
         self._is_waf_detect = params.get('waf_detect') is True or self._is_waf_safe_mode is True
+        self._is_auto_calibrate = params.get('auto_calibrate') is True
+        self._calibration_samples = 5 if params.get('calibration_samples') is None else int(
+            params.get('calibration_samples'))
+        self._calibration_threshold = 0.92 if params.get('calibration_threshold') is None else float(
+            params.get('calibration_threshold'))
         self._extensions = self._normalize_csv(params.get('extensions'))
         self._ignore_extensions = self._normalize_csv(params.get('ignore_extensions'))
         self._is_recursive = params.get('recursive') is True
@@ -85,7 +90,6 @@ class Config(object):
         self._is_ignore_extension_filter = params.get('ignore_extensions') is not None
         self._user_agent = self.DEFAULT_USER_AGENT
         self._threads = self.DEFAULT_MIN_THREADS if params.get('threads') is None else params.get('threads')
-
         self._include_status = self._normalize_csv(params.get('include_status'))
         self._exclude_status = self._normalize_csv(params.get('exclude_status'))
         self._exclude_size = self._normalize_csv(params.get('exclude_size'))
@@ -258,9 +262,14 @@ class Config(object):
         """List body-dependent sniffers and filters that force GET."""
 
         items = list(self.selected_body_required_sniffers)
+
         for item in self.selected_body_required_filters:
             if item not in items:
                 items.append(item)
+
+        if self.is_auto_calibrate is True and '--auto-calibrate' not in items:
+            items.append('--auto-calibrate')
+
         return items
 
     @property
@@ -288,6 +297,9 @@ class Config(object):
 
         if self.requested_method != 'HEAD':
             return self.requested_method
+
+        if self.is_auto_calibrate is True:
+            return 'GET'
 
         if self.is_body_required_response_filtering is True:
             return 'GET'
@@ -369,6 +381,24 @@ class Config(object):
         """If WAF-aware safe mode is enabled."""
 
         return self._is_waf_safe_mode
+
+    @property
+    def is_auto_calibrate(self):
+        """If smart auto-calibration is enabled."""
+
+        return self._is_auto_calibrate
+
+    @property
+    def calibration_samples(self):
+        """Number of calibration probes."""
+
+        return self._calibration_samples
+
+    @property
+    def calibration_threshold(self):
+        """Auto-calibration match threshold."""
+
+        return self._calibration_threshold
 
     @property
     def is_random_user_agent(self):

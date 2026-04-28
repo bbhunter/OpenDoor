@@ -349,5 +349,31 @@ class TestBrowserConfig(unittest.TestCase):
         cfg = Config({'reports': 'std', 'waf_detect': True})
         self.assertTrue(cfg.is_waf_detect)
 
+    def test_config_should_enable_auto_calibration(self):
+        """Config should expose auto-calibration settings."""
+
+        config = Config({
+            'host': 'example.com',
+            'auto_calibrate': True,
+            'calibration_samples': 7,
+            'calibration_threshold': 0.91,
+        })
+
+        self.assertTrue(config.is_auto_calibrate)
+        self.assertEqual(config.calibration_samples, 7)
+        self.assertEqual(config.calibration_threshold, 0.91)
+
+    def test_config_should_force_get_when_auto_calibration_is_enabled(self):
+        """Config.method should override HEAD to GET when auto-calibration is enabled."""
+
+        config = Config({
+            'host': 'example.com',
+            'method': 'HEAD',
+            'auto_calibrate': True,
+        })
+
+        self.assertEqual(config.method, 'GET')
+        self.assertIn('--auto-calibrate', config.method_override_items)
+
 if __name__ == '__main__':
     unittest.main()

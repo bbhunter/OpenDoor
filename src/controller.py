@@ -160,6 +160,9 @@ class Controller(object):
 
         try:
             cli_fail_on_bucket = params.get('fail_on_bucket')
+            cli_auto_calibrate = params.get('auto_calibrate')
+            cli_calibration_samples = params.get('calibration_samples')
+            cli_calibration_threshold = params.get('calibration_threshold')
 
             if 'wizard' in params:
                 tpl.info(key='load_wizard', config=params['wizard'])
@@ -167,6 +170,15 @@ class Controller(object):
 
                 if cli_fail_on_bucket is not None:
                     params['fail_on_bucket'] = cli_fail_on_bucket
+
+                if cli_auto_calibrate is not None:
+                    params['auto_calibrate'] = cli_auto_calibrate
+
+                if cli_calibration_samples is not None:
+                    params['calibration_samples'] = cli_calibration_samples
+
+                if cli_calibration_threshold is not None:
+                    params['calibration_threshold'] = cli_calibration_threshold
 
             if params.get('session_load'):
                 snapshot = SessionManager.load(params.get('session_load'))
@@ -182,6 +194,15 @@ class Controller(object):
 
                 if cli_fail_on_bucket is not None:
                     restored['fail_on_bucket'] = cli_fail_on_bucket
+
+                if cli_auto_calibrate is not None:
+                    restored['auto_calibrate'] = cli_auto_calibrate
+
+                if cli_calibration_samples is not None:
+                    restored['calibration_samples'] = cli_calibration_samples
+
+                if cli_calibration_threshold is not None:
+                    restored['calibration_threshold'] = cli_calibration_threshold
 
                 params = restored
                 tpl.info(msg='Loaded session checkpoint from {0}'.format(
@@ -217,6 +238,9 @@ class Controller(object):
                 brows.ping()
                 if target_params.get('fingerprint') is True:
                     brows.fingerprint()
+
+                if target_params.get('auto_calibrate') is True:
+                    brows.calibrate()
 
                 brows.scan()
                 brows.done()

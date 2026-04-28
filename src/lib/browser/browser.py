@@ -19,6 +19,7 @@
 import copy
 import threading
 import time
+import uuid
 from .session import SessionManager, SessionError
 from src.core import HttpRequestError, HttpsRequestError, ProxyRequestError, ResponseError
 from src.core import SocketError
@@ -33,6 +34,7 @@ from src.lib.reporter import Reporter, ReporterError
 from src.lib.tpl import Tpl as tpl
 from .config import Config
 from .debug import Debug
+from .calibration import Calibration
 from .exceptions import BrowserError
 from .fingerprint import Fingerprint
 from .filter import Filter
@@ -77,6 +79,7 @@ class Browser(Filter):
             self.__waf_safe_recovery_count = 0
             self.__waf_safe_vendor = None
             self.__waf_safe_confidence = None
+            self.__calibration = None
 
             requested_method = str(getattr(self.__config, '_method', '') or '').upper()
             effective_method = str(getattr(self.__config, 'method', '') or '').upper()
@@ -250,6 +253,121 @@ class Browser(Filter):
             result = dict(Fingerprint.DEFAULT_RESULT)
             self.__result['fingerprint'] = result
             return result
+
+    def calibrate(self):
+        """
+        Build smart auto-calibration baseline before scan.
+
+        :return: Calibration|None
+        """
+
+        self.__ensure_session_runtime_state()
+
+        if True is not getattr(self.__config, 'is_auto_calibrate', False):
+            return None
+
+        if self.__calibration is not None and self.__calibration.is_enabled is True:
+            tpl.info(msg='Auto-calibration baseline restored from session checkpoint')
+            return self.__calibration
+
+        try:
+            if self.__client is None:
+                self.__start_request_provider()
+
+            tpl.info(
+                msg='Auto-calibration enabled: samples={0}, threshold={1}'.format(
+                    self.__config.calibration_samples,
+                    self.__config.calibration_threshold
+                )
+            )
+
+            signatures = []
+            for url in self.__build_calibration_urls():
+                try:
+                    response_object = self.__request_with_waf_safe_mode(url)
+                    response_data = self.__response.handle(
+                        response_object,
+                        request_url=url,
+                        items_size=0,
+                        total_size=self.__config.calibration_samples,
+                        ignore_list=[]
+                    )
+
+                    if response_data is None:
+                        continue
+
+                    if response_data[0] == 'blocked':
+                        tpl.warning(
+                            msg='Auto-calibration probe skipped because it was classified as blocked: {0}'.format(url))
+                        continue
+
+                    signatures.append(Calibration.build_signature(response_object, response_data))
+
+                except (ProxyRequestError, HttpRequestError, HttpsRequestError, ResponseError) as error:
+                    tpl.warning(msg='Auto-calibration probe failed: {0}'.format(error))
+
+            self.__calibration = Calibration(
+                signatures=signatures,
+                threshold=self.__config.calibration_threshold
+            )
+
+            if self.__calibration.is_enabled is True:
+                tpl.info(msg='Auto-calibration baseline ready: signatures={0}'.format(len(signatures)))
+                self.__mark_session_dirty()
+                return self.__calibration
+
+            tpl.warning(msg='Auto-calibration disabled: no usable baseline signatures')
+            return None
+
+        except (AttributeError, TypeError, ValueError) as error:
+            tpl.warning(msg='Auto-calibration skipped: {0}'.format(error))
+            return None
+
+    def __build_calibration_urls(self):
+        """
+        Build random impossible URLs for calibration probes.
+
+        :return: list[str]
+        """
+
+        urls = []
+        token = uuid.uuid4().hex[:12]
+
+        for index in range(self.__config.calibration_samples):
+            path = '__opendoor_calibrate_{0}_{1}'.format(token, index)
+            urls.append(self.__build_calibration_url(path))
+
+        return urls
+
+    def __build_calibration_url(self, path):
+        """
+        Build a calibration URL under the configured scan prefix.
+
+        :param str path:
+        :return: str
+        """
+
+        prefix = str(getattr(self.__config, 'prefix', '') or '').strip('/')
+        clean_path = str(path).strip().lstrip('/')
+
+        if prefix:
+            clean_path = '{0}/{1}'.format(prefix, clean_path)
+
+        port = self.__config.port
+        port_suffix = ''
+
+        if self.__config.scheme == 'http://' and port not in [None, 80]:
+            port_suffix = ':{0}'.format(port)
+
+        if self.__config.scheme == 'https://' and port not in [None, 443]:
+            port_suffix = ':{0}'.format(port)
+
+        return '{0}{1}{2}/{3}'.format(
+            self.__config.scheme,
+            self.__config.host,
+            port_suffix,
+            clean_path
+        )
 
     def __start_request_provider(self):
         """
@@ -586,6 +704,25 @@ class Browser(Filter):
             and response_status == 'blocked'
         )
 
+    def __match_calibrated_response(self, response_object, response_data):
+        """
+        Match response against active calibration baseline.
+
+        :param object response_object:
+        :param tuple response_data:
+        :return: dict|None
+        """
+
+        self.__ensure_session_runtime_state()
+
+        if True is not getattr(self.__config, 'is_auto_calibrate', False):
+            return None
+
+        if self.__calibration is None:
+            return None
+
+        return self.__calibration.match(response_object, response_data)
+
     def __http_request(self, url, depth=0):
         """
         Make HTTP request
@@ -622,6 +759,17 @@ class Browser(Filter):
                 )
 
             self.__update_waf_safe_backoff(resp, response_data)
+
+            calibration_match = self.__match_calibrated_response(resp, response_data)
+            if calibration_match is not None:
+                self.__catch_report_data(
+                    'calibrated',
+                    response_data[1],
+                    response_data[2],
+                    response_data[3],
+                    metadata=calibration_match
+                )
+                return
 
             if False is self.__is_response_allowed(resp, response_data):
                 self.__catch_report_data('ignored', response_data[1], response_data[2], response_data[3])
@@ -903,6 +1051,10 @@ class Browser(Filter):
                 item['waf_confidence'] = int(metadata.get('confidence'))
             if metadata.get('signals'):
                 item['waf_signals'] = list(metadata.get('signals'))
+            if metadata.get('calibration_score') is not None:
+                item['calibration_score'] = float(metadata.get('calibration_score'))
+            if metadata.get('calibration_reason'):
+                item['calibration_reason'] = metadata.get('calibration_reason')
 
         self.__result['total'].update((status,))
         self.__result['items'][status] += [url]
@@ -995,6 +1147,7 @@ class Browser(Filter):
                 'total_items': self.__pool.total_items_size,
             },
             'checkpointReason': reason,
+            'calibration': self.__calibration.to_dict() if self.__calibration is not None else None,
             'wafSafeMode': {
                 'active': self.__waf_safe_active,
                 'vendor': self.__waf_safe_vendor,
@@ -1054,6 +1207,9 @@ class Browser(Filter):
             'tor': self.__config.is_internal_torlist,
             'torlist': self.__config.torlist if self.__config.is_external_torlist else None,
             'method': self.__config.requested_method,
+            'auto_calibrate': getattr(self.__config, 'is_auto_calibrate', False),
+            'calibration_samples': getattr(self.__config, 'calibration_samples', None),
+            'calibration_threshold': getattr(self.__config, 'calibration_threshold', None),
             'session_save': getattr(self.__config, 'session_save', None),
             'session_autosave_sec': getattr(self.__config, 'session_autosave_sec', None),
             'session_autosave_items': getattr(self.__config, 'session_autosave_items', None),
@@ -1107,6 +1263,7 @@ class Browser(Filter):
         self.__waf_safe_delay = float(waf_safe.get('delay', self.WAF_SAFE_MIN_DELAY))
         self.__waf_safe_recovery_count = int(waf_safe.get('recoveryCount', 0))
         self.__waf_safe_next_at = 0.0
+        self.__calibration = Calibration.from_dict(snapshot.get('calibration'))
         self.__session_dirty = False
 
     def __save_session(self, reason='periodic', force=False):
@@ -1221,3 +1378,6 @@ class Browser(Filter):
 
         if not hasattr(self, '_Browser__waf_safe_confidence'):
             self.__waf_safe_confidence = None
+
+        if not hasattr(self, '_Browser__calibration'):
+            self.__calibration = None

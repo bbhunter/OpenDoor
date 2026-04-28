@@ -10,6 +10,7 @@ from src.core import filesystem, helper, SocketError, ResponseError, HttpRequest
 from src.core.http.response import Response
 from src.lib import BrowserError, ReporterError, browser
 from src.lib.browser.browser import Browser
+from src.lib.browser.calibration import Calibration
 from src.lib.browser.config import Config
 from src.lib.browser.debug import Debug
 from src.lib.browser.threadpool import ThreadPool
@@ -1480,6 +1481,360 @@ class TestBrowser(unittest.TestCase):
         actual['total']['success'] = 99
 
         self.assertEqual(instance._Browser__result['total']['success'], 1)
+
+    def test_http_request_should_put_calibration_matches_into_calibrated_bucket(self):
+        """Browser.__http_request() should classify calibration matches as calibrated."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'port': 80,
+            'scheme': 'http://',
+            'auto_calibrate': True,
+        }))
+
+        client = MagicMock()
+        client.request.return_value = SimpleNamespace(
+            status=200,
+            headers={'Content-Type': 'text/html'},
+            data=b'<html><title>Not Found</title><body>Missing 123456</body></html>'
+        )
+        setattr(br, '_Browser__client', client)
+
+        response_handler = MagicMock()
+        response_handler.handle.return_value = (
+            'success',
+            'http://example.com/admin',
+            '67B',
+            '200'
+        )
+        setattr(br, '_Browser__response', response_handler)
+
+        reader = MagicMock()
+        reader.get_ignored_list.return_value = []
+        setattr(br, '_Browser__reader', reader)
+
+        pool = SimpleNamespace(items_size=0, total_items_size=1)
+        setattr(br, '_Browser__pool', pool)
+
+        calibration = MagicMock()
+        calibration.match.return_value = {
+            'calibration_score': 0.97,
+            'calibration_reason': 'body-hash,skeleton-hash',
+        }
+        setattr(br, '_Browser__calibration', calibration)
+
+        br._Browser__http_request('http://example.com/admin')
+
+        result = getattr(br, '_Browser__result')
+        self.assertEqual(result['total']['calibrated'], 1)
+        self.assertEqual(result['items']['calibrated'], ['http://example.com/admin'])
+        self.assertEqual(result['report_items']['calibrated'][0]['calibration_score'], 0.97)
+
+    def test_calibrate_should_build_baseline_from_probe_responses(self):
+        """Browser.calibrate() should build baseline signatures from calibration probes."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'port': 80,
+            'scheme': 'http://',
+            'auto_calibrate': True,
+            'calibration_samples': 2,
+            'calibration_threshold': 0.92,
+        }))
+
+        client = MagicMock()
+        client.request.return_value = SimpleNamespace(
+            status=200,
+            headers={'Content-Type': 'text/html'},
+            data=b'<html><title>Not Found</title><body>Missing 123456</body></html>'
+        )
+        setattr(br, '_Browser__client', client)
+
+        response_handler = MagicMock()
+        response_handler.handle.return_value = (
+            'success',
+            'http://example.com/__opendoor_calibrate',
+            '67B',
+            '200'
+        )
+        setattr(br, '_Browser__response', response_handler)
+
+        with patch('src.lib.browser.browser.tpl.info'), \
+                patch('src.lib.browser.browser.tpl.warning'):
+            actual = br.calibrate()
+
+        self.assertIsNotNone(actual)
+        self.assertTrue(actual.is_enabled)
+        self.assertEqual(len(actual.signatures), 2)
+
+    def test_calibrate_should_noop_when_auto_calibration_is_disabled(self):
+        """Browser.calibrate() should do nothing when auto-calibration is disabled."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'auto_calibrate': False,
+        }))
+
+        actual = br.calibrate()
+
+        self.assertIsNone(actual)
+
+    def test_calibrate_should_return_restored_baseline_when_available(self):
+        """Browser.calibrate() should reuse restored calibration baseline."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'auto_calibrate': True,
+        }))
+        calibration = Calibration(signatures=[{'code': 404}], threshold=0.92)
+        setattr(br, '_Browser__calibration', calibration)
+
+        with patch('src.lib.browser.browser.tpl.info') as info_mock:
+            actual = br.calibrate()
+
+        self.assertIs(actual, calibration)
+        info_mock.assert_called_once_with(msg='Auto-calibration baseline restored from session checkpoint')
+
+    def test_calibrate_should_start_request_provider_when_client_is_missing(self):
+        """Browser.calibrate() should initialize request provider when client is missing."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'port': 80,
+            'scheme': 'http://',
+            'auto_calibrate': True,
+            'calibration_samples': 1,
+            'calibration_threshold': 0.92,
+        }))
+        setattr(br, '_Browser__client', None)
+
+        client = MagicMock()
+        client.request.return_value = SimpleNamespace(
+            status=404,
+            headers={'Content-Type': 'text/html'},
+            data=b'not found'
+        )
+
+        response_handler = MagicMock()
+        response_handler.handle.return_value = (
+            'success',
+            'http://example.com/__opendoor_calibrate',
+            '9B',
+            '404'
+        )
+        setattr(br, '_Browser__response', response_handler)
+
+        def start_provider():
+            setattr(br, '_Browser__client', client)
+
+        with patch.object(br, '_Browser__start_request_provider', side_effect=start_provider) as start_mock, \
+                patch('src.lib.browser.browser.tpl.info'), \
+                patch('src.lib.browser.browser.tpl.warning'):
+            actual = br.calibrate()
+
+        self.assertIsNotNone(actual)
+        start_mock.assert_called_once_with()
+        client.request.assert_called_once()
+
+    def test_calibrate_should_skip_none_and_blocked_probe_responses(self):
+        """Browser.calibrate() should skip ignored and blocked calibration probes."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'port': 80,
+            'scheme': 'http://',
+            'auto_calibrate': True,
+            'calibration_samples': 2,
+            'calibration_threshold': 0.92,
+        }))
+
+        client = MagicMock()
+        client.request.return_value = SimpleNamespace(
+            status=403,
+            headers={'Content-Type': 'text/html'},
+            data=b'blocked'
+        )
+        setattr(br, '_Browser__client', client)
+
+        response_handler = MagicMock()
+        response_handler.handle.side_effect = [
+            None,
+            ('blocked', 'http://example.com/__opendoor_calibrate', '7B', '403'),
+        ]
+        setattr(br, '_Browser__response', response_handler)
+
+        with patch('src.lib.browser.browser.tpl.info'), \
+                patch('src.lib.browser.browser.tpl.warning') as warning_mock:
+            actual = br.calibrate()
+
+        self.assertIsNone(actual)
+        self.assertEqual(response_handler.handle.call_count, 2)
+        warning_mock.assert_any_call(msg='Auto-calibration disabled: no usable baseline signatures')
+
+    def test_calibrate_should_continue_after_probe_request_error(self):
+        """Browser.calibrate() should continue and disable baseline when probes fail."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'port': 80,
+            'scheme': 'http://',
+            'auto_calibrate': True,
+            'calibration_samples': 1,
+            'calibration_threshold': 0.92,
+        }))
+
+        client = MagicMock()
+        client.request.side_effect = HttpRequestError('boom')
+        setattr(br, '_Browser__client', client)
+        setattr(br, '_Browser__response', MagicMock())
+
+        with patch('src.lib.browser.browser.tpl.info'), \
+                patch('src.lib.browser.browser.tpl.warning') as warning_mock:
+            actual = br.calibrate()
+
+        self.assertIsNone(actual)
+        warning_mock.assert_any_call(msg='Auto-calibration probe failed: boom')
+        warning_mock.assert_any_call(msg='Auto-calibration disabled: no usable baseline signatures')
+
+    def test_calibrate_should_skip_on_unexpected_runtime_error(self):
+        """Browser.calibrate() should skip calibration on unexpected runtime errors."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'auto_calibrate': True,
+        }))
+        setattr(br, '_Browser__client', MagicMock())
+
+        with patch.object(br, '_Browser__build_calibration_urls', side_effect=AttributeError('bad state')), \
+                patch('src.lib.browser.browser.tpl.info'), \
+                patch('src.lib.browser.browser.tpl.warning') as warning_mock:
+            actual = br.calibrate()
+
+        self.assertIsNone(actual)
+        warning_mock.assert_called_with(msg='Auto-calibration skipped: bad state')
+
+    def test_build_calibration_url_should_include_prefix_and_non_default_http_port(self):
+        """Browser.__build_calibration_url() should include prefix and non-default HTTP port."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'port': 8080,
+            'prefix': 'api/v1',
+        }))
+
+        actual = br._Browser__build_calibration_url('/probe')
+
+        self.assertEqual(actual, 'http://example.com:8080/api/v1/probe')
+
+    def test_build_calibration_url_should_include_non_default_https_port(self):
+        """Browser.__build_calibration_url() should include non-default HTTPS port."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'scheme': 'https://',
+            'ssl': True,
+            'port': 9443,
+        }))
+
+        actual = br._Browser__build_calibration_url('probe')
+
+        self.assertEqual(actual, 'https://example.com:9443/probe')
+
+    def test_match_calibrated_response_should_return_none_when_disabled_or_missing_baseline(self):
+        """Browser.__match_calibrated_response() should return None without enabled calibration baseline."""
+
+        br = self.make_browser()
+        response = SimpleNamespace(status=404, headers={}, data=b'not found')
+        response_data = ('success', 'http://example.com/admin', '9B', '404')
+
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'auto_calibrate': False,
+        }))
+        self.assertIsNone(br._Browser__match_calibrated_response(response, response_data))
+
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'auto_calibrate': True,
+        }))
+        setattr(br, '_Browser__calibration', None)
+        self.assertIsNone(br._Browser__match_calibrated_response(response, response_data))
+
+    def test_session_snapshot_should_include_calibration_state(self):
+        """Browser session snapshot should include calibration baseline state."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', self.browser_configuration({
+            'reports': 'std',
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'port': 80,
+            'auto_calibrate': True,
+            'calibration_samples': 5,
+            'calibration_threshold': 0.92,
+        }))
+        setattr(br, '_Browser__pool', SimpleNamespace(items_size=0, total_items_size=1))
+        setattr(br, '_Browser__calibration', Calibration(signatures=[{'code': 404}], threshold=0.92))
+
+        snapshot = br._Browser__build_session_snapshot(reason='test')
+
+        self.assertEqual(snapshot['calibration'], {
+            'threshold': 0.92,
+            'signatures': [{'code': 404}],
+        })
+        self.assertTrue(snapshot['params']['auto_calibrate'])
+        self.assertEqual(snapshot['params']['calibration_samples'], 5)
+        self.assertEqual(snapshot['params']['calibration_threshold'], 0.92)
+
+    def test_restore_session_state_should_restore_calibration_state(self):
+        """Browser.__restore_session_state() should restore calibration baseline from snapshot."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__pool', SimpleNamespace(total_items_size=1))
+
+        br._Browser__restore_session_state({
+            'result': {'total': helper.counter(), 'items': helper.list(), 'report_items': helper.list()},
+            'visitedRecursive': [],
+            'queuedRecursive': [],
+            'seen': [],
+            'pending': [],
+            'stats': {'processed': 0, 'total_items': 1},
+            'wafSafeMode': {},
+            'calibration': {
+                'threshold': 0.93,
+                'signatures': [{'code': 404}],
+            },
+        })
+
+        calibration = getattr(br, '_Browser__calibration')
+        self.assertIsNotNone(calibration)
+        self.assertEqual(calibration.threshold, 0.93)
+        self.assertEqual(calibration.signatures, [{'code': 404}])
 
 if __name__ == '__main__':
     unittest.main()

@@ -73,6 +73,21 @@ class Filter(object):
                     key='--fail-on-bucket'
                 )
 
+            if args.get('auto_calibrate') is True:
+                filtered['auto_calibrate'] = True
+
+            if args.get('calibration_samples') is not None:
+                filtered['calibration_samples'] = Filter.positive_int(
+                    args.get('calibration_samples'),
+                    key='--calibration-samples'
+                )
+
+            if args.get('calibration_threshold') is not None:
+                filtered['calibration_threshold'] = Filter.ratio_float(
+                    args.get('calibration_threshold'),
+                    key='--calibration-threshold'
+                )
+
             return filtered
 
         raw_request = Filter.raw_request(args.get('raw_request'), scheme=args.get('scheme'))
@@ -105,6 +120,10 @@ class Filter(object):
                 filtered[key] = Filter.non_negative_int(value, key='--{0}'.format(key.replace('_', '-')))
             elif key in ['fail_on_bucket']:
                 filtered[key] = Filter.bucket_values(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['calibration_samples']:
+                filtered[key] = Filter.positive_int(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['calibration_threshold']:
+                filtered[key] = Filter.ratio_float(value, key='--{0}'.format(key.replace('_', '-')))
             else:
                 filtered[key] = value
 
@@ -658,6 +677,26 @@ class Filter(object):
             raise FilterError('{0} requires a non-empty file path'.format(key))
 
         return os.path.abspath(filepath)
+
+    @staticmethod
+    def ratio_float(value, key='--value'):
+        """
+        Validate a ratio float option.
+
+        :param value:
+        :param str key:
+        :return: float
+        """
+
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            raise FilterError('{0} must be a float from 0.01 to 1.0'.format(key))
+
+        if value <= 0 or value > 1:
+            raise FilterError('{0} must be a float from 0.01 to 1.0'.format(key))
+
+        return value
 
     @staticmethod
     def positive_int(value, key='--value'):

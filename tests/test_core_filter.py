@@ -553,5 +553,52 @@ class TestFilter(unittest.TestCase):
         self.assertEqual(actual['session_load'], '/tmp/session.json')
         self.assertEqual(actual['fail_on_bucket'], ['blocked', 'forbidden'])
 
+    def test_ratio_float_should_accept_valid_calibration_threshold(self):
+        """Filter.ratio_float() should accept valid calibration thresholds."""
+
+        self.assertEqual(Filter.ratio_float('0.92', key='--calibration-threshold'), 0.92)
+        self.assertEqual(Filter.ratio_float(1, key='--calibration-threshold'), 1.0)
+
+    def test_ratio_float_should_reject_invalid_calibration_threshold(self):
+        """Filter.ratio_float() should reject invalid calibration thresholds."""
+
+        with self.assertRaises(FilterError):
+            Filter.ratio_float(0, key='--calibration-threshold')
+
+        with self.assertRaises(FilterError):
+            Filter.ratio_float(1.1, key='--calibration-threshold')
+
+        with self.assertRaises(FilterError):
+            Filter.ratio_float('bad', key='--calibration-threshold')
+
+    def test_filter_should_normalize_auto_calibration_options(self):
+        """Filter.filter() should normalize auto-calibration options."""
+
+        actual = Filter.filter({
+            'host': 'example.com',
+            'auto_calibrate': True,
+            'calibration_samples': 7,
+            'calibration_threshold': 0.91,
+        })
+
+        self.assertTrue(actual['auto_calibrate'])
+        self.assertEqual(actual['calibration_samples'], 7)
+        self.assertEqual(actual['calibration_threshold'], 0.91)
+
+    def test_filter_should_keep_auto_calibration_options_with_session_load(self):
+        """Filter.filter() should preserve invocation-level auto-calibration options for session resume."""
+
+        actual = Filter.filter({
+            'session_load': '/tmp/session.json',
+            'auto_calibrate': True,
+            'calibration_samples': 9,
+            'calibration_threshold': 0.93,
+        })
+
+        self.assertEqual(actual['session_load'], '/tmp/session.json')
+        self.assertTrue(actual['auto_calibrate'])
+        self.assertEqual(actual['calibration_samples'], 9)
+        self.assertEqual(actual['calibration_threshold'], 0.93)
+
 if __name__ == '__main__':
     unittest.main()

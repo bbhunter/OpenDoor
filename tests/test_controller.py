@@ -488,5 +488,99 @@ class TestController(unittest.TestCase):
             }
         ])
 
+    def test_scan_action_runs_auto_calibration_before_scan(self):
+        """Controller.scan_action() should run auto-calibration before scan when enabled."""
+
+        browser_instance = MagicMock()
+        params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'auto_calibrate': True,
+        }
+
+        with patch('src.controller.browser', return_value=browser_instance), \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 0)
+        browser_instance.ping.assert_called_once_with()
+        browser_instance.calibrate.assert_called_once_with()
+        browser_instance.scan.assert_called_once_with()
+        browser_instance.done.assert_called_once_with()
+
+    def test_scan_action_preserves_auto_calibration_cli_overrides_for_wizard(self):
+        """Controller.scan_action() should preserve auto-calibration CLI overrides for wizard flow."""
+
+        browser_instance = MagicMock()
+        wizard_params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+        }
+
+        with patch('src.controller.package.wizard', return_value=wizard_params), \
+                patch('src.controller.browser', return_value=browser_instance) as browser_mock, \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            Controller.scan_action({
+                'wizard': 'opendoor.conf',
+                'auto_calibrate': True,
+                'calibration_samples': 9,
+                'calibration_threshold': 0.93,
+            })
+
+        browser_mock.assert_called_once()
+        passed_params = browser_mock.call_args[0][0]
+        self.assertTrue(passed_params['auto_calibrate'])
+        self.assertEqual(passed_params['calibration_samples'], 9)
+        self.assertEqual(passed_params['calibration_threshold'], 0.93)
+        browser_instance.calibrate.assert_called_once_with()
+
+    def test_scan_action_preserves_auto_calibration_cli_overrides_for_session_load(self):
+        """Controller.scan_action() should preserve auto-calibration CLI overrides for session resume."""
+
+        snapshot = {
+            'params': {
+                'host': 'example.com',
+                'scheme': 'http://',
+                'ssl': False,
+                'port': 80,
+                'reports': 'std',
+            }
+        }
+
+        browser_instance = MagicMock()
+
+        with patch('src.controller.SessionManager.load', return_value=snapshot), \
+                patch('src.controller.browser', return_value=browser_instance) as browser_mock, \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            Controller.scan_action({
+                'session_load': '/tmp/session.json',
+                'auto_calibrate': True,
+                'calibration_samples': 9,
+                'calibration_threshold': 0.93,
+            })
+
+        passed_params = browser_mock.call_args[0][0]
+        self.assertTrue(passed_params['auto_calibrate'])
+        self.assertEqual(passed_params['calibration_samples'], 9)
+        self.assertEqual(passed_params['calibration_threshold'], 0.93)
+        browser_instance.calibrate.assert_called_once_with()
+
+    def test_resolve_scan_targets_should_return_empty_list_without_target_source(self):
+        """Controller._resolve_scan_targets() should return an empty list without target source."""
+
+        actual = Controller._resolve_scan_targets({})
+
+        self.assertEqual(actual, [])
+
 if __name__ == '__main__':
     unittest.main()
