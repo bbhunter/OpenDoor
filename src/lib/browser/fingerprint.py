@@ -264,8 +264,6 @@ class Fingerprint(object):
 
         if hasattr(raw_headers, 'items'):
             items = list(raw_headers.items())
-        elif isinstance(raw_headers, dict):
-            items = list(raw_headers.items())
         else:
             items = []
 

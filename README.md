@@ -13,7 +13,6 @@ OWASP WEB Directory Scanner [![Twitter](https://img.shields.io/twitter/url/https
 It detects exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets using built-in or custom wordlists. OpenDoor is built for authorized security testing and supports flexible scan configuration, proxy-based traffic routing, reporting, filtering, and fingerprint detection.
 The project is released under the GPL license, maintained by the community, and available in [BlackArch Linux](https://blackarch.org/webapp.html).
 
-![Maintainer](https://img.shields.io/badge/maintainer-stanislav_web-blue)
 [![Contributors](https://img.shields.io/github/contributors/stanislav-web/Opendoor)](https://github.com/stanislav-web/OpenDoor/graphs/contributors)
 [![PyPI - Version](https://img.shields.io/pypi/v/opendoor)](https://pypi.org/project/opendoor/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%20%2B-green.svg)](https://www.python.org/) [![codecov](https://codecov.io/github/stanislav-web/OpenDoor/graph/badge.svg?token=dyBxutYBso)](https://codecov.io/github/stanislav-web/OpenDoor)

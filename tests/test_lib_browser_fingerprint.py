@@ -647,3 +647,340 @@ class TestFingerprint(unittest.TestCase):
         self.assertEqual(result['category'], 'custom')
         self.assertEqual(result['name'], 'Unknown custom stack')
         self.assertNotIn('Neos', [candidate['name'] for candidate in result['candidates']])
+
+    def test_should_restore_request_method_after_request_call(self):
+        """Fingerprint._request() should restore original config method after request."""
+
+        config = FakeConfig()
+        client = self._make_client(config, {
+            ('GET', 'http://example.com/'): FakeResponse(200, 'ok', {}),
+        })
+
+        detector = Fingerprint(config=config, client=client)
+
+        actual = detector._request('http://example.com/', method='GET')
+
+        self.assertEqual(actual.status, 200)
+        self.assertEqual(config._method, 'HEAD')
+
+    def test_should_follow_redirects_stop_after_max_hops(self):
+        """Fingerprint._follow_redirects() should stop after max_hops is reached."""
+
+        config = FakeConfig()
+        client = self._make_client(config, {
+            ('GET', 'http://example.com/next'): FakeResponse(
+                302,
+                '',
+                {'Location': '/final'}
+            ),
+        })
+
+        detector = Fingerprint(config=config, client=client)
+
+        response = FakeResponse(
+            302,
+            '',
+            {'Location': '/next'}
+        )
+
+        actual_response, actual_url = detector._follow_redirects(
+            response,
+            'http://example.com/',
+            method='GET',
+            max_hops=1
+        )
+
+        self.assertEqual(actual_response.status, 302)
+        self.assertEqual(actual_url, 'http://example.com/next')
+
+    def test_should_follow_redirects_stop_when_location_header_is_missing(self):
+        """Fingerprint._follow_redirects() should stop when redirect has no Location header."""
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=self._make_client(config, {}))
+
+        response = FakeResponse(302, '', {})
+
+        actual_response, actual_url = detector._follow_redirects(
+            response,
+            'http://example.com/',
+            method='GET'
+        )
+
+        self.assertIs(actual_response, response)
+        self.assertEqual(actual_url, 'http://example.com/')
+
+    def test_should_follow_redirects_stop_when_next_response_is_none(self):
+        """Fingerprint._follow_redirects() should stop when redirected request returns None."""
+
+        class NoneClient(object):
+            def request(self, _url):
+                return None
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=NoneClient())
+
+        response = FakeResponse(
+            302,
+            '',
+            {'Location': '/login'}
+        )
+
+        actual_response, actual_url = detector._follow_redirects(
+            response,
+            'http://example.com/',
+            method='GET'
+        )
+
+        self.assertIsNone(actual_response)
+        self.assertEqual(actual_url, 'http://example.com/login')
+
+    def test_should_extract_headers_return_empty_dict_for_unsupported_headers_object(self):
+        """Fingerprint._extract_headers() should return empty dict for unsupported headers object."""
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=self._make_client(config, {}))
+
+        response = FakeResponse(200, 'ok', object())
+
+        actual = detector._extract_headers(response)
+
+        self.assertEqual(actual, {})
+
+    def test_should_extract_body_return_empty_string_for_none_body(self):
+        """Fingerprint._extract_body() should return empty string for None body."""
+
+        response = FakeResponse(200, None, {})
+
+        actual = Fingerprint._extract_body(response)
+
+        self.assertEqual(actual, '')
+
+    def test_should_extract_body_stringify_non_bytes_body(self):
+        """Fingerprint._extract_body() should stringify non-bytes body."""
+
+        response = FakeResponse(200, '', {})
+        response.data = {'ok': True}
+
+        actual = Fingerprint._extract_body(response)
+
+        self.assertEqual(actual, "{'ok': True}")
+
+    def test_should_extract_cookies_return_empty_list_when_getlist_fails(self):
+        """Fingerprint._extract_cookies() should return empty list when getlist raises."""
+
+        class BrokenHeaders(object):
+            def getlist(self, _name):
+                raise RuntimeError('broken headers')
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=self._make_client(config, {}))
+
+        response = FakeResponse(200, 'ok', BrokenHeaders())
+
+        actual = detector._extract_cookies(response)
+
+        self.assertEqual(actual, [])
+
+    def test_should_extract_cookies_skip_invalid_cookie_pairs(self):
+        """Fingerprint._extract_cookies() should skip invalid and empty cookie pairs."""
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=self._make_client(config, {}))
+
+        response = FakeResponse(
+            200,
+            'ok',
+            {
+                'Set-Cookie': 'valid=1; Path=/',
+                'set-cookie': '=bad; Path=/',
+                'X-Test': 'ignored=1',
+            }
+        )
+
+        actual = detector._extract_cookies(response)
+
+        self.assertEqual(actual, ['valid'])
+
+    def test_should_extract_generator_return_empty_string_without_generator_meta(self):
+        """Fingerprint._extract_generator() should return empty string without generator meta."""
+
+        actual = Fingerprint._extract_generator('<html><body>ok</body></html>')
+
+        self.assertEqual(actual, '')
+
+    def test_should_probe_endpoints_ignore_none_and_response_without_status(self):
+        """Fingerprint._probe_endpoints() should ignore None responses and responses without status."""
+
+        class MixedClient(object):
+            def __init__(self):
+                self.index = 0
+
+            def request(self, _url):
+                self.index += 1
+                if self.index == 1:
+                    return None
+                if self.index == 2:
+                    return object()
+                return FakeResponse(403, '', {})
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=MixedClient())
+
+        original_probes = Fingerprint.PROBES
+        try:
+            Fingerprint.PROBES = ('/first', '/second', '/third')
+            actual = detector._probe_endpoints('http://example.com/')
+        finally:
+            Fingerprint.PROBES = original_probes
+
+        self.assertEqual(actual, {'/third': 403})
+
+    def test_should_probe_not_found_signature_return_empty_when_probe_returns_none(self):
+        """Fingerprint._probe_not_found_signature() should return empty signature when probe fails."""
+
+        class NoneClient(object):
+            def request(self, _url):
+                return None
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=NoneClient())
+
+        actual = detector._probe_not_found_signature('http://example.com/')
+
+        self.assertEqual(actual, (0, '', {}))
+
+    def test_should_probe_not_found_signature_return_empty_when_redirect_chain_returns_none(self):
+        """Fingerprint._probe_not_found_signature() should return empty signature when redirects fail."""
+
+        config = FakeConfig()
+        detector = Fingerprint(
+            config=config,
+            client=self._make_client(config, {
+                ('GET', 'http://example.com/.opendoor-fingerprint-not-found-probe'): FakeResponse(
+                    302,
+                    '',
+                    {'Location': '/404'}
+                ),
+            })
+        )
+
+        original_follow_redirects = detector._follow_redirects
+        try:
+            detector._follow_redirects = lambda *_args, **_kwargs: (None, 'http://example.com/404')
+            actual = detector._probe_not_found_signature('http://example.com/')
+        finally:
+            detector._follow_redirects = original_follow_redirects
+
+        self.assertEqual(actual, (0, '', {}))
+
+    def test_should_probe_not_found_signature_return_status_body_and_headers(self):
+        """Fingerprint._probe_not_found_signature() should return status, body and headers."""
+
+        config = FakeConfig()
+        detector = Fingerprint(
+            config=config,
+            client=self._make_client(config, {
+                ('GET', 'http://example.com/.opendoor-fingerprint-not-found-probe'): FakeResponse(
+                    404,
+                    'Cannot GET /.missing',
+                    {'X-Powered-By': 'Express', 'Server': 'nginx'}
+                ),
+            })
+        )
+
+        actual = detector._probe_not_found_signature('http://example.com/')
+
+        self.assertEqual(actual[0], 404)
+        self.assertEqual(actual[1], 'Cannot GET /.missing')
+        self.assertEqual(actual[2], {
+            'x-powered-by': 'Express',
+            'server': 'nginx',
+        })
+
+    def test_should_apply_detection_rules_for_remaining_cms_meta_and_markup_branches(self):
+        """Fingerprint._apply_detection_rules() should cover remaining CMS meta and markup branches."""
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=self._make_client(config, {}))
+
+        body_lower = (
+            'concrete cms gravcms '
+            '/themes/pmahomme/ pma_navigation name="pma_username" '
+            '/styles/prosilver/ viewtopic.php '
+            'umbraco.sys.servervariables /umbraco/assets/ umb-app '
+            'powered by nopcommerce '
+            'pkp_structure_main pkp_page_index /plugins/themes/default /lib/pkp/ '
+            '<title>directus</title> /admin/assets/index.js'
+        )
+
+        detector._apply_detection_rules(
+            body='',
+            body_lower=body_lower,
+            headers={},
+            cookies=[
+                'pma_lang',
+                'phpbb3_sid',
+            ],
+            generator='phpMyAdmin phpBB Umbraco nopCommerce Directus',
+            probe_statuses={
+                '/umbraco/': 200,
+                '/admin': 200,
+                '/api.php': 200,
+                '/index.php/index/login': 200,
+            },
+            final_root_url='http://example.com/',
+            not_found_status=0,
+            not_found_body='',
+            not_found_headers={},
+        )
+
+        candidates = detector._build_candidates()
+        names = [candidate['name'] for candidate in candidates]
+
+        self.assertIn('phpMyAdmin', names)
+        self.assertIn('phpBB', names)
+        self.assertIn('Umbraco', names)
+        self.assertIn('nopCommerce', names)
+        self.assertIn('Concrete CMS', names)
+        self.assertIn('GravCMS', names)
+        self.assertIn('Open Journal Systems', names)
+        self.assertIn('Directus', names)
+
+    def test_should_build_infrastructure_result_without_candidates(self):
+        """Fingerprint._build_infrastructure_result() should return unknown infrastructure without candidates."""
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=self._make_client(config, {}))
+
+        actual = detector._build_infrastructure_result([])
+
+        self.assertEqual(actual, {
+            'provider': 'unknown',
+            'confidence': 0,
+            'signals': [],
+            'candidates': [],
+        })
+
+    def test_should_build_infrastructure_result_with_second_score_gap(self):
+        """Fingerprint._build_infrastructure_result() should calculate confidence from score gap."""
+
+        config = FakeConfig()
+        detector = Fingerprint(config=config, client=self._make_client(config, {}))
+
+        detector._add_infrastructure_signal('Cloudflare', 'header', 'cf-ray', 9)
+        detector._add_infrastructure_signal('Fastly', 'header', 'x-fastly-request-id', 7)
+
+        candidates = detector._build_infrastructure_candidates()
+        actual = detector._build_infrastructure_result(candidates)
+
+        self.assertEqual(actual['provider'], 'Cloudflare')
+        self.assertGreater(actual['confidence'], 35)
+        self.assertEqual(actual['signals'][0]['value'], 'cf-ray')
+        self.assertEqual(actual['candidates'][:2], candidates[:2])
+
+    def test_should_calculate_confidence_with_lower_and_upper_caps(self):
+        """Fingerprint._calculate_confidence() should clamp confidence to 35..98."""
+
+        self.assertEqual(Fingerprint._calculate_confidence(0, 0), 35)
+        self.assertEqual(Fingerprint._calculate_confidence(100, 100), 98)

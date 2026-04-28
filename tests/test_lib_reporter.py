@@ -147,6 +147,44 @@ class TestReporter(unittest.TestCase):
         self.assertIn('Statistics (test.local)', rendered)
         self.assertIn('workers', rendered)
 
+    def test_std_plugin_process_should_render_fingerprint_infrastructure(self):
+        """StdReportPlugin.process() should render fingerprint infrastructure summary."""
+
+        data = {
+            'items': {},
+            'total': {
+                'success': 1,
+                'items': 1,
+                'workers': 1,
+            },
+            'fingerprint': {
+                'category': 'cms',
+                'name': 'WordPress',
+                'confidence': 95,
+                'infrastructure': {
+                    'provider': 'Cloudflare',
+                    'confidence': 90,
+                },
+            },
+        }
+
+        plugin = StdReportPlugin('test.local', data)
+
+        with patch('src.lib.reporter.plugins.std.sys.writeln') as writeln_mock:
+            self.assertIsNone(plugin.process())
+
+        rendered = writeln_mock.call_args[0][0]
+        self.assertIn('fingerprint_category', rendered)
+        self.assertIn('cms', rendered)
+        self.assertIn('fingerprint_name', rendered)
+        self.assertIn('WordPress', rendered)
+        self.assertIn('fingerprint_confidence', rendered)
+        self.assertIn('95%', rendered)
+        self.assertIn('fingerprint_infra', rendered)
+        self.assertIn('Cloudflare', rendered)
+        self.assertIn('fingerprint_infra_confidence', rendered)
+        self.assertIn('90%', rendered)
+
     def test_text_plugin_init_wraps_makedir_errors(self):
         """TextReportPlugin.__init__() should wrap directory creation failures."""
 
@@ -266,6 +304,69 @@ class TestReporter(unittest.TestCase):
         self.assertIn('Next.js', rendered)
         self.assertIn('fingerprint_infra', rendered)
         self.assertIn('AWS CloudFront', rendered)
+
+    def test_std_plugin_process_should_render_fingerprint_without_infrastructure(self):
+        """StdReportPlugin.process() should render fingerprint summary without infrastructure block."""
+
+        data = {
+            'items': {},
+            'total': {
+                'success': 1,
+                'items': 1,
+                'workers': 1,
+            },
+            'fingerprint': {
+                'category': 'framework',
+                'name': 'Next.js',
+                'confidence': 88,
+                'infrastructure': {},
+            },
+        }
+
+        plugin = StdReportPlugin('test.local', data)
+
+        with patch('src.lib.reporter.plugins.std.sys.writeln') as writeln_mock:
+            self.assertIsNone(plugin.process())
+
+        rendered = writeln_mock.call_args[0][0]
+
+        self.assertIn('fingerprint_category', rendered)
+        self.assertIn('framework', rendered)
+        self.assertIn('fingerprint_name', rendered)
+        self.assertIn('Next.js', rendered)
+        self.assertIn('fingerprint_confidence', rendered)
+        self.assertIn('88%', rendered)
+
+        self.assertNotIn('fingerprint_infra', rendered)
+        self.assertNotIn('fingerprint_infra_confidence', rendered)
+
+    def test_std_plugin_process_should_render_fingerprint_when_infrastructure_is_missing(self):
+        """StdReportPlugin.process() should render fingerprint summary when infrastructure key is missing."""
+
+        data = {
+            'items': {},
+            'total': {
+                'success': 1,
+                'items': 1,
+                'workers': 1,
+            },
+            'fingerprint': {
+                'category': 'cms',
+                'name': 'WordPress',
+                'confidence': 95,
+            },
+        }
+
+        plugin = StdReportPlugin('test.local', data)
+
+        with patch('src.lib.reporter.plugins.std.sys.writeln') as writeln_mock:
+            plugin.process()
+
+        rendered = writeln_mock.call_args[0][0]
+
+        self.assertIn('fingerprint_name', rendered)
+        self.assertIn('WordPress', rendered)
+        self.assertNotIn('fingerprint_infra', rendered)
 
     def test_plugin_provider_formats_waf_metadata(self):
         """PluginProvider should append WAF metadata for text-based sinks."""

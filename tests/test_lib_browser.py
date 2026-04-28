@@ -1344,6 +1344,201 @@ class TestBrowser(unittest.TestCase):
             sniffers='indexof, collation'
         )
 
+    def test_extract_response_code_should_return_none_when_status_and_response_data_are_invalid(self):
+        """Browser.__extract_response_code() should return None when all status sources are invalid."""
+
+        response = SimpleNamespace(status='bad')
+
+        actual = Browser._Browser__extract_response_code(
+            response,
+            ('success', 'http://example.com', '1B', '-')
+        )
+
+        self.assertIsNone(actual)
+
+    def test_extract_response_code_should_use_response_data_when_response_status_is_invalid(self):
+        """Browser.__extract_response_code() should fallback to handled response data code."""
+
+        response = SimpleNamespace(status='bad')
+
+        actual = Browser._Browser__extract_response_code(
+            response,
+            ('success', 'http://example.com', '1B', '404')
+        )
+
+        self.assertEqual(actual, 404)
+
+    def test_get_header_value_should_return_direct_header_lookup(self):
+        """Browser.__get_header_value() should return header value from direct lookup."""
+
+        response = SimpleNamespace(headers={'Retry-After': '5'})
+
+        actual = Browser._Browser__get_header_value(response, 'Retry-After')
+
+        self.assertEqual(actual, '5')
+
+    def test_get_header_value_should_return_lowercase_header_lookup(self):
+        """Browser.__get_header_value() should return header value from lowercase lookup."""
+
+        response = SimpleNamespace(headers={'retry-after': '7'})
+
+        actual = Browser._Browser__get_header_value(response, 'Retry-After')
+
+        self.assertEqual(actual, '7')
+
+    def test_get_header_value_should_return_items_fallback_lookup(self):
+        """Browser.__get_header_value() should return header value from items fallback."""
+
+        class HeadersWithoutGet(object):
+            def items(self):
+                return [('Retry-After', '9')]
+
+        response = SimpleNamespace(headers=HeadersWithoutGet())
+
+        actual = Browser._Browser__get_header_value(response, 'retry-after')
+
+        self.assertEqual(actual, '9')
+
+    def test_get_header_value_should_return_none_when_headers_have_no_mapping_api(self):
+        """Browser.__get_header_value() should return None for unsupported headers object."""
+
+        response = SimpleNamespace(headers=object())
+
+        actual = Browser._Browser__get_header_value(response, 'Retry-After')
+
+        self.assertIsNone(actual)
+
+    def test_get_header_value_should_return_none_without_headers_attribute(self):
+        """Browser.__get_header_value() should return None when response has no headers."""
+
+        response = SimpleNamespace()
+
+        actual = Browser._Browser__get_header_value(response, 'Retry-After')
+
+        self.assertIsNone(actual)
+
+    def test_get_retry_after_delay_should_return_none_for_invalid_retry_after_value(self):
+        """Browser.__get_retry_after_delay() should return None for non-numeric Retry-After."""
+
+        br = self.make_browser()
+        response = SimpleNamespace(headers={'Retry-After': 'soon'})
+
+        actual = br._Browser__get_retry_after_delay(response)
+
+        self.assertIsNone(actual)
+
+    def test_get_retry_after_delay_should_return_none_for_negative_retry_after_value(self):
+        """Browser.__get_retry_after_delay() should return None for negative Retry-After."""
+
+        br = self.make_browser()
+        response = SimpleNamespace(headers={'Retry-After': '-1'})
+
+        actual = br._Browser__get_retry_after_delay(response)
+
+        self.assertIsNone(actual)
+
+    def test_get_retry_after_delay_should_return_numeric_retry_after_value(self):
+        """Browser.__get_retry_after_delay() should return numeric Retry-After delay."""
+
+        br = self.make_browser()
+        response = SimpleNamespace(headers={'Retry-After': '3.5'})
+
+        actual = br._Browser__get_retry_after_delay(response)
+
+        self.assertEqual(actual, 3.5)
+
+    def test_recover_waf_safe_backoff_should_reset_counter_when_delay_is_minimal(self):
+        """Browser.__recover_waf_safe_backoff() should reset recovery counter when delay is already minimal."""
+
+        br = self.make_browser()
+
+        setattr(br, '_Browser__waf_safe_delay', br.WAF_SAFE_MIN_DELAY)
+        setattr(br, '_Browser__waf_safe_recovery_count', 3)
+
+        br._Browser__recover_waf_safe_backoff()
+
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), br.WAF_SAFE_MIN_DELAY)
+        self.assertEqual(getattr(br, '_Browser__waf_safe_recovery_count'), 0)
+
+    def test_update_waf_safe_backoff_should_ignore_none_response_data(self):
+        """Browser.__update_waf_safe_backoff() should ignore missing handled response data."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', SimpleNamespace(is_waf_safe_mode=True))
+        setattr(br, '_Browser__waf_safe_active', True)
+        setattr(br, '_Browser__waf_safe_delay', 4.0)
+
+        br._Browser__update_waf_safe_backoff(
+            SimpleNamespace(status=429, headers={'Retry-After': '1'}),
+            None
+        )
+
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 4.0)
+
+    def test_update_waf_safe_backoff_should_ignore_when_safe_mode_is_disabled(self):
+        """Browser.__update_waf_safe_backoff() should ignore updates when WAF safe mode is disabled."""
+
+        br = self.make_browser()
+        setattr(br, '_Browser__config', SimpleNamespace(is_waf_safe_mode=False))
+        setattr(br, '_Browser__waf_safe_active', True)
+        setattr(br, '_Browser__waf_safe_delay', 4.0)
+
+        br._Browser__update_waf_safe_backoff(
+            SimpleNamespace(status=429, headers={'Retry-After': '1'}),
+            ('blocked', 'http://example.com', '1B', '429')
+        )
+
+        self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 4.0)
+
+    def test_http_request_should_not_enqueue_recursive_children_for_already_visited_url(self):
+        """Browser.__http_request() should not enqueue recursive children for already visited URL."""
+
+        br = self.make_browser()
+
+        client = MagicMock()
+        client.request.return_value = SimpleNamespace(
+            status=200,
+            headers={},
+            data=b'ok',
+        )
+
+        response_handler = MagicMock()
+        response_handler.handle.return_value = (
+            'success',
+            'http://example.com/panel',
+            '2B',
+            '200'
+        )
+
+        reader = MagicMock()
+        reader.get_ignored_list.return_value = []
+
+        pool = SimpleNamespace(items_size=1, total_items_size=10)
+
+        config = self.browser_configuration({
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'recursive': True,
+            'recursive_depth': 2,
+            'recursive_status': '200',
+            'recursive_exclude': 'jpg,png,css,js',
+        })
+
+        setattr(br, '_Browser__config', config)
+        setattr(br, '_Browser__client', client)
+        setattr(br, '_Browser__response', response_handler)
+        setattr(br, '_Browser__reader', reader)
+        setattr(br, '_Browser__pool', pool)
+        setattr(br, '_Browser__visited_recursive', {'http://example.com/panel'})
+
+        with patch.object(br, '_Browser__enqueue_recursive_children') as enqueue_mock:
+            br._Browser__http_request('http://example.com/panel', depth=0)
+
+        enqueue_mock.assert_not_called()
+        self.assertEqual(getattr(br, '_Browser__result')['total']['success'], 1)
+
     def test_done_skips_report_generation_when_queue_is_not_empty(self):
         """Browser.done() should skip reporting while there are still queued items."""
 
