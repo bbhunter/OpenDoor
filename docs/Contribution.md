@@ -1,116 +1,373 @@
-Contribution
-============
+# 🤝 Contribution
 
-Thank you for your interest in OpenDoor.
+Thank you for considering a contribution to OpenDoor.
 
-The project is currently maintained with a focus on:
-- stability
-- reproducible builds
-- modern Python packaging
-- minimal surprise for end users
-- practical packaging for Linux distributions
+OpenDoor is an open-source CLI scanner for authorized web reconnaissance, directory discovery, and exposure assessment. Contributions should improve reliability, clarity, testability, documentation, packaging, or safe security-testing workflows.
 
-Getting started
-===============
+---
 
-#### Clone the repository
-```shell
-git clone https://github.com/stanislav-web/OpenDoor.git
-cd OpenDoor/
+## 🧭 Contribution principles
+
+Good contributions are:
+
+- focused;
+- tested;
+- easy to review;
+- compatible with the current CLI behavior;
+- documented when they change user-facing behavior;
+- safe for public open-source distribution.
+
+Prefer small, isolated pull requests over large mixed changes.
+
+---
+
+## ⚖️ Responsible security work
+
+OpenDoor is a security testing tool. Contributions must support authorized testing only.
+
+Do not contribute:
+
+- exploit payload collections intended for abuse;
+- credential theft logic;
+- stealth or persistence features;
+- destructive scanning behavior;
+- malware-like behavior;
+- real private VPN profiles, API tokens, cookies, bearer tokens, or credentials.
+
+Do not commit real OpenVPN or WireGuard secrets.
+
+Use examples only:
+
+```text
+data/openvpn-profiles/example.ovpn
+data/wireguard-profiles/example.conf
 ```
 
-#### Create a development environment
+These files must contain placeholders, not real production credentials.
+
+---
+
+## 🛠️ Development setup
+
+Clone the repository:
+
+```shell
+git clone https://github.com/stanislav-web/OpenDoor.git
+cd OpenDoor
+```
+
+Create a virtual environment:
+
 ```shell
 python3 -m venv .venv
 source .venv/bin/activate
+```
+
+Install development dependencies:
+
+```shell
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements-dev.txt
 python -m pip install -e .
 ```
 
-#### Run the baseline checks
+Verify the CLI:
+
+```shell
+opendoor --version
+opendoor --help
+```
+
+---
+
+## 🌿 Branch workflow
+
+Create a feature branch:
+
+```shell
+git checkout -b feature/my-change
+```
+
+Recommended branch prefixes:
+
+| Prefix | Purpose |
+|---|---|
+| `feature/` | New user-facing functionality |
+| `fix/` | Bug fixes |
+| `docs/` | Documentation-only changes |
+| `test/` | Test-only changes |
+| `refactor/` | Internal code cleanup without behavior change |
+| `release/` | Release preparation |
+
+Keep commits focused. If a change touches code, tests, and docs, that is fine when all changes support the same feature or fix.
+
+---
+
+## ✅ Required checks
+
+Before opening a pull request, run the relevant checks.
+
+### Full unit test suite
+
 ```shell
 python -m unittest
-python -m build
+```
+
+Explicit discovery:
+
+```shell
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+### Coverage
+
+```shell
+coverage run -m unittest discover -s tests -p "test_*.py"
+coverage report -m
+```
+
+### Lint
+
+```shell
 ruff check .
 ```
 
-Contribution workflow
-=====================
+### Documentation
 
-Recommended workflow:
-1. create a small focused change
-2. keep public CLI behavior stable unless intentionally changing it
-3. run tests
-4. run packaging checks if install/build logic changed
-5. update documentation if behavior changed
-6. open a pull request
+```shell
+python -m mkdocs build --strict
+```
 
-Current change policy
-=====================
+If `mkdocs` is not available, use a documentation virtual environment:
 
-Currently welcomed contributions:
-- packaging modernization
-- metadata cleanup
-- Python version baseline refresh
-- dependency refresh
-- build fixes
-- documentation improvements
-- test stabilization
-- safe internal cleanup that does not change scanner behavior
+```shell
+python3 -m venv .docs-venv
+source .docs-venv/bin/activate
+python -m pip install -r docs/requirements.txt
+python -m mkdocs build --strict
+```
 
-Avoid unless explicitly planned:
-- large architectural rewrites
-- changing scanner heuristics without tests
-- removing public CLI flags
-- renaming report formats or sniff plugins
-- changing output semantics without changelog updates
+---
 
-Documentation rules
-===================
+## 🧪 Test expectations
 
-When installation, release, docs, or workflow changes:
-- update `README.md`
-- update `CHANGELOG.md` when appropriate
-- update documentation pages in `docs/`
-- update `AGENTS.md` if contributor workflow changes
+Every behavior change should include tests unless there is a clear reason not to.
 
-Code style
-==========
+Tests should be:
 
-- Keep comments and docstrings in English
-- Prefer explicit readable code
-- Make small reviewable changes
-- Avoid unnecessary dependencies
-- Keep Linux distribution packaging in mind
+- deterministic;
+- isolated;
+- readable;
+- free from real network dependencies;
+- free from real VPN/process side effects;
+- explicit about expected behavior.
 
-Reporting issues
-================
+Avoid increasing per-test timeouts to hide instability. Fix the underlying nondeterminism instead.
 
-Please use the GitHub issue tracker for:
-- bugs
-- packaging issues
-- install/build failures
-- regressions
-- documentation problems
-- feature ideas
+When a test fails, verify whether the failure comes from the test or from the implementation before changing assertions.
 
-Project links
-=============
+---
 
-- Repository: https://github.com/stanislav-web/OpenDoor
-- Issues: https://github.com/stanislav-web/OpenDoor/issues
-- Documentation: https://opendoor.readthedocs.io/
-- PyPI: https://pypi.org/project/opendoor/
+## 🧩 Areas that usually need tests
 
-Maintainer
-==========
+| Change area | Expected test coverage |
+|---|---|
+| CLI option parsing | Unit tests for options and config propagation |
+| Response filters | Unit tests for include/exclude behavior |
+| Sniffers | Unit tests for plugin classification |
+| Auto-calibration | Unit tests for baseline and matching behavior |
+| Fingerprinting | Unit tests for known positive/negative samples |
+| WAF detection | Unit tests for passive detection signals |
+| Sessions | Unit tests for save/load/resume compatibility |
+| Reports | Unit tests for output writers and file creation |
+| Transports | Unit tests with mocked OpenVPN/WireGuard/process calls |
+| Packaging | Installation smoke checks and runtime asset checks |
+| Documentation | `mkdocs build --strict` |
 
-Primary maintainer:
-- `@stanislav-web`
+---
 
-Final note
-==========
+## 📚 Documentation changes
 
-Please keep changes controlled and incremental.  
-The 5.x line is intended to preserve working behavior while modernizing the project around it.
+Update documentation when a change affects:
+
+- CLI flags;
+- config file options;
+- reports;
+- scan behavior;
+- result buckets;
+- installation;
+- release process;
+- Homebrew/pip packaging;
+- transport setup;
+- WAF/fingerprint/auto-calibration behavior.
+
+Documentation lives in:
+
+```text
+docs/
+```
+
+Build locally:
+
+```shell
+python -m mkdocs build --strict
+```
+
+Serve locally:
+
+```shell
+python -m mkdocs serve
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/
+```
+
+---
+
+## 📦 Packaging changes
+
+If you change packaging metadata, runtime data files, entry points, dependencies, or install layout, run packaging checks.
+
+Build:
+
+```shell
+python -m build
+```
+
+Install into a clean virtual environment:
+
+```shell
+python3 -m venv /tmp/opendoor-package-check
+source /tmp/opendoor-package-check/bin/activate
+
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install /path/to/OpenDoor/dist/opendoor-*.whl
+
+opendoor --version
+opendoor --help
+```
+
+Verify runtime assets:
+
+```shell
+python - <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.prefix)
+
+paths = [
+    "opendoor.conf",
+    "data/directories.dat",
+    "data/subdomains.dat",
+    "data/useragents.dat",
+    "data/proxies.dat",
+    "data/ignored.dat",
+    "data/openvpn-profiles/example.ovpn",
+    "data/wireguard-profiles/example.conf",
+]
+
+for rel in paths:
+    print(rel, (root / rel).exists())
+PY
+```
+
+All required runtime assets should exist.
+
+---
+
+## 🍺 Homebrew formula changes
+
+When validating a Homebrew formula locally:
+
+```shell
+HOMEBREW_NO_INSTALL_FROM_API=1 brew install --build-from-source --verbose opendoor
+HOMEBREW_NO_INSTALL_FROM_API=1 brew test opendoor
+HOMEBREW_NO_INSTALL_FROM_API=1 brew audit --strict --new --online opendoor
+```
+
+A Homebrew test must not depend on external network access.
+
+---
+
+## 🔐 Secret hygiene
+
+Before committing, check for accidental secrets.
+
+Useful checks:
+
+```shell
+git grep -n -I -E '(BEGIN .*PRIVATE KEY|PrivateKey = [A-Za-z0-9+/=]{20,}|PresharedKey = [A-Za-z0-9+/=]{20,}|<key>|</key>)'
+```
+
+OpenVPN/WireGuard examples must contain placeholders only.
+
+Do not commit:
+
+- real VPN profiles;
+- private keys;
+- auth-user-pass files;
+- cookies;
+- API tokens;
+- bearer tokens;
+- customer target lists;
+- generated reports with sensitive findings.
+
+---
+
+## 🧾 Pull request checklist
+
+Before opening a pull request:
+
+- [ ] The change is focused and reviewable.
+- [ ] User-facing behavior is documented.
+- [ ] Tests were added or updated where needed.
+- [ ] `python -m unittest` passes.
+- [ ] `coverage report -m` is acceptable.
+- [ ] `ruff check .` passes.
+- [ ] `python -m mkdocs build --strict` passes for docs changes.
+- [ ] Packaging checks were run if install layout changed.
+- [ ] No secrets or real transport profiles were committed.
+
+---
+
+## 🗂️ Commit message style
+
+Use concise, descriptive commit messages.
+
+Examples:
+
+```text
+Add WAF summary to reports
+Fix response size range filtering
+Refresh ReadTheDocs usage guide
+Include transport profile examples in package data
+```
+
+Avoid vague messages such as:
+
+```text
+fix
+updates
+misc changes
+work
+```
+
+---
+
+## 🧯 Review guidance
+
+When reviewing a contribution, check:
+
+- whether the change matches the intended behavior;
+- whether tests prove the new behavior;
+- whether docs and examples are accurate;
+- whether runtime defaults remain safe;
+- whether package data is still included;
+- whether the change introduces secret or credential risks;
+- whether CI/CD behavior and exit codes remain predictable.
+
+Prefer minimal, targeted fixes over broad rewrites.
