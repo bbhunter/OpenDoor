@@ -53,3 +53,11 @@ results.sarif
 
 # Misc
 TODO
+# Local transport profiles may contain secrets.
+data/wireguard-profiles/*.conf
+!data/wireguard-profiles/example.conf
+
+# Local OpenVPN profiles may contain secrets.
+data/openvpn-profiles/*.ovpn
+data/openvpn-profiles/*.conf
+!data/openvpn-profiles/example.ovpn
