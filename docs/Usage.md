@@ -1,373 +1,806 @@
-Usage
-=====
+# 🧭 Usage
 
-Basic usage
-===========
+This page describes the OpenDoor command-line interface and common scan workflows.
 
-Run a simple directory scan:
+Use:
 
 ```shell
-python3 opendoor.py --host http://www.example.com
+opendoor --help
 ```
 
-Installed entrypoint usage:
+to see the exact options available in your installed build.
+
+---
+
+## 🎯 Target input
+
+OpenDoor accepts one target, a target list, targets from standard input, or a saved session.
+
+Only one of these modes should be used at a time:
 
 ```shell
-opendoor --host http://www.example.com
+opendoor --host https://example.com
+opendoor --hostlist targets.txt
+cat targets.txt | opendoor --stdin
+opendoor --session-load scan.session
 ```
 
-![Usage](img/usage.jpg)
-
-Help
-====
+### Single target
 
 ```shell
-usage: opendoor [-h] [--host HOST] [-p PORT] [-m METHOD] [-t THREADS]
-                [-d DELAY] [--timeout TIMEOUT] [-r RETRIES]
-                [--keep-alive] [--accept-cookies] [--header HEADER]
-                [--cookie COOKIE] [--debug DEBUG] [--tor]
-                [--torlist TORLIST] [--proxy PROXY] [-s SCAN] [-w WORDLIST]
-                [--reports REPORTS] [--reports-dir REPORTS_DIR]
-                [--random-agent] [--random-list] [--prefix PREFIX]
-                [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive]
-                [--recursive-depth RECURSIVE_DEPTH]
-                [--recursive-status RECURSIVE_STATUS]
-                [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF]
-                [--update] [--version] [--examples] [--docs]
-                [--wizard [WIZARD]]
-
-options:
-  -h, --help            show this help message and exit
-
-required named options:
-  --host HOST           Target host; example: --host http://example.com
-
-Application tools:
-  --update              Show package update instructions
-  --version             Show current version
-  --examples            Show usage examples
-  --docs                Open documentation
-  --wizard [WIZARD]     Run scanner wizard from your config
-
-Debug tools:
-  --debug DEBUG         Debug level -1 (silent), 1 - 3
-
-Reports tools:
-  --reports REPORTS     Scan reports (json,std,txt,html)
-  --reports-dir REPORTS_DIR
-                        Path to custom reports directory
-
-Request tools:
-  -p, --port PORT       Custom port (default 80)
-  -m, --method METHOD   Request method (HEAD by default)
-  -d, --delay DELAY     Delay between threaded requests
-  --timeout TIMEOUT     Request timeout (30 sec default)
-  -r, --retries RETRIES
-                        Maximum reconnect retries (default 3)
-  --keep-alive          Use keep-alive connection
-  --accept-cookies      Accept and route cookies from responses
-  --header HEADER       Add custom request header, e.g. --header 'X-Test: 1'
-  --cookie COOKIE       Add custom cookie, e.g. --cookie 'sid=abc123'
-  --tor                 Use built-in proxy list
-  --torlist TORLIST     Path to custom proxy list
-  --proxy PROXY         Custom permanent proxy server
-  --random-agent        Randomize user-agent per request
-
-Sniff tools:
-  --sniff SNIFF         Response sniff plugins (indexof,collation,file,skipempty,skipsizes=NUM:NUM...)
-
-Stream tools:
-  -t, --threads THREADS
-                        Allowed threads
-
-Wordlist tools:
-  -s, --scan SCAN       Scan type: directories or subdomains
-  -w, --wordlist WORDLIST
-                        Path to custom wordlist
-  --random-list         Shuffle scan list
-  --prefix PREFIX       Append path prefix to scan host
-  -e, --extensions EXTENSIONS
-                        Force selected extensions for the scan session, e.g. php,json
-  -i, --ignore-extensions IGNORE_EXTENSIONS
-                        Ignore selected extensions for the scan session, e.g. aspx,jsp
-  --recursive           Enable recursive directory scan
-  --recursive-depth RECURSIVE_DEPTH
-                        Maximum recursive scan depth
-  --recursive-status RECURSIVE_STATUS
-                        HTTP status codes allowed for recursive expansion
-  --recursive-exclude RECURSIVE_EXCLUDE
-                        File extensions excluded from recursive expansion
+opendoor --host https://example.com
 ```
 
-Arguments description
-=====================
+Use a full URL for directory scans.
 
-Application tools
------------------
-
-**--update**  
-Show update instructions for modern package-based environments.
+### Target list
 
 ```shell
-opendoor --update
+opendoor --hostlist targets.txt
 ```
 
-**--version**  
-Show the current local version and compare it with the latest published version.
+Example `targets.txt`:
+
+```text
+https://example.com
+https://app.example.com
+example.org
+```
+
+### Standard input
+
+```shell
+cat targets.txt | opendoor --stdin
+```
+
+This is useful when OpenDoor is part of a larger pipeline.
+
+### Resume from session
+
+```shell
+opendoor --session-load scan.session
+```
+
+Use this when a previous scan was saved with `--session-save`.
+
+---
+
+## 🔎 Scan modes
+
+OpenDoor supports directory discovery and subdomain discovery.
+
+```shell
+opendoor --host https://example.com --scan directories
+opendoor --host example.com --scan subdomains
+```
+
+### Directory discovery
+
+Directory discovery is used to find exposed paths, files, backups, login panels, admin areas, and other web resources.
+
+```shell
+opendoor --host https://example.com --scan directories
+```
+
+### Subdomain discovery
+
+Subdomain discovery is used to enumerate probable subdomains from a dictionary.
+
+```shell
+opendoor --host example.com --scan subdomains
+```
+
+Use a domain name instead of a full path when scanning subdomains.
+
+---
+
+## 📚 Wordlists and extensions
+
+### Custom wordlist
+
+```shell
+opendoor --host https://example.com --wordlist ./wordlist.txt
+```
+
+A custom wordlist is useful when testing a specific technology stack, application, CMS, or organization-specific naming pattern.
+
+### Shuffle scan list
+
+```shell
+opendoor --host https://example.com --random-list
+```
+
+This randomizes scan order.
+
+### Prefix
+
+```shell
+opendoor --host https://example.com --prefix admin/
+```
+
+The prefix is appended to scanned paths.
+
+### Force extensions
+
+```shell
+opendoor --host https://example.com --extensions php,json,txt
+```
+
+Short form:
+
+```shell
+opendoor --host https://example.com -e php,json,txt
+```
+
+### Ignore extensions
+
+```shell
+opendoor --host https://example.com --ignore-extensions aspx,jsp
+```
+
+Short form:
+
+```shell
+opendoor --host https://example.com -i aspx,jsp
+```
+
+---
+
+## 🔁 Recursive scan
+
+Recursive scan expands discovered directories and scans deeper paths.
+
+```shell
+opendoor --host https://example.com --recursive
+```
+
+### Limit recursion depth
+
+```shell
+opendoor --host https://example.com --recursive --recursive-depth 2
+```
+
+### Control recursive expansion statuses
+
+```shell
+opendoor --host https://example.com --recursive --recursive-status 200,301,302,403
+```
+
+Only responses with selected statuses are used as recursive expansion points.
+
+### Exclude file extensions from recursion
+
+```shell
+opendoor --host https://example.com --recursive --recursive-exclude jpg,png,css,js,pdf
+```
+
+This prevents static assets and binary files from becoming recursive scan roots.
+
+---
+
+## 🌐 Request options
+
+### Port
+
+```shell
+opendoor --host https://example.com --port 8443
+```
+
+Short form:
+
+```shell
+opendoor --host https://example.com -p 8443
+```
+
+### HTTP method
+
+OpenDoor uses `HEAD` by default.
+
+```shell
+opendoor --host https://example.com --method GET
+```
+
+Short form:
+
+```shell
+opendoor --host https://example.com -m GET
+```
+
+Use `GET` when you need body-based filters such as `--match-text`, `--exclude-text`, `--match-regex`, or `--exclude-regex`.
+
+### Delay
+
+```shell
+opendoor --host https://example.com --delay 0.5
+```
+
+Short form:
+
+```shell
+opendoor --host https://example.com -d 0.5
+```
+
+### Timeout
+
+```shell
+opendoor --host https://example.com --timeout 60
+```
+
+### Retries
+
+```shell
+opendoor --host https://example.com --retries 5
+```
+
+Short form:
+
+```shell
+opendoor --host https://example.com -r 5
+```
+
+### Threads
+
+```shell
+opendoor --host https://example.com --threads 20
+```
+
+Short form:
+
+```shell
+opendoor --host https://example.com -t 20
+```
+
+### Keep-alive
+
+```shell
+opendoor --host https://example.com --keep-alive
+```
+
+### Headers
+
+```shell
+opendoor --host https://example.com --header "X-Test: 1"
+opendoor --host https://example.com --header "Authorization: Bearer TOKEN"
+```
+
+### Cookies
+
+```shell
+opendoor --host https://example.com --cookie "sid=abc123"
+```
+
+### Accept cookies from responses
+
+```shell
+opendoor --host https://example.com --accept-cookies
+```
+
+---
+
+## 🧾 Raw HTTP request
+
+OpenDoor can read a raw HTTP request exported from a proxy, repeater, or similar testing tool.
+
+```shell
+opendoor --raw-request request.txt
+```
+
+If the request line uses a relative path, provide the scheme:
+
+```shell
+opendoor --raw-request request.txt --scheme https
+```
+
+Raw requests are useful for authenticated scans, custom headers, application-specific cookies, or copied requests from a browser/proxy workflow.
+
+Example raw request:
+
+```http
+GET /admin HTTP/1.1
+Host: example.com
+User-Agent: OpenDoor
+Cookie: sid=abc123
+```
+
+---
+
+## 🧹 Response filters
+
+Response filters are deterministic user-defined filters. They help keep only relevant responses and remove known noise.
+
+### Include statuses
+
+```shell
+opendoor --host https://example.com --include-status 200-299,301,302,403
+```
+
+### Exclude statuses
+
+```shell
+opendoor --host https://example.com --exclude-status 404,429,500-599
+```
+
+### Exclude exact response sizes
+
+```shell
+opendoor --host https://example.com --exclude-size 0,1234
+```
+
+### Exclude response size ranges
+
+```shell
+opendoor --host https://example.com --exclude-size-range 0-256,1024-2048
+```
+
+### Match text
+
+```shell
+opendoor --host https://example.com --method GET --match-text "Dashboard"
+```
+
+`--match-text` is repeatable.
+
+### Exclude text
+
+```shell
+opendoor --host https://example.com --method GET --exclude-text "Not Found"
+```
+
+`--exclude-text` is repeatable.
+
+### Match regex
+
+```shell
+opendoor --host https://example.com --method GET --match-regex "admin|login|dashboard"
+```
+
+`--match-regex` is repeatable.
+
+### Exclude regex
+
+```shell
+opendoor --host https://example.com --method GET --exclude-regex "404|not found"
+```
+
+`--exclude-regex` is repeatable.
+
+### Minimum response length
+
+```shell
+opendoor --host https://example.com --min-response-length 100
+```
+
+### Maximum response length
+
+```shell
+opendoor --host https://example.com --max-response-length 50000
+```
+
+### Practical filter example
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --include-status 200-299,301,302,403 \
+  --exclude-size-range 0-256 \
+  --exclude-regex "not found|404"
+```
+
+---
+
+## 🧠 Auto-calibration
+
+Auto-calibration helps classify soft-404, wildcard, and catch-all responses.
+
+```shell
+opendoor --host https://example.com --auto-calibrate
+```
+
+### Calibration samples
+
+```shell
+opendoor --host https://example.com --auto-calibrate --calibration-samples 8
+```
+
+### Calibration threshold
+
+```shell
+opendoor --host https://example.com --auto-calibrate --calibration-threshold 0.85
+```
+
+The threshold accepts values from `0.01` to `1.0`.
+
+Use auto-calibration when a target returns similar pages for invalid and valid paths.
+
+---
+
+## 🧬 Fingerprint detection
+
+Fingerprinting attempts to identify probable CMS, frameworks, application stacks, custom technologies, and infrastructure providers before the scan.
+
+```shell
+opendoor --host https://example.com --fingerprint
+```
+
+Fingerprinting is useful for:
+
+- choosing better wordlists;
+- understanding the target stack;
+- identifying static hosting or CDN providers;
+- adjusting filters and scan strategy.
+
+---
+
+## 🛡️ WAF detection and safe mode
+
+### WAF detection
+
+```shell
+opendoor --host https://example.com --waf-detect
+```
+
+This passively detects probable WAF or anti-bot protections before classifying responses.
+
+### Safe mode
+
+```shell
+opendoor --host https://example.com --waf-safe-mode
+```
+
+Safe mode automatically switches to a more cautious scan profile after WAF detection.
+
+Use this mode when scanning authorized targets protected by WAF, CDN, or anti-bot infrastructure.
+
+---
+
+## 🔁 Sessions
+
+Sessions allow long-running scans to be saved and resumed.
+
+### Save a session
+
+```shell
+opendoor --host https://example.com --session-save scan.session
+```
+
+### Autosave by time
+
+```shell
+opendoor \
+  --host https://example.com \
+  --session-save scan.session \
+  --session-autosave-sec 20
+```
+
+### Autosave by processed items
+
+```shell
+opendoor \
+  --host https://example.com \
+  --session-save scan.session \
+  --session-autosave-items 200
+```
+
+### Load a session
+
+```shell
+opendoor --session-load scan.session
+```
+
+Sessions are useful for:
+
+- large wordlists;
+- unstable networks;
+- batch scans;
+- recursive scans;
+- transport-based workflows;
+- scans interrupted by terminal or system restarts.
+
+---
+
+## 🌐 Proxy and transport options
+
+OpenDoor supports proxy usage and network transport profiles.
+
+### Permanent proxy
+
+```shell
+opendoor --host https://example.com --proxy socks5://127.0.0.1:9050
+```
+
+### Built-in proxy list
+
+```shell
+opendoor --host https://example.com --tor
+```
+
+### Custom proxy list
+
+```shell
+opendoor --host https://example.com --torlist proxies.txt
+```
+
+### Transport mode
+
+```shell
+opendoor --host https://example.com --transport direct
+opendoor --host https://example.com --transport proxy --proxy socks5://127.0.0.1:9050
+opendoor --host https://example.com --transport openvpn --transport-profile ./profile.ovpn
+opendoor --host https://example.com --transport wireguard --transport-profile ./profile.conf
+```
+
+Available transport modes:
+
+| Mode | Purpose |
+|---|---|
+| `direct` | Default network path |
+| `proxy` | Route traffic through a configured proxy |
+| `openvpn` | Bring up an OpenVPN profile for the scan |
+| `wireguard` | Bring up a WireGuard profile for the scan |
+
+### Single transport profile
+
+```shell
+opendoor \
+  --host https://example.com \
+  --transport openvpn \
+  --transport-profile ./profile.ovpn
+```
+
+```shell
+opendoor \
+  --host https://example.com \
+  --transport wireguard \
+  --transport-profile ./profile.conf
+```
+
+### Multiple transport profiles
+
+```shell
+opendoor \
+  --hostlist targets.txt \
+  --transport openvpn \
+  --transport-profiles vpn-profiles.txt
+```
+
+Example `vpn-profiles.txt`:
+
+```text
+./vpn/profile-1.ovpn
+./vpn/profile-2.ovpn
+./vpn/profile-3.ovpn
+```
+
+### Transport rotation
+
+```shell
+opendoor \
+  --hostlist targets.txt \
+  --transport openvpn \
+  --transport-profiles vpn-profiles.txt \
+  --transport-rotate per-target
+```
+
+Supported rotation modes:
+
+| Mode | Behavior |
+|---|---|
+| `none` | Use the selected transport without rotation |
+| `per-target` | Rotate transport profiles between targets |
+
+### Transport timeout
+
+```shell
+opendoor --host https://example.com --transport-timeout 60
+```
+
+### Transport healthcheck
+
+```shell
+opendoor \
+  --host https://example.com \
+  --transport openvpn \
+  --transport-profile ./profile.ovpn \
+  --transport-healthcheck-url https://ifconfig.me
+```
+
+### OpenVPN auth-user-pass
+
+```shell
+opendoor \
+  --host https://example.com \
+  --transport openvpn \
+  --transport-profile ./profile.ovpn \
+  --openvpn-auth ./auth.txt
+```
+
+Never commit real OpenVPN profiles, WireGuard private keys, auth files, or production transport credentials to a public repository.
+
+---
+
+## 📊 Reports
+
+OpenDoor can write scan results in multiple formats.
+
+```shell
+opendoor --host https://example.com --reports std,json,html
+opendoor --host https://example.com --reports json,sqlite --reports-dir ./reports
+```
+
+Available report formats:
+
+| Format   | Purpose                                       |
+|----------|-----------------------------------------------|
+| `std`    | Terminal output                               |
+| `txt`    | Plain text output                             |
+| `json`   | Machine-readable output                       |
+| `csv`    | Column-separated output                       |
+| `html`   | Human-readable report                         |
+| `sqlite` | Structured local database for post-processing |
+
+### Custom reports directory
+
+```shell
+opendoor --host https://example.com --reports json,html --reports-dir ./reports
+```
+
+---
+
+## 🧪 CI/CD fail-on rules
+
+OpenDoor can behave as a CI/CD quality gate.
+
+```shell
+opendoor --host https://example.com --fail-on-bucket success,auth,forbidden,blocked
+```
+
+When selected buckets are found, OpenDoor exits with code `1`.
+
+This is useful for:
+
+- GitHub Actions;
+- GitLab CI;
+- nightly exposure checks;
+- release gates;
+- security regression tests.
+
+Example:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --reports json,sqlite \
+  --fail-on-bucket success,auth,forbidden
+```
+
+---
+
+## 🔍 Sniffers
+
+Sniffers are built-in response analysis plugins.
+
+```shell
+opendoor --host https://example.com --sniff indexof
+opendoor --host https://example.com --sniff skipempty
+opendoor --host https://example.com --sniff skipsizes=24:41:50
+```
+
+Multiple sniffers can be combined:
+
+```shell
+opendoor --host https://example.com --sniff skipempty,file,collation,indexof,skipsizes=24:41:50
+```
+
+For details, see [Sniffers](Sniffers.md).
+
+---
+
+## 🐞 Debugging
+
+### Debug levels
+
+```shell
+opendoor --host https://example.com --debug 1
+opendoor --host https://example.com --debug 2
+opendoor --host https://example.com --debug 3
+```
+
+Silent mode:
+
+```shell
+opendoor --host https://example.com --debug -1
+```
+
+Use debug output when validating filters, transport behavior, request headers, response classification, or report generation.
+
+---
+
+## 🧰 Application tools
+
+### Show current version
 
 ```shell
 opendoor --version
 ```
 
-**--examples**  
-Show usage examples.
+### Show examples
 
 ```shell
 opendoor --examples
 ```
 
-**--docs**  
-Open the project documentation.
+### Open documentation
 
 ```shell
 opendoor --docs
 ```
 
-**--wizard**  
-Run the configuration wizard. `opendoor.conf` is used by default.
+### Run wizard
 
 ```shell
 opendoor --wizard
-opendoor --wizard /usr/local/path/to/project.conf
 ```
 
-Required arguments
-------------------
-
-**--host**  
-Target host or IP address. Scheme may also be included.
+### Show update instructions
 
 ```shell
-opendoor --host www.example.com
-opendoor --host https://www.example.com
-opendoor --host 127.0.0.1
+opendoor --update
 ```
 
-Request tools
--------------
+---
 
-**--port, -p**  
-Custom port. Default is usually 80 for HTTP and 443 for HTTPS.
+## ✅ Practical workflows
+
+### Low-noise directory scan
 
 ```shell
-opendoor --host www.example.com --port 8080
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --auto-calibrate \
+  --include-status 200-299,301,302,403 \
+  --exclude-size-range 0-256 \
+  --reports std,json,csv
 ```
 
-**--method, -m**  
-HTTP request method. `HEAD` is the default.
+### Authenticated scan from raw request
 
 ```shell
-opendoor --host www.example.com --method GET
+opendoor \
+  --raw-request request.txt \
+  --scheme https \
+  --method GET \
+  --auto-calibrate \
+  --reports json,html
 ```
 
-**--delay, -d**  
-Delay between threaded requests.
+### WAF-safe scan
 
 ```shell
-opendoor --host www.example.com --delay 1
+opendoor \
+  --host https://example.com \
+  --waf-safe-mode \
+  --timeout 60 \
+  --retries 5 \
+  --delay 0.5
 ```
 
-**--timeout**  
-Request timeout in seconds.
+### Batch scan with reports
 
 ```shell
-opendoor --host www.example.com --timeout 60
+opendoor \
+  --hostlist targets.txt \
+  --reports json,sqlite,csv \
+  --reports-dir ./reports
 ```
 
-**--retries, -r**  
-Maximum reconnect retries.
+### CI/CD exposure gate
 
 ```shell
-opendoor --host www.example.com --retries 5
-```
-
-**--keep-alive**  
-Use keep-alive connections.
-
-```shell
-opendoor --host www.example.com --keep-alive
-```
-
-**--accept-cookies**  
-Accept and reuse cookies from responses.
-
-```shell
-opendoor --host www.example.com --accept-cookies
-```
-
-**--header**  
-Append a custom request header. May be used multiple times.
-
-```shell
-opendoor --host www.example.com --header "Authorization: Bearer test"
-opendoor --host www.example.com --header "X-Test: 1" --header "Accept-Language: en-US"
-```
-
-**--cookie**  
-Append a custom request cookie. May be used multiple times. Values are joined into the initial `Cookie` header.
-
-```shell
-opendoor --host www.example.com --cookie "sid=abc123"
-opendoor --host www.example.com --cookie "sid=abc123" --cookie "locale=en"
-```
-
-**--tor**  
-Use the built-in proxy list.
-
-```shell
-opendoor --host www.example.com --tor
-```
-
-**--torlist**  
-Use a custom proxy list file.
-
-```shell
-opendoor --host www.example.com --torlist /path/to/proxy-list.txt
-```
-
-**--proxy**  
-Use a permanent proxy server.
-
-```shell
-opendoor --host www.example.com --proxy socks5://127.0.0.1:9050
-```
-
-**--random-agent**  
-Randomize the user-agent per request.
-
-```shell
-opendoor --host www.example.com --random-agent
-```
-
-Stream tools
-------------
-
-**--threads, -t**  
-Number of worker threads.
-
-```shell
-opendoor --host www.example.com --threads 10
-```
-
-Wordlist tools
---------------
-
-**--scan, -s**  
-Scan type: `directories` or `subdomains`.
-
-```shell
-opendoor --host www.example.com --scan directories
-opendoor --host example.com --scan subdomains
-```
-
-**--wordlist, -w**  
-Use a custom wordlist file.
-
-```shell
-opendoor --host www.example.com --wordlist /path/to/wordlist.txt
-```
-
-**--random-list**  
-Shuffle the scan list.
-
-```shell
-opendoor --host www.example.com --random-list
-```
-
-**--prefix**  
-Append a path prefix to the target host.
-
-```shell
-opendoor --host www.example.com --prefix admin/
-```
-
-**--extensions, -e**  
-Force selected extensions for the scan session.
-
-```shell
-opendoor --host www.example.com --extensions php,json
-```
-
-**--ignore-extensions, -i**  
-Ignore selected extensions for the scan session.
-
-```shell
-opendoor --host www.example.com --ignore-extensions aspx,jsp
-```
-
-**--recursive**  
-Enable recursive directory scan.
-
-```shell
-opendoor --host www.example.com --recursive
-```
-
-**--recursive-depth**  
-Set maximum recursive scan depth.
-
-```shell
-opendoor --host www.example.com --recursive --recursive-depth 2
-```
-
-**--recursive-status**  
-Set the HTTP status codes allowed to trigger recursive expansion.
-
-```shell
-opendoor --host www.example.com --recursive --recursive-status 200,403
-```
-
-**--recursive-exclude**  
-Exclude file-like paths from recursive expansion.
-
-```shell
-opendoor --host www.example.com --recursive --recursive-exclude jpg,png,css,js,pdf
-```
-
-Reports tools
--------------
-
-**--reports**  
-Select output report formats.
-
-```shell
-opendoor --host www.example.com --reports std,txt,json,html
-```
-
-**--reports-dir**  
-Write reports to a custom directory.
-
-```shell
-opendoor --host www.example.com --reports txt,html --reports-dir /tmp/reports
-```
-
-Debug tools
------------
-
-**--debug**  
-Set debug level from `-1` to `3`.
-
-```shell
-opendoor --host www.example.com --debug 1
-opendoor --host www.example.com --debug 3
-```
-
-Sniff tools
------------
-
-**--sniff**  
-Apply response sniff plugins.
-
-```shell
-opendoor --host www.example.com --sniff indexof,skipempty
-opendoor --host www.example.com --sniff file,collation,skipsizes=25:50:100
+opendoor \
+  --host https://example.com \
+  --auto-calibrate \
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden
 ```
