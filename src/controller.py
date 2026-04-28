@@ -29,6 +29,7 @@ from src.lib import package
 from src.lib import reporter
 from src.lib import tpl
 from src.lib.browser.session import SessionManager, SessionError
+from src.core.network import NetworkTransportManager, NetworkTransportError
 from .exceptions import SrcError
 
 
@@ -163,6 +164,7 @@ class Controller(object):
             cli_auto_calibrate = params.get('auto_calibrate')
             cli_calibration_samples = params.get('calibration_samples')
             cli_calibration_threshold = params.get('calibration_threshold')
+            cli_transport_overrides = cls._collect_transport_cli_overrides(params)
 
             if 'wizard' in params:
                 tpl.info(key='load_wizard', config=params['wizard'])
@@ -179,6 +181,8 @@ class Controller(object):
 
                 if cli_calibration_threshold is not None:
                     params['calibration_threshold'] = cli_calibration_threshold
+
+                params.update(cli_transport_overrides)
 
             if params.get('session_load'):
                 snapshot = SessionManager.load(params.get('session_load'))
@@ -204,6 +208,8 @@ class Controller(object):
                 if cli_calibration_threshold is not None:
                     restored['calibration_threshold'] = cli_calibration_threshold
 
+                restored.update(cli_transport_overrides)
+
                 params = restored
                 tpl.info(msg='Loaded session checkpoint from {0}'.format(
                     snapshot.get('_loaded_from', restored['session_save'])))
@@ -223,36 +229,62 @@ class Controller(object):
             if reporter.default == params.get('reports'):
                 tpl.info(key='use_reports')
 
-            for target in targets:
-                target_params = dict(params)
-                target_params.update(target)
+            transport = NetworkTransportManager(params)
 
-                brows = browser(target_params)
+            if transport.rotate_mode == 'per-target':
+                for target in targets:
+                    target_params = dict(params)
+                    target_params.update(target)
 
-                if True is reporter.is_reported(target_params.get('host')):
+                    transport.rotate()
+                    cls._log_transport_start(transport)
+
+                    transport_started = False
                     try:
-                        tpl.prompt(key='logged')
-                    except KeyboardInterrupt:
-                        tpl.cancel(key='abort')
+                        transport.start()
+                        transport_started = True
 
-                brows.ping()
-                if target_params.get('fingerprint') is True:
-                    brows.fingerprint()
+                        scan_result = cls._scan_target(target_params)
 
-                if target_params.get('auto_calibrate') is True:
-                    brows.calibrate()
+                        if ci_mode_enabled is True:
+                            fail_on_matches.extend(
+                                cls._match_fail_on_buckets(
+                                    target_params.get('host'),
+                                    scan_result,
+                                    fail_on_buckets
+                                )
+                            )
+                    finally:
+                        if transport_started is True:
+                            transport.stop()
+                            cls._log_transport_stop(transport)
 
-                brows.scan()
-                brows.done()
+            else:
+                cls._log_transport_start(transport)
 
-                if ci_mode_enabled is True:
-                    fail_on_matches.extend(
-                        cls._match_fail_on_buckets(
-                            target_params.get('host'),
-                            brows.result,
-                            fail_on_buckets
-                        )
-                    )
+                transport_started = False
+                try:
+                    transport.start()
+                    transport_started = True
+
+                    for target in targets:
+                        target_params = dict(params)
+                        target_params.update(target)
+
+                        scan_result = cls._scan_target(target_params)
+
+                        if ci_mode_enabled is True:
+                            fail_on_matches.extend(
+                                cls._match_fail_on_buckets(
+                                    target_params.get('host'),
+                                    scan_result,
+                                    fail_on_buckets
+                                )
+                            )
+                finally:
+                    if transport_started is True:
+                        transport.stop()
+                        cls._log_transport_stop(transport)
 
             if ci_mode_enabled is True:
                 if len(fail_on_matches) > 0:
@@ -267,11 +299,83 @@ class Controller(object):
 
             return 0
 
-        except (AttributeError, BrowserError, ReporterError, TplError, SessionError) as error:
+        except (AttributeError, BrowserError, ReporterError, TplError, SessionError, NetworkTransportError) as error:
             raise SrcError(error)
         except (KeyboardInterrupt, SystemExit):
             tpl.cancel(key='abort')
             return 0
+
+    @classmethod
+    def _scan_target(cls, target_params):
+        """
+        Run scan flow for one resolved target.
+
+        :param dict target_params:
+        :raise BrowserError:
+        :return: dict
+        """
+
+        brows = browser(target_params)
+
+        if True is reporter.is_reported(target_params.get('host')):
+            try:
+                tpl.prompt(key='logged')
+            except KeyboardInterrupt:
+                tpl.cancel(key='abort')
+
+        brows.ping()
+
+        if target_params.get('fingerprint') is True:
+            brows.fingerprint()
+
+        if target_params.get('auto_calibrate') is True:
+            brows.calibrate()
+
+        brows.scan()
+        brows.done()
+
+        return brows.result
+
+    @staticmethod
+    def _collect_transport_cli_overrides(params):
+        """
+        Collect explicit transport options that should override wizard/session params.
+
+        Defaults inserted by option filtering must not accidentally override
+        transport settings restored from wizard or session configuration.
+
+        :param dict params:
+        :return: dict
+        """
+
+        overrides = {}
+
+        transport = params.get('transport')
+        if transport in ['proxy', 'openvpn', 'wireguard']:
+            overrides['transport'] = transport
+
+        if params.get('transport_profile') is not None:
+            overrides['transport_profile'] = params.get('transport_profile')
+
+        if params.get('transport_profiles') is not None:
+            overrides['transport_profiles'] = params.get('transport_profiles')
+
+        if params.get('transport_timeout') is not None:
+            overrides['transport_timeout'] = params.get('transport_timeout')
+
+        if params.get('transport_healthcheck_url') is not None:
+            overrides['transport_healthcheck_url'] = params.get('transport_healthcheck_url')
+
+        if params.get('openvpn_auth') is not None:
+            overrides['openvpn_auth'] = params.get('openvpn_auth')
+
+        if params.get('transport_rotate') is not None:
+            if params.get('transport_rotate') != 'none' \
+                    or overrides.get('transport') in ['proxy', 'openvpn', 'wireguard'] \
+                    or overrides.get('transport_profiles') is not None:
+                overrides['transport_rotate'] = params.get('transport_rotate')
+
+        return overrides
 
     @staticmethod
     def _match_fail_on_buckets(host, result, buckets):
@@ -351,3 +455,48 @@ class Controller(object):
             return [target]
 
         return []
+
+    @staticmethod
+    def _is_transport_loggable(transport):
+        """
+        Check if transport should be shown in terminal logs.
+
+        :param NetworkTransportManager transport:
+        :return: bool
+        """
+
+        return getattr(transport, 'transport', 'direct') != 'direct'
+
+    @classmethod
+    def _log_transport_start(cls, transport):
+        """
+        Print transport startup message.
+
+        :param NetworkTransportManager transport:
+        :return: None
+        """
+
+        if cls._is_transport_loggable(transport) is not True:
+            return
+
+        tpl.info(msg='Network transport enabled: {0} profile={1}'.format(
+            transport.transport,
+            transport.current_profile_name
+        ))
+
+    @classmethod
+    def _log_transport_stop(cls, transport):
+        """
+        Print transport stop message.
+
+        :param NetworkTransportManager transport:
+        :return: None
+        """
+
+        if cls._is_transport_loggable(transport) is not True:
+            return
+
+        tpl.info(msg='Network transport stopped: {0} profile={1}'.format(
+            transport.transport,
+            transport.current_profile_name
+        ))

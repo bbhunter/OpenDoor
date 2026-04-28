@@ -852,5 +852,84 @@ class TestOptions(unittest.TestCase):
             'fail_on_bucket': 'success,auth',
         })
 
+    def test_init_should_parse_network_transport_arguments(self):
+        """Options.__init__() should parse network transport arguments."""
+
+        with patch(
+                'src.core.options.options.sys.argv',
+                [
+                    'opendoor.py',
+                    '--host',
+                    'example.com',
+                    '--transport',
+                    'wireguard',
+                    '--transport-profile',
+                    './vpn/nl.conf',
+                    '--transport-rotate',
+                    'none',
+                    '--transport-timeout',
+                    '15',
+                    '--transport-healthcheck-url',
+                    'https://example.com/ip',
+                ]
+        ):
+            option = Options()
+
+        self.assertEqual(option.args.transport, 'wireguard')
+        self.assertEqual(option.args.transport_profile, './vpn/nl.conf')
+        self.assertEqual(option.args.transport_rotate, 'none')
+        self.assertEqual(option.args.transport_timeout, 15)
+        self.assertEqual(option.args.transport_healthcheck_url, 'https://example.com/ip')
+
+    def test_get_arg_values_should_pass_network_transport_arguments_through_filter(self):
+        """Options.get_arg_values() should pass network transport arguments through Filter.filter()."""
+
+        namespace = Namespace(
+            host='example.com',
+            hostlist=None,
+            stdin=False,
+            raw_request=None,
+            session_load=None,
+            version=False,
+            update=False,
+            examples=False,
+            docs=False,
+            wizard=None,
+            transport='openvpn',
+            transport_profile='./vpn/nl.ovpn',
+            transport_profiles=None,
+            transport_rotate='none',
+            transport_timeout=20,
+            transport_healthcheck_url='https://example.com/ip',
+            openvpn_auth='./auth.txt',
+        )
+        option = self.make_options(namespace)
+
+        filtered = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'transport': 'openvpn',
+            'transport_profile': '/abs/vpn/nl.ovpn',
+            'transport_rotate': 'none',
+            'transport_timeout': 20,
+            'transport_healthcheck_url': 'https://example.com/ip',
+            'openvpn_auth': '/abs/auth.txt',
+        }
+
+        with patch('src.core.options.options.Filter.filter', return_value=filtered) as filter_mock:
+            actual = option.get_arg_values()
+
+        self.assertEqual(actual, filtered)
+        filter_mock.assert_called_once_with({
+            'host': 'example.com',
+            'transport': 'openvpn',
+            'transport_profile': './vpn/nl.ovpn',
+            'transport_rotate': 'none',
+            'transport_timeout': 20,
+            'transport_healthcheck_url': 'https://example.com/ip',
+            'openvpn_auth': './auth.txt',
+        })
+
 if __name__ == '__main__':
     unittest.main()

@@ -375,5 +375,40 @@ class TestBrowserConfig(unittest.TestCase):
         self.assertEqual(config.method, 'GET')
         self.assertIn('--auto-calibrate', config.method_override_items)
 
+    def test_config_should_expose_network_transport_settings(self):
+        """Config should expose network transport settings."""
+
+        config = Config({
+            'host': 'example.com',
+            'transport': 'wireguard',
+            'transport_profile': '/tmp/wg.conf',
+            'transport_profiles': '/tmp/profiles.txt',
+            'transport_rotate': 'per-target',
+            'transport_timeout': 15,
+            'transport_healthcheck_url': 'https://example.com/ip',
+            'openvpn_auth': '/tmp/auth.txt',
+        })
+
+        self.assertEqual(config.transport, 'wireguard')
+        self.assertEqual(config.transport_profile, '/tmp/wg.conf')
+        self.assertEqual(config.transport_profiles, '/tmp/profiles.txt')
+        self.assertEqual(config.transport_rotate, 'per-target')
+        self.assertEqual(config.transport_timeout, 15)
+        self.assertEqual(config.transport_healthcheck_url, 'https://example.com/ip')
+        self.assertEqual(config.openvpn_auth, '/tmp/auth.txt')
+
+    def test_config_should_default_to_direct_transport(self):
+        """Config should default to direct network transport."""
+
+        config = Config({'host': 'example.com'})
+
+        self.assertEqual(config.transport, 'direct')
+        self.assertIsNone(config.transport_profile)
+        self.assertIsNone(config.transport_profiles)
+        self.assertEqual(config.transport_rotate, 'none')
+        self.assertEqual(config.transport_timeout, 30)
+        self.assertIsNone(config.transport_healthcheck_url)
+        self.assertIsNone(config.openvpn_auth)
+
 if __name__ == '__main__':
     unittest.main()

@@ -600,5 +600,385 @@ class TestFilter(unittest.TestCase):
         self.assertEqual(actual['calibration_samples'], 9)
         self.assertEqual(actual['calibration_threshold'], 0.93)
 
+    def test_filter_should_normalize_transport_options(self):
+        """Filter.filter() should normalize network transport options."""
+
+        actual = Filter.filter({
+            'host': 'example.com',
+            'transport': 'wireguard',
+            'transport_profile': './profiles/nl.conf',
+            'transport_rotate': 'none',
+            'transport_timeout': 15,
+            'transport_healthcheck_url': 'https://example.com/ip',
+        })
+
+        self.assertEqual(actual['transport'], 'wireguard')
+        self.assertTrue(actual['transport_profile'].endswith('profiles/nl.conf'))
+        self.assertEqual(actual['transport_rotate'], 'none')
+        self.assertEqual(actual['transport_timeout'], 15)
+        self.assertEqual(actual['transport_healthcheck_url'], 'https://example.com/ip')
+
+    def test_filter_should_normalize_transport_none_values(self):
+        """Filter should normalize empty transport values to defaults."""
+
+        self.assertEqual(Filter.transport(None), 'direct')
+        self.assertEqual(Filter.transport('None'), 'direct')
+        self.assertEqual(Filter.transport_rotate(None), 'none')
+        self.assertIsNone(Filter.optional_text('None'))
+        self.assertIsNone(Filter.optional_path('None'))
+
+    def test_filter_should_reject_invalid_transport(self):
+        """Filter.filter() should reject unsupported network transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'vpn',
+            })
+
+    def test_filter_should_reject_invalid_transport_rotate(self):
+        """Filter.filter() should reject unsupported transport rotation mode."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport_rotate': 'per-request',
+            })
+
+    def test_filter_should_reject_profile_for_direct_transport(self):
+        """Filter.filter() should reject transport profile for direct transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'direct',
+                'transport_profile': './vpn/nl.conf',
+            })
+
+    def test_filter_should_reject_per_target_rotate_for_direct_transport(self):
+        """Filter.filter() should reject per-target rotation for direct transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'direct',
+                'transport_rotate': 'per-target',
+            })
+
+    def test_filter_should_allow_proxy_layer_with_vpn_transport(self):
+        """Filter.filter() should allow existing proxy layer together with VPN transport."""
+
+        actual = Filter.filter({
+            'host': 'example.com',
+            'proxy': 'http://127.0.0.1:8080',
+            'transport': 'openvpn',
+            'transport_profile': './vpn/nl.ovpn',
+        })
+
+        self.assertEqual(actual['proxy'], 'http://127.0.0.1:8080')
+        self.assertEqual(actual['transport'], 'openvpn')
+        self.assertTrue(actual['transport_profile'].endswith('vpn/nl.ovpn'))
+
+    def test_filter_should_reject_per_target_rotate_for_proxy_transport(self):
+        """Filter.filter() should reject per-target rotation for proxy transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'proxy',
+                'transport_rotate': 'per-target',
+            })
+
+    def test_filter_should_require_openvpn_profile(self):
+        """Filter.filter() should require profile for openvpn transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'openvpn',
+            })
+
+    def test_filter_should_reject_conf_profile_for_openvpn(self):
+        """Filter.filter() should reject .conf profile for openvpn transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'openvpn',
+                'transport_profile': './vpn/nl.conf',
+            })
+
+    def test_filter_should_reject_ovpn_profile_for_wireguard(self):
+        """Filter.filter() should reject .ovpn profile for wireguard transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'wireguard',
+                'transport_profile': './vpn/nl.ovpn',
+            })
+
+    def test_filter_should_require_profiles_for_per_target_rotation(self):
+        """Filter.filter() should require transport profiles list for per-target rotation."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'wireguard',
+                'transport_profile': './vpn/nl.conf',
+                'transport_rotate': 'per-target',
+            })
+
+    def test_filter_should_accept_profiles_for_per_target_rotation(self):
+        """Filter.filter() should accept transport profiles list for per-target rotation."""
+
+        actual = Filter.filter({
+            'host': 'example.com',
+            'transport': 'wireguard',
+            'transport_profiles': './vpn/profiles.txt',
+            'transport_rotate': 'per-target',
+        })
+
+        self.assertEqual(actual['transport'], 'wireguard')
+        self.assertTrue(actual['transport_profiles'].endswith('vpn/profiles.txt'))
+        self.assertEqual(actual['transport_rotate'], 'per-target')
+
+    def test_filter_should_reject_profile_and_profiles_combination_for_rotation(self):
+        """Filter.filter() should reject single profile when per-target rotation is used."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'wireguard',
+                'transport_profile': './vpn/nl.conf',
+                'transport_profiles': './vpn/profiles.txt',
+                'transport_rotate': 'per-target',
+            })
+
+    def test_filter_should_reject_profiles_without_rotation(self):
+        """Filter.filter() should reject transport profiles list without per-target rotation."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'wireguard',
+                'transport_profiles': './vpn/profiles.txt',
+            })
+
+    def test_filter_should_reject_openvpn_auth_for_wireguard(self):
+        """Filter.filter() should reject OpenVPN auth for WireGuard transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'wireguard',
+                'transport_profile': './vpn/nl.conf',
+                'openvpn_auth': './auth.txt',
+            })
+
+    def test_filter_should_keep_transport_options_with_session_load(self):
+        """Filter.filter() should preserve invocation-level transport options for session resume."""
+
+        actual = Filter.filter({
+            'session_load': '/tmp/session.json',
+            'transport': 'openvpn',
+            'transport_profile': './vpn/nl.ovpn',
+            'transport_timeout': 20,
+            'transport_healthcheck_url': 'https://example.com/ip',
+            'openvpn_auth': './auth.txt',
+        })
+
+        self.assertEqual(actual['session_load'], '/tmp/session.json')
+        self.assertEqual(actual['transport'], 'openvpn')
+        self.assertTrue(actual['transport_profile'].endswith('vpn/nl.ovpn'))
+        self.assertEqual(actual['transport_timeout'], 20)
+        self.assertEqual(actual['transport_healthcheck_url'], 'https://example.com/ip')
+        self.assertTrue(actual['openvpn_auth'].endswith('auth.txt'))
+
+    def test_filter_should_reject_session_load_with_raw_request(self):
+        """Filter.filter() should reject session-load mixed with raw request."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'session_load': '/tmp/session.json',
+                'raw_request': '/tmp/request.txt',
+            })
+
+    def test_filter_should_reject_session_load_with_hostlist_or_stdin(self):
+        """Filter.filter() should reject session-load mixed with hostlist or stdin target sources."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'session_load': '/tmp/session.json',
+                'hostlist': '/tmp/targets.txt',
+            })
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'session_load': '/tmp/session.json',
+                'stdin': True,
+            })
+
+    def test_filter_should_keep_transport_profiles_rotation_with_session_load(self):
+        """Filter.filter() should preserve per-target transport rotation options for session resume."""
+
+        actual = Filter.filter({
+            'session_load': '/tmp/session.json',
+            'transport': 'wireguard',
+            'transport_profiles': './vpn/profiles.txt',
+            'transport_rotate': 'per-target',
+            'transport_timeout': 25,
+            'transport_healthcheck_url': 'https://example.com/ip',
+        })
+
+        self.assertEqual(actual['session_load'], '/tmp/session.json')
+        self.assertEqual(actual['transport'], 'wireguard')
+        self.assertTrue(actual['transport_profiles'].endswith('vpn/profiles.txt'))
+        self.assertEqual(actual['transport_rotate'], 'per-target')
+        self.assertEqual(actual['transport_timeout'], 25)
+        self.assertEqual(actual['transport_healthcheck_url'], 'https://example.com/ip')
+
+    def test_filter_should_keep_openvpn_auth_with_session_load(self):
+        """Filter.filter() should preserve OpenVPN auth option for session resume."""
+
+        actual = Filter.filter({
+            'session_load': '/tmp/session.json',
+            'transport': 'openvpn',
+            'transport_profile': './vpn/nl.ovpn',
+            'transport_rotate': 'none',
+            'openvpn_auth': './vpn/auth.txt',
+        })
+
+        self.assertEqual(actual['transport'], 'openvpn')
+        self.assertTrue(actual['transport_profile'].endswith('vpn/nl.ovpn'))
+        self.assertEqual(actual['transport_rotate'], 'none')
+        self.assertTrue(actual['openvpn_auth'].endswith('vpn/auth.txt'))
+
+    def test_filter_should_normalize_stdin_targets_in_full_filter_flow(self):
+        """Filter.filter() should normalize stdin targets in the full filter flow."""
+
+        with patch('src.core.options.filter.sys.stdin', io.StringIO('example.com\nhttps://secure.example.com\n')):
+            actual = Filter.filter({
+                'stdin': True,
+                'reports': 'std',
+            })
+
+        self.assertEqual(actual['targets'], [
+            {'host': 'example.com', 'scheme': 'http://', 'ssl': False, 'source': 'example.com'},
+            {'host': 'secure.example.com', 'scheme': 'https://', 'ssl': True, 'source': 'https://secure.example.com'},
+        ])
+        self.assertEqual(actual['transport'], 'direct')
+        self.assertEqual(actual['transport_rotate'], 'none')
+
+    def test_filter_should_normalize_session_save_and_scan_arguments(self):
+        """Filter.filter() should normalize session save and scan options in normal flow."""
+
+        actual = Filter.filter({
+            'host': 'example.com',
+            'session_save': './sessions/run.json',
+            'session_autosave_sec': 15,
+            'session_autosave_items': 100,
+            'scan': 'subdomains',
+        })
+
+        self.assertEqual(actual['scan'], 'subdomains')
+        self.assertTrue(actual['session_save'].endswith('sessions/run.json'))
+        self.assertEqual(actual['session_autosave_sec'], 15)
+        self.assertEqual(actual['session_autosave_items'], 100)
+
+    def test_filter_should_reject_direct_transport_with_profiles_or_auth(self):
+        """Filter.filter() should reject profiles and OpenVPN auth for direct transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'direct',
+                'transport_profiles': './vpn/profiles.txt',
+            })
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'direct',
+                'openvpn_auth': './vpn/auth.txt',
+            })
+
+    def test_filter_should_reject_proxy_transport_with_openvpn_auth(self):
+        """Filter.filter() should reject OpenVPN auth for proxy transport."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'host': 'example.com',
+                'transport': 'proxy',
+                'openvpn_auth': './vpn/auth.txt',
+            })
+
+    def test_filter_should_accept_valid_transport_profile_extensions(self):
+        """Filter.validate_transport_profile_extension() should accept valid VPN profile extensions."""
+
+        self.assertIsNone(
+            Filter.validate_transport_profile_extension(
+                'openvpn',
+                './vpn/nl.ovpn',
+                key='--transport-profile'
+            )
+        )
+        self.assertIsNone(
+            Filter.validate_transport_profile_extension(
+                'wireguard',
+                './vpn/nl.conf',
+                key='--transport-profile'
+            )
+        )
+
+    def test_filter_should_allow_registered_non_vpn_transport_without_vpn_profile_rules(self):
+        """Filter.validate_transport_options() should allow future registered non-VPN transports."""
+
+        payload = {
+            'transport': 'container',
+            'transport_profile': './profiles/container.json',
+            'transport_rotate': 'none',
+        }
+
+        with patch.object(Filter, 'TRANSPORTS', Filter.TRANSPORTS + ('container',)):
+            Filter.validate_transport_options(payload)
+
+        self.assertEqual(payload['transport'], 'container')
+        self.assertEqual(payload['transport_rotate'], 'none')
+        self.assertEqual(payload['transport_profile'], './profiles/container.json')
+
+    def test_filter_optional_helpers_should_cover_empty_and_null_values(self):
+        """Filter optional helpers should normalize empty and null-like values."""
+
+        self.assertIsNone(Filter.optional_text(''))
+        self.assertIsNone(Filter.optional_text('   '))
+        self.assertIsNone(Filter.optional_text('null'))
+        self.assertIsNone(Filter.optional_path(None))
+        self.assertIsNone(Filter.optional_path('None'))
+
+    def test_filter_transport_rotate_should_normalize_empty_values(self):
+        """Filter.transport_rotate() should normalize empty and null-like values to none."""
+
+        self.assertEqual(Filter.transport_rotate(''), 'none')
+        self.assertEqual(Filter.transport_rotate('null'), 'none')
+        self.assertEqual(Filter.transport_rotate('NONE'), 'none')
+
+    def test_filter_should_reject_invalid_transport_options_with_session_load(self):
+        """Filter.filter() should validate transport options in session-load flow."""
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'session_load': '/tmp/session.json',
+                'transport': 'wireguard',
+                'transport_profile': './vpn/nl.ovpn',
+            })
+
+        with self.assertRaises(FilterError):
+            Filter.filter({
+                'session_load': '/tmp/session.json',
+                'transport': 'proxy',
+                'transport_rotate': 'per-target',
+            })
+
 if __name__ == '__main__':
     unittest.main()

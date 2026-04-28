@@ -51,6 +51,14 @@ class Config(object):
         self._session_autosave_sec = 20 if params.get('session_autosave_sec') is None else int(params.get('session_autosave_sec'))
         self._session_autosave_items = 200 if params.get('session_autosave_items') is None else int(params.get('session_autosave_items'))
         self._proxy = '' if params.get('proxy') is None else params.get('proxy')
+        self._transport = 'direct' if params.get('transport') is None else params.get('transport')
+        self._transport_profile = params.get('transport_profile')
+        self._transport_profiles = params.get('transport_profiles')
+        self._transport_rotate = 'none' if params.get('transport_rotate') is None else params.get('transport_rotate')
+        self._transport_timeout = 30 if params.get('transport_timeout') is None else int(
+            params.get('transport_timeout'))
+        self._transport_healthcheck_url = params.get('transport_healthcheck_url')
+        self._openvpn_auth = params.get('openvpn_auth')
         self._headers = params.get('header')
         self._cookies = params.get('cookie')
         self._raw_request = params.get('raw_request')
@@ -546,6 +554,48 @@ class Config(object):
             for item in self._recursive_exclude
             if str(item).strip()
         ]
+
+    @property
+    def transport(self):
+        """Network transport mode."""
+
+        return self._transport
+
+    @property
+    def transport_profile(self):
+        """Single transport profile path."""
+
+        return self._transport_profile
+
+    @property
+    def transport_profiles(self):
+        """Transport profiles list path."""
+
+        return self._transport_profiles
+
+    @property
+    def transport_rotate(self):
+        """Transport rotation mode."""
+
+        return self._transport_rotate
+
+    @property
+    def transport_timeout(self):
+        """Transport command timeout."""
+
+        return self._transport_timeout
+
+    @property
+    def transport_healthcheck_url(self):
+        """Transport healthcheck URL."""
+
+        return self._transport_healthcheck_url
+
+    @property
+    def openvpn_auth(self):
+        """OpenVPN auth-user-pass file path."""
+
+        return self._openvpn_auth
 
     @property
     def reports(self):

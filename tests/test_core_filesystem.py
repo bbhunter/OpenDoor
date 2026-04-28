@@ -17,6 +17,7 @@
 """
 
 import os
+import errno
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -278,6 +279,91 @@ class TestFileSystem(unittest.TestCase):
         self.assertEqual(FileSystem.human_size(512), '512.00B')
         self.assertEqual(FileSystem.human_size(2048), '2.00KB')
 
+    def test_resolve_readable_file_should_reject_unreadable_file(self):
+        """FileSystem._resolve_readable_file() should reject unreadable files."""
+
+        with patch('src.core.filesystem.filesystem.os.path.isfile', return_value=True), \
+                patch('src.core.filesystem.filesystem.os.access', return_value=False):
+            with self.assertRaises(FileSystemError):
+                FileSystem._resolve_readable_file('/tmp/secret.txt')
+
+    def test_resolve_writable_file_should_reject_unwritable_file(self):
+        """FileSystem._resolve_writable_file() should reject unwritable files."""
+
+        with patch('src.core.filesystem.filesystem.os.path.isfile', return_value=True), \
+                patch('src.core.filesystem.filesystem.os.access', return_value=False):
+            with self.assertRaises(FileSystemError):
+                FileSystem._resolve_writable_file('/tmp/out.txt')
+
+    def test_makedir_should_raise_permission_denied_when_existing_candidates_are_not_writable(self):
+        """FileSystem.makedir() should raise permission denied when candidates are not writable."""
+
+        error = OSError()
+        error.errno = errno.EEXIST
+
+        with patch('src.core.filesystem.filesystem.os.path.isabs', return_value=True), \
+                patch('src.core.filesystem.filesystem.os.makedirs', side_effect=error), \
+                patch('src.core.filesystem.filesystem.os.access', return_value=False):
+            with self.assertRaises(FileSystemError) as context:
+                FileSystem.makedir('/tmp/existing-denied')
+
+        self.assertIn('Permission denied', str(context.exception))
+
+    def test_makefile_should_create_nested_file(self):
+        """FileSystem.makefile() should create parent directory and target file."""
+
+        root = tempfile.mkdtemp()
+        self.addCleanup(lambda: os.path.isdir(root) and os.rmdir(root))
+
+        nested_dir = os.path.join(root, 'nested')
+        target = os.path.join(nested_dir, 'out.txt')
+
+        actual = FileSystem.makefile(target)
+
+        self.assertEqual(actual, target)
+        self.assertTrue(os.path.isfile(target))
+
+        os.unlink(target)
+        os.rmdir(nested_dir)
+
+    def test_shuffle_should_write_chunked_output(self):
+        """FileSystem.shuffle() should write shuffled chunks to output file."""
+
+        source = tempfile.NamedTemporaryFile(delete=False)
+        source.write(b'a\nb\nc\n')
+        source.close()
+        self.addCleanup(lambda: os.path.exists(source.name) and os.unlink(source.name))
+
+        output = tempfile.NamedTemporaryFile(delete=False)
+        output.close()
+        self.addCleanup(lambda: os.path.exists(output.name) and os.unlink(output.name))
+
+        with patch('src.core.filesystem.filesystem.random.shuffle', side_effect=lambda items: None):
+            FileSystem.shuffle(source.name, output.name, 2)
+
+        with open(output.name, 'r', encoding=FileSystem.text_encoding) as file:
+            self.assertEqual(file.readlines(), ['a\n', 'b\n', 'c\n'])
+
+    def test_readline_should_not_call_loader_twice_for_exact_batch_size(self):
+        """FileSystem.readline() should not call loader with an extra empty batch after exact batch flush."""
+
+        source = tempfile.NamedTemporaryFile(delete=False, mode='w', encoding=FileSystem.text_encoding)
+        source.write('a\nb\n')
+        source.close()
+        self.addCleanup(lambda: os.path.exists(source.name) and os.unlink(source.name))
+
+        loaded = []
+
+        def handler(line, _params):
+            return line.strip()
+
+        def loader(batch):
+            loaded.append(batch)
+
+        with patch.object(FileSystem, 'READLINE_BATCH_SIZE', 2):
+            FileSystem.readline(source.name, handler, {}, loader)
+
+        self.assertEqual(loaded, [['a', 'b']])
 
 if __name__ == '__main__':
     unittest.main()

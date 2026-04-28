@@ -33,33 +33,33 @@ v5.10.0 (28.04.2026)
 - (enhancement) added `fail_on_bucket` support to wizard configuration
 - (enhancement) added explicit CI/CD mode startup and final result messages
 - (enhancement) `--fail-on-bucket` is preserved for wizard and session resume flows
-- (enhancement) add CSV report plugin (`--reports csv`)
-- (enhancement) wizard configuration
-- (enhancement) increase WAF Safe Mode cooldown on blocked/challenge responses
-- (enhancement) react to 429 rate-limit responses
-- (enhancement) respect numeric Retry-After values for temporary 503 responses
-- (enhancement) avoid treating plain 403 Forbidden as rate limiting
-- (enhancement) gradually recover cooldown after clean responses
-- (enhancement) persist adaptive cooldown state in session checkpoints
+- (enhancement) added CSV report plugin via `--reports csv`
+- (enhancement) improved wizard configuration support for new scan options
+- (enhancement) increased WAF safe mode cooldown on blocked and challenge responses
+- (enhancement) added adaptive handling for `429` rate-limit responses
+- (enhancement) added support for numeric `Retry-After` values on temporary `503` responses
+- (enhancement) avoided treating plain `403 Forbidden` responses as rate limiting
+- (enhancement) added gradual cooldown recovery after clean responses
+- (enhancement) adaptive cooldown state is persisted in session checkpoints
 - (dictionary) cleaned and normalized directories list
-- (dictionary) refresh subdomains wordlist (added +1251780)
-- (tests) add unittest coverage for CI/CD fail-on exit codes
-- (tests) add unittest coverage for adaptive cooldown behaviour
+- (dictionary) refreshed subdomains wordlist with `+1251780` entries
+- (tests) added unittest coverage for CI/CD fail-on exit codes
+- (tests) added unittest coverage for adaptive cooldown behaviour
 
 v5.9.2 (27.04.2026)
 ---------------------------
 - (dictionary) cleaned and normalized directories list
 - (dictionary) cleaned and normalized browser user agents list
 - (enhancement) added Open Journal Systems to fingerprints
-- (enhancement) browser-like HTTP defaults improved for normal scan requests
-- (enhancement) default `User-Agent` changed from `PostmanRuntime` to browser-like Chrome
-- (enhancement) default `Accept` and `Accept-Encoding` headers aligned with browser document navigation
+- (enhancement) improved browser-like HTTP defaults for normal scan requests
+- (enhancement) changed default `User-Agent` from `PostmanRuntime` to browser-like Chrome
+- (enhancement) aligned default `Accept` and `Accept-Encoding` headers with browser document navigation
 - (enhancement) generated `Referer` no longer includes default `:80` and `:443` ports
 - (enhancement) generated `Origin` is no longer added by default for `GET` and `HEAD` requests
-- (bugfix) `indexOf` sniffer: reduce false positives
-- (bugfix) user agent rotation now works correctly per request (`--random-agent`)
-- (bugfix) ResponseError: Unknown response status : `411`
-- (bugfix) ResponseError: Unknown response status : `509`
+- (bugfix) reduced false positives in the `indexOf` sniffer
+- (bugfix) fixed per-request user agent rotation with `--random-agent`
+- (bugfix) fixed `ResponseError: Unknown response status : 411`
+- (bugfix) fixed `ResponseError: Unknown response status : 509`
 - (bugfix) custom headers from `--header` and `--raw-request` are no longer overwritten by generated defaults
 - (bugfix) `--accept-cookies` now forwards only valid `name=value` cookie pairs from `Set-Cookie`
 - (bugfix) cookie attributes such as `Path`, `HttpOnly`, `Secure`, `SameSite`, `Expires`, and `Max-Age` are no longer routed as request cookies
@@ -79,7 +79,7 @@ v5.9.1 (27.04.2026)
 v5.9.0 (26.04.2026)
 ---------------------------
 - (feature) added passive WAF / anti-bot recognition behind the opt-in `--waf-detect` flag
-- (feature) added vendor-aware WAF identification with confidence scoring in debug and reports
+- (feature) added vendor-aware WAF identification with confidence scoring in debug output and reports
 - (feature) added support for Anubis, Cloudflare, Sucuri, Akamai, Imperva, Distil, F5 BIG-IP ASM, AWS WAF, Azure Front Door, Fastly, ModSecurity, DataDome, PerimeterX / HUMAN, Kasada, Barracuda, Radware, FortiWeb, Reblaze, NetScaler / Citrix WAF, AppTrana, and Huawei Cloud WAF
 - (enhancement) WAF detection remains strict opt-in and does not affect default scan behavior or performance without `--waf-detect`
 - (enhancement) WAF metadata is preserved in standard debug output and detailed reports while keeping the response status as `blocked`
@@ -87,316 +87,317 @@ v5.9.0 (26.04.2026)
 
 v5.8.2 (26.04.2026)
 ---------------------------
-- (dictionary) added `+11572` new potencial directries to wordlist
-- (enhancement) heuristic fingerprinting ( `--fingerprint` stabilizes and expands)
+- (dictionary) added `+11572` potential directories to the wordlist
+- (enhancement) stabilized and expanded heuristic fingerprinting via `--fingerprint`
 - (enhancement) improved infrastructure detection
-- (enhancement) collision hardening for generic admin/backend/assets patterns
-- (enhancement) `--sniff indexof` improved to detect directory listings across Apache, nginx, IIS and generic layouts
-- (enhancement) `--sniff collation` improved to better detect repeated soft404/error templates
-- (enhancement) `--sniff file` improved to detect explicit downloads, binary responses and large bodies without `Content-Length`
-- (enhancement) `--sniff skipempty` improved to skip only truly empty or semantically empty short responses
-- (enhancement) `--sniff skipsizes` improved with safer size handling, invalid header fallback and KB range support
-- (bugfix) fixed false positives in sniff plugins for short login pages, short useful JSON responses and binary placeholders
+- (enhancement) hardened collision handling for generic admin, backend, and assets patterns
+- (enhancement) improved `--sniff indexof` detection across Apache, nginx, IIS, and generic directory listing layouts
+- (enhancement) improved `--sniff collation` detection for repeated soft-404 and error templates
+- (enhancement) improved `--sniff file` detection for explicit downloads, binary responses, and large bodies without `Content-Length`
+- (enhancement) improved `--sniff skipempty` to skip only truly empty or semantically empty short responses
+- (enhancement) improved `--sniff skipsizes` with safer size handling, invalid header fallback, and KB range support
+- (bugfix) fixed false positives in sniff plugins for short login pages, short useful JSON responses, and binary placeholders
 - (bugfix) fixed backward compatibility regressions in `CollationResponsePlugin`
-- (tests) negative regression coverage to reduce false positives
-- (tests) expanded coverage for `file`, `indexof`, `collation`, `skipempty` and `skipsizes`
+- (tests) added negative regression coverage to reduce false positives
+- (tests) expanded coverage for `file`, `indexof`, `collation`, `skipempty`, and `skipsizes`
 - (tests) full unittest suite passes after integration (`790` tests)
-- (tests) negative regression coverage to reduce false positives
 
 v5.8.1 (23.04.2026)
 ---------------------------
-- (feature) Extend fingerprinting (`--fingerpring`). Better defined Node/API backend stack
-- (feature) Extend fingerprinting (`--fingerpring`). Better defined e-commerce/CMS
-- (feature) Extend fingerprinting (`--fingerpring`). Better defined docs/static tooling
-- (feature) Extend reporting (`--reports`) by adding `sqlite` report format
-- (bugfix) ResponseError: Unknown response status : `511`
+- (feature) extended fingerprinting via `--fingerprint` with better defined Node/API backend stack detection
+- (feature) extended fingerprinting via `--fingerprint` with better defined e-commerce and CMS detection
+- (feature) extended fingerprinting via `--fingerprint` with better defined docs and static tooling detection
+- (feature) extended reporting via `--reports` by adding the `sqlite` report format
+- (bugfix) fixed `ResponseError: Unknown response status : 511`
 
 v5.8.0 (23.04.2026)
 ---------------------------
-- (feature) Added persistent scan sessions with `--session-save` and `--session-load`.
-- (feature) Added checkpoint autosave controls: `--session-autosave-sec` and `--session-autosave-items`.
-- (feature) Added logical scan state restore for pending queue, processed items, recursive state and partial results.
-- (feature) Added session snapshot validation with schema version checks and checksum verification.
-- (feature) Added atomic session writes with `.tmp` swap and `.bak` fallback recovery.
-- (feature) Added controller-level restore flow so resumed scans continue from saved session state instead of restarting from zero.
-- (feature) Kept persistent sessions strictly opt-in: no session file is created or updated unless session mode is explicitly enabled.
-- (improvement) Hardened browser runtime so legacy non-session flows and existing pause/resume behavior remain unchanged when session mode is disabled.
-- (improvement) Improved session compatibility across interrupted scans, graceful stops and resumed executions.
-- (tests) Expanded regression coverage across browser session lifecycle, controller restore flow, config accessors and session file validation.
-- (tests) Coverage gate now passes at 98%.
+- (feature) added persistent scan sessions with `--session-save` and `--session-load`
+- (feature) added checkpoint autosave controls via `--session-autosave-sec` and `--session-autosave-items`
+- (feature) added logical scan state restore for pending queue, processed items, recursive state, and partial results
+- (feature) added session snapshot validation with schema version checks and checksum verification
+- (feature) added atomic session writes with `.tmp` swap and `.bak` fallback recovery
+- (feature) added controller-level restore flow so resumed scans continue from saved session state instead of restarting from zero
+- (enhancement) kept persistent sessions strictly opt-in: no session file is created or updated unless session mode is explicitly enabled
+- (enhancement) hardened browser runtime so legacy non-session flows and existing pause/resume behavior remain unchanged when session mode is disabled
+- (enhancement) improved session compatibility across interrupted scans, graceful stops, and resumed executions
+- (tests) expanded regression coverage across browser session lifecycle, controller restore flow, config accessors, and session file validation
+- (tests) coverage gate now passes at `98%`
 
 v5.7.0 (22.04.2026)
 ---------------------------
-- (feature) Added `--fingerprint` to run heuristic technology fingerprinting before the main scan.
-- (feature) Added probable application stack detection for popular CMS, ecommerce platforms, frameworks, site builders, and static-site tooling.
-- (feature) Added infrastructure fingerprinting for AWS (CloudFront, S3, ELB/ALB, API Gateway, Amplify), Cloudflare, Vercel, Netlify, GitHub Pages, GitLab Pages, Heroku, Azure, Google Cloud, Fastly, Akamai, and OpenResty.
-- (feature) Added fingerprint summary fields to the standard report output, including application category/name/confidence and infrastructure provider/confidence.
-- (ux) Fingerprinting now runs after connectivity checks and before the main scan without breaking the existing scan pipeline.
-- (tests) Added regression coverage for fingerprint detection rules, runtime browser integration, controller orchestration, and report rendering.
-- (tests) Full unittest suite passes after integration (`679` tests).
+- (feature) added `--fingerprint` to run heuristic technology fingerprinting before the main scan
+- (feature) added probable application stack detection for popular CMS, ecommerce platforms, frameworks, site builders, and static-site tooling
+- (feature) added infrastructure fingerprinting for AWS CloudFront, S3, ELB/ALB, API Gateway, Amplify, Cloudflare, Vercel, Netlify, GitHub Pages, GitLab Pages, Heroku, Azure, Google Cloud, Fastly, Akamai, and OpenResty
+- (feature) added fingerprint summary fields to the standard report output, including application category, name, confidence, infrastructure provider, and infrastructure confidence
+- (ux) fingerprinting now runs after connectivity checks and before the main scan without breaking the existing scan pipeline
+- (tests) added regression coverage for fingerprint detection rules, runtime browser integration, controller orchestration, and report rendering
+- (tests) full unittest suite passes after integration (`679` tests)
 
 v5.6.0 (22.04.2026)
 ---------------------------
-- (feature) Added `--raw-request` to load raw HTTP request templates from a file.
-- (feature) Added `--scheme` to resolve relative raw request lines with explicit `http` or `https` scheme selection.
-- (feature) Added raw-request parsing for request method, host, port, headers, cookies, body, and derived path prefix.
-- (feature) Added host fallback from raw requests when `--host`, `--hostlist`, or `--stdin` are not provided.
-- (feature) Added raw-request merge behavior where CLI `--host`, `--method`, `--header`, `--cookie`, `--prefix`, and `--port` override template defaults.
-- (ux) Preserved explicit non-`HEAD` methods for raw-request templates while keeping legacy `HEAD -> GET` overrides only for body-required sniffers and filters.
-- (tests) Added regression coverage for raw-request option parsing, filter normalization, browser config exposure, and HTTP/HTTPS request body forwarding.
-- (tests) Full unittest suite passes after integration (`610` tests).
+- (feature) added `--raw-request` to load raw HTTP request templates from a file
+- (feature) added `--scheme` to resolve relative raw request lines with explicit `http` or `https` scheme selection
+- (feature) added raw-request parsing for request method, host, port, headers, cookies, body, and derived path prefix
+- (feature) added host fallback from raw requests when `--host`, `--hostlist`, or `--stdin` are not provided
+- (feature) added raw-request merge behavior where CLI `--host`, `--method`, `--header`, `--cookie`, `--prefix`, and `--port` override template defaults
+- (ux) preserved explicit non-`HEAD` methods for raw-request templates while keeping legacy `HEAD -> GET` overrides only for body-required sniffers and filters
+- (tests) added regression coverage for raw-request option parsing, filter normalization, browser config exposure, and HTTP/HTTPS request body forwarding
+- (tests) full unittest suite passes after integration (`610` tests)
 
 v5.5.0 (21.04.2026)
 ---------------------------
-- (feature) Added response filter flags: `--include-status`, `--exclude-status`, `--exclude-size`, `--exclude-size-range`, `--match-text`, `--exclude-text`, `--match-regex`, `--exclude-regex`, `--min-response-length`, and `--max-response-length`.
-- (feature) Added HTTP status range support for response filtering, e.g. `200-299,301,302,403`.
-- (feature) Added exact size and inclusive byte-range filtering for noisy responses and false positives.
-- (feature) Added body text and regex response filtering for more precise discovery workflows.
-- (ux) Automatically override explicit `HEAD` to `GET` when selected response filters require response body access.
-- (tests) Added regression coverage for response filter option parsing, validation, browser config normalization, and browser filtering behavior.
-- (tests) Full unittest suite passes after integration (`585` tests).
+- (feature) added response filter flags: `--include-status`, `--exclude-status`, `--exclude-size`, `--exclude-size-range`, `--match-text`, `--exclude-text`, `--match-regex`, `--exclude-regex`, `--min-response-length`, and `--max-response-length`
+- (feature) added HTTP status range support for response filtering, e.g. `200-299,301,302,403`
+- (feature) added exact size and inclusive byte-range filtering for noisy responses and false positives
+- (feature) added body text and regex response filtering for more precise discovery workflows
+- (ux) automatically overrides explicit `HEAD` to `GET` when selected response filters require response body access
+- (tests) added regression coverage for response filter option parsing, validation, browser config normalization, and browser filtering behavior
+- (tests) full unittest suite passes after integration (`585` tests)
 
 v5.4.0 (21.04.2026)
 ---------------------------
-- (feature) `--hostlist` support for multi-target scanning from a file
-- (feature) `--stdin` support for reading targets from standard input
-- (feature) mutually exclusive target source validation for `--host`, `--hostlist`, and `--stdin`
-- (feature) target normalization, comment skipping, empty-line skipping, and deduplication
-- (feature) sequential multi-target scan orchestration without breaking the single-host flow
-- (tests) Added regression coverage for target source parsing in options/filter
-- (tests) Added controller coverage for multi-target scan execution
-- (tests) Full unittest suite passes after integration
+- (feature) added `--hostlist` support for multi-target scanning from a file
+- (feature) added `--stdin` support for reading targets from standard input
+- (feature) added mutually exclusive target source validation for `--host`, `--hostlist`, and `--stdin`
+- (feature) added target normalization, comment skipping, empty-line skipping, and deduplication
+- (feature) added sequential multi-target scan orchestration without breaking the single-host flow
+- (tests) added regression coverage for target source parsing in options and filters
+- (tests) added controller coverage for multi-target scan execution
+- (tests) full unittest suite passes after integration
 
 v5.3.1 (21.04.2026)
 ---------------------------
-- (fix) Fixed SOCKS proxy runtime support by adding `PySocks` as a required dependency.
-- (fix) Added support for `socks://` proxy alias and normalized it to `socks5://`.
-- (fix) Fixed proxy normalization for both standalone `--proxy` usage and proxy list entries.
-- (tests) Added regression tests for SOCKS proxy alias handling and missing `PySocks` dependency behavior.
-- (build) Refreshed package metadata and distribution artifacts for the `5.3.1` patch release.
-- 
+- (bugfix) fixed SOCKS proxy runtime support by adding `PySocks` as a required dependency
+- (bugfix) added support for the `socks://` proxy alias and normalized it to `socks5://`
+- (bugfix) fixed proxy normalization for standalone `--proxy` usage and proxy list entries
+- (tests) added regression coverage for SOCKS proxy alias handling and missing `PySocks` dependency behavior
+- (build) refreshed package metadata and distribution artifacts for the `5.3.1` patch release
+
 v5.3.0 (21.04.2026)
 ---------------------------
-- Added: `--header` to send custom request headers from CLI.
-- Added: `--cookie` to send custom request cookies from CLI.
-- Added: request provider support for multiple custom headers and cookies.
-- Added: tests for custom request headers and cookies integration.
-- Changed: `README.md` and `docs/Usage.md` updated for custom request metadata and refreshed CLI help examples.
+- (feature) added `--header` to send custom request headers from CLI
+- (feature) added `--cookie` to send custom request cookies from CLI
+- (feature) added request provider support for multiple custom headers and cookies
+- (docs) updated `README.md` and `docs/Usage.md` for custom request metadata and refreshed CLI help examples
+- (tests) added custom request headers and cookies integration coverage
 
 v5.2.0 (20.04.2026)
 ---------------------------
-- (feature) Added recursive directory scan support.
-- (feature) Added configurable recursion depth via `--recursive-depth`.
-- (feature) Added configurable HTTP status allowlist for recursive expansion via `--recursive-status`.
-- (feature) Added configurable excluded extensions for recursive expansion via `--recursive-exclude`.
-- (optimization) Browser request flow is now depth-aware for recursive workloads.
-- (optimization) ThreadPool total items can be extended for recursive workloads.
-- (docs) Updated `README.md` and `docs/Usage.md` for recursive scan support and refreshed CLI help output.
-- (tests) Test suite expanded to 546 tests with recursive browser/config/thread-pool coverage.
+- (feature) added recursive directory scan support
+- (feature) added configurable recursion depth via `--recursive-depth`
+- (feature) added configurable HTTP status allowlist for recursive expansion via `--recursive-status`
+- (feature) added configurable excluded extensions for recursive expansion via `--recursive-exclude`
+- (optimization) browser request flow is now depth-aware for recursive workloads
+- (optimization) ThreadPool total items can be extended for recursive workloads
+- (docs) updated `README.md` and `docs/Usage.md` for recursive scan support and refreshed CLI help output
+- (tests) expanded test suite to `546` tests with recursive browser, config, and thread-pool coverage
 
 v5.1.0 (20.04.2026)
 ---------------------------
-- (feature)[#35](https://github.com/stanislav-web/OpenDoor/issues/35) Added response size to exported `txt`, `html`, and `json` reports.
-- (feature)[#39](https://github.com/stanislav-web/OpenDoor/issues/39) Feature Request: Output response codes
-- (feature) Populated directories by adding new unique +27965 actual paths
-- (bugfix) Report plugins now create nested target directories correctly, e.g. `reports/example.com` instead of `reportsexample.com`.
-- (bugfix)Fixed BOM decoding behavior in helper utilities and aligned tests with the corrected implementation.
-- (optimization) Refactored `FileSystem.readline()` to batch-load lines with much lower peak memory usage.
-- (optimization) Optimized `Reader.get_lines()` hot path by precomputing handler params and reducing repeated string formatting work.
-- (optimization) Optimized `ThreadPool.add()` submit-side accounting using submitted task tracking.
-- (optimization) Kept `Reader` extension filters on the fast in-memory path after benchmark validation.
-- (optimization) Updated benchmark workflow documentation and project maintenance flow.
-- (optimization) Fixed benchmark callback accounting for batched `readline()` processing.
-- (optimization) Improved compatibility of terminal, color, logger exception, and rainbow logger behavior under tests.
-- (tests) Test suite expanded to 400+ tests.
-- (tests) Added regression tests and edge case coverage for report size propagation.
-- (tests) Added broad unit test coverage across core, HTTP, reporter, browser, proxy, socket, logger, terminal, color, and filesystem modules.
+- (feature) added response size to exported `txt`, `html`, and `json` reports ([#35](https://github.com/stanislav-web/OpenDoor/issues/35))
+- (feature) added response code output support ([#39](https://github.com/stanislav-web/OpenDoor/issues/39))
+- (dictionary) populated directories with `+27965` unique actual paths
+- (bugfix) report plugins now create nested target directories correctly, e.g. `reports/example.com` instead of `reportsexample.com`
+- (bugfix) fixed BOM decoding behavior in helper utilities and aligned tests with the corrected implementation
+- (optimization) refactored `FileSystem.readline()` to batch-load lines with much lower peak memory usage
+- (optimization) optimized `Reader.get_lines()` hot path by precomputing handler params and reducing repeated string formatting work
+- (optimization) optimized `ThreadPool.add()` submit-side accounting using submitted task tracking
+- (optimization) kept `Reader` extension filters on the fast in-memory path after benchmark validation
+- (optimization) updated benchmark workflow documentation and project maintenance flow
+- (optimization) fixed benchmark callback accounting for batched `readline()` processing
+- (optimization) improved compatibility of terminal, color, logger exception, and rainbow logger behavior under tests
+- (tests) expanded test suite to `400+` tests
+- (tests) added regression tests and edge case coverage for report size propagation
+- (tests) added broad unit test coverage across core, HTTP, reporter, browser, proxy, socket, logger, terminal, color, and filesystem modules
 
 v5.0.1 (19.04.2026)
 ---------------------------
-- Fixed: Read the Docs badge updated to the current badge endpoint
-- Removed: stale Codespaces Prebuilds badge that no longer resolves
-- Changed: documentation stack refreshed for current Read the Docs / MkDocs workflow
-- Changed: `docs/requirements.txt` reduced to the active MkDocs-based documentation stack
-- Changed: `.readthedocs.yaml` updated for current RTD configuration
-- Changed: documentation pages refreshed for the modern packaging and installation flow
-- Fixed: docs build now aligns with the current project packaging and supported Python baseline
+- (docs) updated Read the Docs badge to the current badge endpoint
+- (docs) removed stale Codespaces Prebuilds badge that no longer resolves
+- (docs) refreshed documentation stack for the current Read the Docs / MkDocs workflow
+- (docs) reduced `docs/requirements.txt` to the active MkDocs-based documentation stack
+- (docs) updated `.readthedocs.yaml` for current Read the Docs configuration
+- (docs) refreshed documentation pages for the modern packaging and installation flow
+- (bugfix) docs build now aligns with the current project packaging and supported Python baseline
 
 v5.0.0 (19.04.2026)
 ---------------------------
-- Added: `pyproject.toml` for modern Python packaging workflow
-- Added: source and wheel build support through `python -m build`
-- Added: refreshed `MANIFEST.in` for correct source distribution contents
-- Added: `AGENTS.md` for contributor and agent workflow guidance
-- Added: `Ruff` baseline for lightweight Python linting
-- Changed: Python support baseline updated to `3.12`, `3.13`, `3.14`
-- Changed: package build/install flow modernized for current Python ecosystem
-- Changed: CLI update/version behavior refreshed for modern environments
-- Changed: help text and install flow documentation clarified
-- Changed: test suite refreshed for modern Python runtime and standard library mocks
-- Changed: development dependencies refreshed to current maintained versions
-- Fixed: build issues for source and wheel distribution generation
-- Fixed: packaging metadata and install paths for modern setuptools/pip workflows
-- Fixed: tests depending on external shell and network behavior
-- Fixed: CLI banner rendering and package installation checks
-- Planned next: deeper refactoring, additional tests, warnings cleanup and internal code improvements
+- (feature) added `pyproject.toml` for modern Python packaging workflow
+- (feature) added source and wheel build support through `python -m build`
+- (feature) added refreshed `MANIFEST.in` for correct source distribution contents
+- (feature) added `AGENTS.md` for contributor and agent workflow guidance
+- (feature) added `Ruff` baseline for lightweight Python linting
+- (enhancement) updated Python support baseline to `3.12`, `3.13`, and `3.14`
+- (enhancement) modernized package build and install flow for the current Python ecosystem
+- (enhancement) refreshed CLI update and version behavior for modern environments
+- (enhancement) clarified help text and install flow documentation
+- (enhancement) refreshed test suite for modern Python runtime and standard library mocks
+- (enhancement) refreshed development dependencies to current maintained versions
+- (bugfix) fixed build issues for source and wheel distribution generation
+- (bugfix) fixed packaging metadata and install paths for modern setuptools and pip workflows
+- (bugfix) fixed tests depending on external shell and network behavior
+- (bugfix) fixed CLI banner rendering and package installation checks
+- (planning) planned deeper refactoring, additional tests, warning cleanup, and internal code improvements
 
 v4.2.0 (29.07.2023)
 ---------------------------
-- Fixed: `--sniff skipempty,skipsizes=NUM:NUM...` moved pages to ignore in reports instead of just skipping
-- Fixed: invalid response statuses received because of invalid headers were passed
-- Fixed: --accept-cookie param. Now it is working correctly if the server provided Cookies for surfing
-- Optimized `directories_count` and `subdomains_count` operation to reduce RAM usage.
-- Removed: `-262` directories from internal wordlist because of trash
-- Edit Keep-Alive connection type moved to a separate parameter `--keep-alive`
-- Optimized internal wordlist directories.txt list (sort, removed trash lines)
+- (bugfix) `--sniff skipempty,skipsizes=NUM:NUM...` now moves pages to ignore in reports instead of only skipping them
+- (bugfix) invalid response statuses received because of invalid headers are now passed through correctly
+- (bugfix) fixed `--accept-cookie` so server-provided cookies are accepted and routed correctly while surfing
+- (enhancement) moved Keep-Alive connection type control to a separate `--keep-alive` parameter
+- (optimization) optimized `directories_count` and `subdomains_count` operations to reduce RAM usage
+- (dictionary) removed `-262` trash entries from the internal directories wordlist
+- (dictionary) optimized internal `directories.txt` by sorting entries and removing trash lines
 
 v4.1.0 (07.07.2023)
 ---------------------------
--   Added `--sniff skipsizes=25:60:101:...`: allow skipping redirect to 200 OK pages which not found
--   Fixed `--sniff skipempty`: increase condition value to detect empty content <= 500 bytes detect as empty page instead of 100 bytes
--   Fixed `ResponseError: Unknown response status : 525`: added to define incorrect SSL handshakes
--   Fixed `Object of type HTTPHeaderDictItemView is not JSON serializable`: if `--debug` set `3`
--   Fixed `--accept-cookies` param. (Accept and route cookies from responses)
--   Fixed response encode failed`('Received response with content-encoding: gzip, but failed to decode it.', error('Error -3 while decompressing data: incorrect header check'))`
--   Added `+20` new directories to internal wordlist
--   Added `+74242` new subdomains to internal wordlist
--   Optimize internal wordlist directories.txt list (sort, removed trash lines)
+- (feature) added `--sniff skipsizes=25:60:101:...` to skip redirect-to-200 pages that represent not-found responses
+- (feature) added `+20` new directories to the internal wordlist
+- (feature) added `+74242` new subdomains to the internal wordlist
+- (bugfix) increased `--sniff skipempty` threshold to detect empty content up to `500` bytes instead of `100` bytes
+- (bugfix) fixed `ResponseError: Unknown response status : 525` by defining incorrect SSL handshake responses
+- (bugfix) fixed `Object of type HTTPHeaderDictItemView is not JSON serializable` when `--debug` is set to `3`
+- (bugfix) fixed `--accept-cookies` to accept and route cookies from responses
+- (bugfix) fixed gzip response decoding failures for malformed `Content-Encoding: gzip` responses
+- (dictionary) optimized internal `directories.txt` by sorting entries and removing trash lines
 
 v4.0.61 (30.06.2023)
 ---------------------------
--   Added +1007 directories
--   Optimize directories.txt list (sort, removed trash lines)
--   Fix [#ISSUE-64](https://github.com/stanislav-web/OpenDoor/issues/64) HTTPConnection.__init__() got an unexpected keyword argument 'cert_reqs'
+- (dictionary) added `+1007` directories
+- (dictionary) optimized `directories.txt` by sorting entries and removing trash lines
+- (bugfix) fixed `HTTPConnection.__init__() got an unexpected keyword argument 'cert_reqs'` ([#64](https://github.com/stanislav-web/OpenDoor/issues/64))
 
 v4.0.6 (26.06.2023)
 ---------------------------
--   Re-create documentation portal. Keep docs up to date. Publish on Pypi
+- (docs) recreated documentation portal
+- (docs) kept documentation up to date
+- (build) published package on PyPI
 
 v4.0.5 (25.06.2023)
 ---------------------------
--   Fix unit tests and resolve dev requirements
+- (bugfix) fixed unit tests
+- (build) resolved development requirements
 
 v4.0.4-stable (24.06.2023)
 ---------------------------
--   Fix unit tests and resolve dev requirements
+- (bugfix) fixed unit tests
+- (build) resolved development requirements
 
 v4.0.3 (24.06.2023)
 -------------------
--   Fix [#ISSUE-44](https://github.com/stanislav-web/OpenDoor/issues/44) ignore invalid SSL by default
+- (bugfix) fixed invalid SSL handling by ignoring invalid SSL by default ([#44](https://github.com/stanislav-web/OpenDoor/issues/44))
 
 v4.0.2 (23.06.2023)
 -------------------
--   Python 3.11 launch fix [#ISSUE-58](https://github.com/stanislav-web/OpenDoor/issues/58) added encoding to setup.py 
+- (bugfix) fixed Python `3.11` launch by adding encoding to `setup.py` ([#58](https://github.com/stanislav-web/OpenDoor/issues/58))
 
 v4.0.1-beta (23.02.2021)
 ------------------------
--   Python 2.6,2.7 is unsupported
--   Update directories.dat  36994 -> 37019
--   [enhancement] [#PR-40](https://github.com/stanislav-web/OpenDoor/issues/40) added encoding to setup.py 
--   [bugfix] [#PR-48](https://github.com/stanislav-web/OpenDoor/issues/48) Python 3.9 / 3.10 compatibility
--   [bugfix] [#PR-20](https://github.com/stanislav-web/OpenDoor/issues/20) No timeout setup in request
--   [enhancement] [#PR-36](https://github.com/stanislav-web/OpenDoor/issues/36) Feature Request: Show only found items
+- (breaking) removed support for Python `2.6` and `2.7`
+- (dictionary) updated `directories.dat` from `36994` to `37019`
+- (enhancement) added encoding to `setup.py` ([#40](https://github.com/stanislav-web/OpenDoor/issues/40))
+- (bugfix) fixed Python `3.9` and `3.10` compatibility ([#48](https://github.com/stanislav-web/OpenDoor/issues/48))
+- (bugfix) fixed missing request timeout setup ([#20](https://github.com/stanislav-web/OpenDoor/issues/20))
+- (enhancement) added support for showing only found items ([#36](https://github.com/stanislav-web/OpenDoor/issues/36))
 
 v3.4.481-stable (02.10.2017)
 ----------------------------
--   Fixed bugs with externals wordlists
--   Added 80018 subdomains
+- (bugfix) fixed bugs with external wordlists
+- (dictionary) added `80018` subdomains
 
 v3.4.47-rc Gained more Power! (05.07.2017)
 ------------------------------------------
-- Added IPs lookup for subdomain scans
-- Added missing HTTP statuses
-- Bugfix: encoding errors (supported cp1251,utf8,utf16) for body analyze
-- Bugfix: allow to use both --random-list & --extension params
-- Directory closing slash has been removed
-- Support Internationalized Domain Names IDNA
-- Removed --indexof (-i) params
-- Add --ignore-extensions -i param to ignore a selected extension
-- Added --sniff param to process responses
-    - indexof   (detect Apache Index Of/ directories)
-    - file      (detect large files)
-    - collation (heuristic detect invalid web pages)
-    - skipempty (skip empty valid pages)
-- Internal dictionaries have been filtered out. Delete all duplicates
-- Added +990 unique directories (36931)
+- (feature) added IP lookup for subdomain scans
+- (feature) added Internationalized Domain Names support via IDNA
+- (feature) added `--ignore-extensions` / `-i` to ignore selected extensions
+- (feature) added `--sniff indexof` to detect Apache `Index Of` directories
+- (feature) added `--sniff file` to detect large files
+- (feature) added `--sniff collation` to heuristically detect invalid web pages
+- (feature) added `--sniff skipempty` to skip empty valid pages
+- (bugfix) added missing HTTP statuses
+- (bugfix) fixed encoding errors for body analysis with `cp1251`, `utf8`, and `utf16`
+- (bugfix) allowed using both `--random-list` and `--extension` parameters together
+- (enhancement) removed directory closing slash from generated paths
+- (breaking) removed legacy `--indexof` / `-i` parameter
+- (dictionary) filtered internal dictionaries and removed duplicates
+- (dictionary) added `+990` unique directories (`36931` total)
 
 v3.3.37-rc (22.06.2017)
 ------------------------
-- Fixed errors
-- Add config wizard (allows you to configure an own project)
-    
+- (feature) added config wizard for configuring a project
+- (bugfix) fixed errors
+
 v3.2.36-rc (04.06.2017)
 ------------------------
-- Added custom reports directory --reports-dir /home/user/Reports
-- Added user guide --docs
-- Reusable proxy requests pooling in --tor, --torlist
-- Prevent socks5 proxy warnings
-- Optimizing scan execution
-- Request delays allow using of milliseconds
-- Python2.7 no longer support
+- (feature) added custom reports directory via `--reports-dir /home/user/Reports`
+- (feature) added user guide access via `--docs`
+- (feature) added reusable proxy request pooling for `--tor` and `--torlist`
+- (enhancement) optimized scan execution
+- (enhancement) request delays now support milliseconds
+- (bugfix) prevented SOCKS5 proxy warnings
+- (breaking) removed Python `2.7` support
 
 v3.1.32-rc (02.06.2017)
 ------------------------
-- Add extensions filter --extensions php,json etc
+- (feature) added extension filtering via `--extensions php,json`
 
 v3.0.32-rc (19.05.2017)
 -----------------------
-- Add global installation
+- (feature) added global installation support
 
 v3.0.31-rc (20.02.2017)
 ------------------------
-- update directories
-- fixes for redirects
+- (dictionary) updated directories
+- (bugfix) fixed redirects
 
 v3.0.3-rc (17.02.2017)
 -----------------------
-- fixes for https stuff scan
-- cleared internal wordlists
-- increased coverage
-    
+- (bugfix) fixed HTTPS scan issues
+- (dictionary) cleared internal wordlists
+- (tests) increased test coverage
+
 v3.0.3-beta (13.02.2017)
 -------------------------
-- detect SSL cert requires
-- added 7150 directories
-- fixes for https subdomains
-- more unit coverages
-    
+- (feature) added SSL certificate requirement detection
+- (dictionary) added `7150` directories
+- (bugfix) fixed HTTPS subdomain handling
+- (tests) increased unit coverage
+
 v3.0.2-beta (31.01.2017)
 ------------------------
-- relieved of unnecessary dependencies
-- fully optimized code inside
-- user-friendly interface
-- multiple reporters (std,txt,json,html)
-- added external wordlists support
-- added external proxylist support
-- added wordlist shuffling
-- wordlist prefixes
-- added multithreading control
-- dynamic and smart requests (cookies + accept headers)
-- apache index of/ and files detection
+- (feature) added multiple reporters: `std`, `txt`, `json`, and `html`
+- (feature) added external wordlist support
+- (feature) added external proxy list support
+- (feature) added wordlist shuffling
+- (feature) added wordlist prefixes
+- (feature) added multithreading control
+- (feature) added dynamic and smart requests with cookies and accept headers
+- (feature) added Apache `Index Of` and file detection
+- (enhancement) improved user-friendly interface
+- (optimization) optimized internal code
+- (cleanup) removed unnecessary dependencies
 
-v2.7.96  - v1.0.0 (05.01.2017)
+v2.7.96 - v1.0.0 (05.01.2017)
 ------------------------------
-
-* *v1.0.0* - all the basic functionality is available
-* *v1.0.1* - added debug level as param --debug
-* *v1.2.1* - added filesystem logger (param --log)
-* *v1.2.2* - added example of usage (param --examples)
-* *v1.3.2* - added possibility to use random proxy from proxylist (param --proxy)
-* *v1.3.3* - simplify dependency installation
-* *v1.3.4* - added code quality watcher
-* *v1.3.5* - added ReadTimeoutError ProxyError handlers
-* *v1.3.51* - fixed code style, resolve file read errors
-* *v1.3.52* - code doc style added
-* *v2.3.52* - subdomains scan available! (param --check subdomains). Added databases
-* *v2.3.54* - disabled treads error. Refactored
-* *v2.4.62* - change port is available now! (param --port 8080). Code style fixes
-* *v2.5.62* - HTTPS support added
-* *v2.6.62* - added 19000 Possible directories!
-* *v2.7.62* - added redirect handler (Beta)
-* *v2.7.72* - added 52 directories, small changes for UI
-* *v2.7.82* - added 683 directories
-* *v2.7.92* - exclusion list added Data/exclusions.dat
-* *v2.7.95* - large files definitions , bad requests detection handler
-* *v2.7.96* - optimize debug levels (0 - 1 - 2 param --debug) , optimize imports
+- (feature) v1.0.0: basic functionality became available
+- (feature) v1.0.1: added debug level via `--debug`
+- (feature) v1.2.1: added filesystem logger via `--log`
+- (feature) v1.2.2: added usage examples via `--examples`
+- (feature) v1.3.2: added random proxy selection from proxy list via `--proxy`
+- (enhancement) v1.3.3: simplified dependency installation
+- (cleanup) v1.3.51: fixed code style and resolved file read errors
+- (docs) v1.3.52: added code documentation style
+- (feature) v2.3.52: added subdomain scan support via `--check subdomains`
+- (feature) v2.4.62: added custom port support via `--port 8080`
+- (feature) v2.5.62: added HTTPS support
+- (feature) v2.7.62: added redirect handler beta
+- (feature) v2.7.92: added exclusion list at `Data/exclusions.dat`
+- (feature) v2.7.95: added large file definitions and bad request detection handler
+- (bugfix) v1.3.5: added `ReadTimeoutError` and `ProxyError` handlers
+- (bugfix) v2.3.54: fixed thread-related errors and refactored related code
+- (dictionary) v2.6.62: added `19000` possible directories
+- (dictionary) v2.7.72: added `52` directories
+- (dictionary) v2.7.82: added `683` directories
+- (ux) v2.7.72: added small UI changes
+- (optimization) v2.7.96: optimized debug levels (`0`, `1`, `2`) via `--debug` and optimized imports

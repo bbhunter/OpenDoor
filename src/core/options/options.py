@@ -44,6 +44,7 @@ class Options(object):
             'sniff': "Sniff tools",
             'session': "Session tools",
             'calibration': "Auto-calibration tools",
+            'network': "Network transport tools",
             'ci': "CI/CD tools",
             'report': "Reports tools",
             'filter': "Response filters",
@@ -247,6 +248,69 @@ class Options(object):
                 "default": None,
                 "action": "store",
                 "help": "Custom permanent proxy server",
+                "type": str
+            },
+            {
+                "group": "network",
+                "args": None,
+                "argl": "--transport",
+                "default": None,
+                "action": "store",
+                "help": "Network transport mode: direct, proxy, openvpn, wireguard",
+                "type": str
+            },
+            {
+                "group": "network",
+                "args": None,
+                "argl": "--transport-profile",
+                "default": None,
+                "action": "store",
+                "help": "Single transport profile path. OpenVPN: *.ovpn, WireGuard: *.conf",
+                "type": str
+            },
+            {
+                "group": "network",
+                "args": None,
+                "argl": "--transport-profiles",
+                "default": None,
+                "action": "store",
+                "help": "Text file with transport profile paths, one per line",
+                "type": str
+            },
+            {
+                "group": "network",
+                "args": None,
+                "argl": "--transport-rotate",
+                "default": None,
+                "action": "store",
+                "help": "Transport rotation mode: none, per-target",
+                "type": str
+            },
+            {
+                "group": "network",
+                "args": None,
+                "argl": "--transport-timeout",
+                "default": None,
+                "action": "store",
+                "help": "Seconds to wait for transport commands",
+                "type": int
+            },
+            {
+                "group": "network",
+                "args": None,
+                "argl": "--transport-healthcheck-url",
+                "default": None,
+                "action": "store",
+                "help": "Optional URL used to verify connectivity after transport startup",
+                "type": str
+            },
+            {
+                "group": "network",
+                "args": None,
+                "argl": "--openvpn-auth",
+                "default": None,
+                "action": "store",
+                "help": "Optional auth-user-pass file for OpenVPN transport only",
                 "type": str
             },
             {

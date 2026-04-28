@@ -34,6 +34,10 @@ class Filter(object):
     STATUS_RANGE_REGEX = re.compile(r'^\d{3}(?:-\d{3})?$')
     INTEGER_RANGE_REGEX = re.compile(r'^\d+(?:-\d+)?$')
 
+    TRANSPORTS = ('direct', 'proxy', 'openvpn', 'wireguard')
+    TRANSPORT_ROTATES = ('none', 'per-target')
+    VPN_TRANSPORTS = ('openvpn', 'wireguard')
+
     @staticmethod
     def filter(args):
         """
@@ -88,6 +92,47 @@ class Filter(object):
                     key='--calibration-threshold'
                 )
 
+            if args.get('transport') is not None:
+                filtered['transport'] = Filter.transport(args.get('transport'), key='--transport')
+
+            if args.get('transport_profile') is not None:
+                filtered['transport_profile'] = Filter.optional_path(
+                    args.get('transport_profile'),
+                    key='--transport-profile'
+                )
+
+            if args.get('transport_profiles') is not None:
+                filtered['transport_profiles'] = Filter.optional_path(
+                    args.get('transport_profiles'),
+                    key='--transport-profiles'
+                )
+
+            if args.get('transport_rotate') is not None:
+                filtered['transport_rotate'] = Filter.transport_rotate(
+                    args.get('transport_rotate'),
+                    key='--transport-rotate'
+                )
+
+            if args.get('transport_timeout') is not None:
+                filtered['transport_timeout'] = Filter.positive_int(
+                    args.get('transport_timeout'),
+                    key='--transport-timeout'
+                )
+
+            if args.get('transport_healthcheck_url') is not None:
+                filtered['transport_healthcheck_url'] = Filter.optional_text(
+                    args.get('transport_healthcheck_url'),
+                    key='--transport-healthcheck-url'
+                )
+
+            if args.get('openvpn_auth') is not None:
+                filtered['openvpn_auth'] = Filter.optional_path(
+                    args.get('openvpn_auth'),
+                    key='--openvpn-auth'
+                )
+
+            Filter.validate_transport_options(filtered)
+
             return filtered
 
         raw_request = Filter.raw_request(args.get('raw_request'), scheme=args.get('scheme'))
@@ -124,6 +169,16 @@ class Filter(object):
                 filtered[key] = Filter.positive_int(value, key='--{0}'.format(key.replace('_', '-')))
             elif key in ['calibration_threshold']:
                 filtered[key] = Filter.ratio_float(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['transport']:
+                filtered[key] = Filter.transport(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['transport_rotate']:
+                filtered[key] = Filter.transport_rotate(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['transport_profile', 'transport_profiles', 'openvpn_auth']:
+                filtered[key] = Filter.optional_path(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['transport_timeout']:
+                filtered[key] = Filter.positive_int(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['transport_healthcheck_url']:
+                filtered[key] = Filter.optional_text(value, key='--{0}'.format(key.replace('_', '-')))
             else:
                 filtered[key] = value
 
@@ -167,6 +222,8 @@ class Filter(object):
 
         if raw_request is not None and len(targets) <= 0:
             raise FilterError('Unable to resolve target from --raw-request. Provide a Host header or use --host/--hostlist/--stdin')
+
+        Filter.validate_transport_options(filtered)
 
         return filtered
 
@@ -717,3 +774,155 @@ class Filter(object):
             raise FilterError('{0} must be a positive integer'.format(key))
 
         return value
+
+    @staticmethod
+    def optional_text(value, key='--value'):
+        """
+        Normalize optional text value.
+
+        :param value:
+        :param str key:
+        :return: str | None
+        """
+
+        if value is None:
+            return None
+
+        value = str(value).strip()
+        if value.lower() in ['', 'none', 'null']:
+            return None
+
+        return value
+
+    @staticmethod
+    def optional_path(value, key='--path'):
+        """
+        Normalize optional file path without reading it.
+
+        :param value:
+        :param str key:
+        :return: str | None
+        """
+
+        value = Filter.optional_text(value, key=key)
+        if value is None:
+            return None
+
+        return os.path.abspath(value)
+
+    @staticmethod
+    def transport(value, key='--transport'):
+        """
+        Validate network transport mode.
+
+        :param value:
+        :param str key:
+        :return: str
+        """
+
+        value = 'direct' if value is None else str(value).strip().lower()
+
+        if value in ['', 'none', 'null']:
+            value = 'direct'
+
+        if value not in Filter.TRANSPORTS:
+            raise FilterError('{0} must be one of: {1}'.format(key, ', '.join(Filter.TRANSPORTS)))
+
+        return value
+
+    @staticmethod
+    def transport_rotate(value, key='--transport-rotate'):
+        """
+        Validate transport rotation mode.
+
+        :param value:
+        :param str key:
+        :return: str
+        """
+
+        value = 'none' if value is None else str(value).strip().lower()
+
+        if value in ['', 'null']:
+            value = 'none'
+
+        if value not in Filter.TRANSPORT_ROTATES:
+            raise FilterError('{0} must be one of: {1}'.format(key, ', '.join(Filter.TRANSPORT_ROTATES)))
+
+        return value
+
+    @staticmethod
+    def validate_transport_options(filtered):
+        """
+        Validate cross-field network transport options.
+
+        :param dict filtered:
+        :raise FilterError:
+        :return: None
+        """
+
+        transport = Filter.transport(filtered.get('transport'), key='--transport')
+        rotate = Filter.transport_rotate(filtered.get('transport_rotate'), key='--transport-rotate')
+        profile = filtered.get('transport_profile')
+        profiles = filtered.get('transport_profiles')
+        openvpn_auth = filtered.get('openvpn_auth')
+
+        filtered['transport'] = transport
+        filtered['transport_rotate'] = rotate
+
+        if transport == 'direct':
+            if rotate != 'none':
+                raise FilterError('--transport-rotate can be used only with VPN transports')
+            if profile is not None:
+                raise FilterError('--transport-profile cannot be used with --transport direct')
+            if profiles is not None:
+                raise FilterError('--transport-profiles cannot be used with --transport direct')
+            if openvpn_auth is not None:
+                raise FilterError('--openvpn-auth cannot be used with --transport direct')
+            return
+
+        if transport == 'proxy':
+            if openvpn_auth is not None:
+                raise FilterError('--openvpn-auth cannot be used with --transport proxy')
+            if rotate == 'per-target':
+                raise FilterError('--transport-rotate per-target is supported only for VPN transports')
+            return
+
+        if transport not in Filter.VPN_TRANSPORTS:
+            return
+
+        if openvpn_auth is not None and transport != 'openvpn':
+            raise FilterError('--openvpn-auth can be used only with --transport openvpn')
+
+        if rotate == 'per-target':
+            if profiles is None:
+                raise FilterError('--transport-profiles is required when --transport-rotate per-target is used')
+            if profile is not None:
+                raise FilterError('--transport-profile cannot be combined with --transport-rotate per-target')
+        else:
+            if profile is None:
+                raise FilterError('--transport-profile is required for --transport {0}'.format(transport))
+            if profiles is not None:
+                raise FilterError('--transport-profiles requires --transport-rotate per-target')
+
+        if profile is not None:
+            Filter.validate_transport_profile_extension(transport, profile, key='--transport-profile')
+
+    @staticmethod
+    def validate_transport_profile_extension(transport, profile, key='--transport-profile'):
+        """
+        Validate profile extension for selected transport.
+
+        :param str transport:
+        :param str profile:
+        :param str key:
+        :raise FilterError:
+        :return: None
+        """
+
+        lower_profile = str(profile).lower()
+
+        if transport == 'openvpn' and lower_profile.endswith('.ovpn') is False:
+            raise FilterError('{0} must point to *.ovpn when --transport openvpn is used'.format(key))
+
+        if transport == 'wireguard' and lower_profile.endswith('.conf') is False:
+            raise FilterError('{0} must point to *.conf when --transport wireguard is used'.format(key))

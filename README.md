@@ -9,12 +9,9 @@ OWASP WEB Directory Scanner [![Twitter](https://img.shields.io/twitter/url/https
 | 3.13 | [![CI Linux Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py313.yml) | [![CI macOS Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py313.yml) | [![CI Windows Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py313.yml) |
 | 3.14 | [![CI Linux Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py314.yml) | [![CI macOS Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py314.yml) | [![CI Windows Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py314.yml) |
 
-**OpenDoor OWASP** is a multifunctional console website scanner.  
-This application finds possible login entry points, `Index of/` directories, web shells, restricted access points, subdomains, hidden data, and large backup files.  
-Scanning is performed using both the built-in dictionary and external dictionaries.  
-Anonymity and speed are provided through the use of proxy servers.  
-The software is written for informational purposes and is released as an open-source product under the GPL license.  
-The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and is maintained and supported by the community.
+**OpenDoor** is an open-source CLI scanner for web reconnaissance, directory discovery, and exposure assessment.
+It detects exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets using built-in or custom wordlists. OpenDoor is built for authorized security testing and supports flexible scan configuration, proxy-based traffic routing, reporting, filtering, and fingerprint detection.
+The project is released under the GPL license, maintained by the community, and available in [BlackArch Linux](https://blackarch.org/webapp.html).
 
 ![Maintainer](https://img.shields.io/badge/maintainer-stanislav_web-blue)
 [![Contributors](https://img.shields.io/github/contributors/stanislav-web/Opendoor)](https://github.com/stanislav-web/OpenDoor/graphs/contributors)
@@ -27,30 +24,12 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 [![CodeQL](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql)
 
 * *Built-in dictionaries*
-    - Directories: 115092
+    - Directories: 114796
     - Subdomains: 1507134
 
-##### v5.11.0 (28.04.2026)
+##### v5.12.0 (28.04.2026)
 
-- (feature) added smart auto-calibration via `--auto-calibrate`
-- (feature) added baseline filtering for soft-404, wildcard and catch-all responses
-- (feature) added `--calibration-samples` to control the number of random calibration probes
-- (feature) added `--calibration-threshold` to control calibration match strictness
-- (feature) added multi-signal calibration signatures based on status code, OpenDoor bucket, normalized body hash, HTML skeleton hash, title, redirect target, stable headers, size, word count and line count
-- (feature) added `calibrated` result bucket for responses filtered by auto-calibration
-- (enhancement) auto-calibration remains strict opt-in and does not change default scan behaviour when disabled
-- (enhancement) auto-calibration forces `HEAD` to `GET` only when enabled because response body analysis is required
-- (enhancement) dynamic response fragments such as UUIDs, timestamps, long numeric IDs, nonce and CSRF-like values are normalized before hashing
-- (enhancement) calibration matches now preserve `calibration_score` and `calibration_reason` in detailed report items
-- (enhancement) calibration baseline is persisted in session checkpoints and restored on resume
-- (enhancement) auto-calibration options are preserved for wizard and session resume flows
-- (enhancement) blocked WAF probe responses are skipped during calibration baseline creation
-- (enhancement) failed calibration probes no longer stop the scan; OpenDoor safely continues without a usable baseline
-- (enhancement) CI/CD `--fail-on-bucket` remains compatible with auto-calibration and can explicitly target the `calibrated` bucket
-- (tests) added unittest coverage for calibration signatures, normalization, scoring, matching and fallback paths
-- (tests) added regression coverage for Browser calibration runtime, session persistence and controller orchestration
-- (tests) full unittest suite passes after integration (`999` tests)
-- (tests) coverage gate passes at `98%`
+
 
 #### [Changelog](CHANGELOG.md) (last changes)
 

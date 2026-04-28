@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from src import Controller, SrcError
 from src.core.logger.logger import Logger
 from src.lib import ArgumentsError, BrowserError, PackageError, ReporterError
+from src.core.network.exceptions import NetworkTransportError
 
 
 class TestController(unittest.TestCase):
@@ -581,6 +582,290 @@ class TestController(unittest.TestCase):
         actual = Controller._resolve_scan_targets({})
 
         self.assertEqual(actual, [])
+
+    def test_scan_action_should_start_and_stop_transport_once_for_all_targets(self):
+        """Controller.scan_action() should wrap all targets with one transport session."""
+
+        browser_first = MagicMock()
+        browser_first.result = {'total': {'success': 0}}
+
+        browser_second = MagicMock()
+        browser_second.result = {'total': {'success': 0}}
+
+        transport = MagicMock()
+        transport.transport = 'wireguard'
+        transport.rotate_mode = 'none'
+        transport.current_profile_name = 'nl.conf'
+
+        params = {
+            'targets': [
+                {'host': 'first.example.com', 'scheme': 'http://', 'ssl': False},
+                {'host': 'second.example.com', 'scheme': 'https://', 'ssl': True},
+            ],
+            'reports': 'std',
+            'transport': 'wireguard',
+            'transport_profile': '/tmp/nl.conf',
+        }
+
+        with patch('src.controller.NetworkTransportManager', return_value=transport), \
+                patch('src.controller.browser', side_effect=[browser_first, browser_second]) as browser_mock, \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 0)
+        transport.start.assert_called_once_with()
+        transport.stop.assert_called_once_with()
+        transport.rotate.assert_not_called()
+        self.assertEqual(browser_mock.call_count, 2)
+        browser_first.scan.assert_called_once_with()
+        browser_second.scan.assert_called_once_with()
+
+    def test_scan_action_should_rotate_transport_per_target(self):
+        """Controller.scan_action() should rotate transport for each target in per-target mode."""
+
+        browser_first = MagicMock()
+        browser_first.result = {'total': {'success': 0}}
+
+        browser_second = MagicMock()
+        browser_second.result = {'total': {'blocked': 0}}
+
+        transport = MagicMock()
+        transport.transport = 'wireguard'
+        transport.rotate_mode = 'per-target'
+        transport.current_profile_name = 'nl.conf'
+
+        params = {
+            'targets': [
+                {'host': 'first.example.com', 'scheme': 'http://', 'ssl': False},
+                {'host': 'second.example.com', 'scheme': 'https://', 'ssl': True},
+            ],
+            'reports': 'std',
+            'transport': 'wireguard',
+            'transport_profiles': '/tmp/profiles.txt',
+            'transport_rotate': 'per-target',
+        }
+
+        with patch('src.controller.NetworkTransportManager', return_value=transport), \
+                patch('src.controller.browser', side_effect=[browser_first, browser_second]) as browser_mock, \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 0)
+        self.assertEqual(transport.rotate.call_count, 2)
+        self.assertEqual(transport.start.call_count, 2)
+        self.assertEqual(transport.stop.call_count, 2)
+        self.assertEqual(browser_mock.call_count, 2)
+
+    def test_scan_action_should_stop_transport_when_scan_fails(self):
+        """Controller.scan_action() should stop transport when browser scan fails."""
+
+        browser_instance = MagicMock()
+        browser_instance.scan.side_effect = BrowserError('scan failed')
+
+        transport = MagicMock()
+        transport.transport = 'openvpn'
+        transport.rotate_mode = 'none'
+        transport.current_profile_name = 'nl.ovpn'
+
+        params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'transport': 'openvpn',
+            'transport_profile': '/tmp/nl.ovpn',
+        }
+
+        with patch('src.controller.NetworkTransportManager', return_value=transport), \
+                patch('src.controller.browser', return_value=browser_instance), \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            with self.assertRaises(SrcError):
+                Controller.scan_action(params)
+
+        transport.start.assert_called_once_with()
+        transport.stop.assert_called_once_with()
+
+    def test_scan_action_should_not_scan_when_transport_start_fails(self):
+        """Controller.scan_action() should abort before browser flow when transport start fails."""
+
+        transport = MagicMock()
+        transport.transport = 'wireguard'
+        transport.rotate_mode = 'none'
+        transport.current_profile_name = 'nl.conf'
+        transport.start.side_effect = NetworkTransportError('wg failed')
+
+        params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'transport': 'wireguard',
+            'transport_profile': '/tmp/nl.conf',
+        }
+
+        with patch('src.controller.NetworkTransportManager', return_value=transport), \
+                patch('src.controller.browser') as browser_mock, \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            with self.assertRaises(SrcError):
+                Controller.scan_action(params)
+
+        browser_mock.assert_not_called()
+        transport.start.assert_called_once_with()
+        transport.stop.assert_not_called()
+
+    def test_scan_action_should_preserve_transport_cli_overrides_for_wizard(self):
+        """Controller.scan_action() should preserve explicit transport CLI overrides for wizard flow."""
+
+        browser_instance = MagicMock()
+        browser_instance.result = {'total': {'success': 0}}
+
+        transport = MagicMock()
+        transport.transport = 'wireguard'
+        transport.rotate_mode = 'none'
+        transport.current_profile_name = 'nl.conf'
+
+        wizard_params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'transport': 'direct',
+            'transport_rotate': 'none',
+        }
+
+        with patch('src.controller.package.wizard', return_value=wizard_params), \
+                patch('src.controller.NetworkTransportManager', return_value=transport) as transport_mock, \
+                patch('src.controller.browser', return_value=browser_instance), \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            Controller.scan_action({
+                'wizard': 'opendoor.conf',
+                'transport': 'wireguard',
+                'transport_profile': '/tmp/nl.conf',
+                'transport_rotate': 'none',
+            })
+
+        passed_params = transport_mock.call_args[0][0]
+        self.assertEqual(passed_params['transport'], 'wireguard')
+        self.assertEqual(passed_params['transport_profile'], '/tmp/nl.conf')
+        self.assertEqual(passed_params['transport_rotate'], 'none')
+
+    def test_scan_action_should_not_override_wizard_transport_with_default_direct(self):
+        """Controller.scan_action() should not override wizard transport with default direct values."""
+
+        browser_instance = MagicMock()
+        browser_instance.result = {'total': {'success': 0}}
+
+        transport = MagicMock()
+        transport.transport = 'wireguard'
+        transport.rotate_mode = 'none'
+        transport.current_profile_name = 'wizard.conf'
+
+        wizard_params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'transport': 'wireguard',
+            'transport_profile': '/tmp/wizard.conf',
+            'transport_rotate': 'none',
+        }
+
+        with patch('src.controller.package.wizard', return_value=wizard_params), \
+                patch('src.controller.NetworkTransportManager', return_value=transport) as transport_mock, \
+                patch('src.controller.browser', return_value=browser_instance), \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            Controller.scan_action({
+                'wizard': 'opendoor.conf',
+                'transport': 'direct',
+                'transport_rotate': 'none',
+            })
+
+        passed_params = transport_mock.call_args[0][0]
+        self.assertEqual(passed_params['transport'], 'wireguard')
+        self.assertEqual(passed_params['transport_profile'], '/tmp/wizard.conf')
+
+    def test_scan_action_should_preserve_transport_cli_overrides_for_session_load(self):
+        """Controller.scan_action() should preserve explicit transport CLI overrides for session resume."""
+
+        browser_instance = MagicMock()
+        browser_instance.result = {'total': {'success': 0}}
+
+        transport = MagicMock()
+        transport.transport = 'openvpn'
+        transport.rotate_mode = 'none'
+        transport.current_profile_name = 'nl.ovpn'
+
+        snapshot = {
+            'params': {
+                'host': 'example.com',
+                'scheme': 'http://',
+                'ssl': False,
+                'port': 80,
+                'reports': 'std',
+                'transport': 'direct',
+                'transport_rotate': 'none',
+            }
+        }
+
+        with patch('src.controller.SessionManager.load', return_value=snapshot), \
+                patch('src.controller.NetworkTransportManager', return_value=transport) as transport_mock, \
+                patch('src.controller.browser', return_value=browser_instance), \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.reporter.default', 'std'):
+            Controller.scan_action({
+                'session_load': '/tmp/session.json',
+                'transport': 'openvpn',
+                'transport_profile': '/tmp/nl.ovpn',
+                'transport_rotate': 'none',
+                'openvpn_auth': '/tmp/auth.txt',
+            })
+
+        passed_params = transport_mock.call_args[0][0]
+        self.assertEqual(passed_params['transport'], 'openvpn')
+        self.assertEqual(passed_params['transport_profile'], '/tmp/nl.ovpn')
+        self.assertEqual(passed_params['openvpn_auth'], '/tmp/auth.txt')
+
+    def test_collect_transport_cli_overrides_should_ignore_default_direct_values(self):
+        """Controller._collect_transport_cli_overrides() should ignore default direct/none values."""
+
+        actual = Controller._collect_transport_cli_overrides({
+            'transport': 'direct',
+            'transport_rotate': 'none',
+        })
+
+        self.assertEqual(actual, {})
+
+    def test_collect_transport_cli_overrides_should_collect_explicit_vpn_values(self):
+        """Controller._collect_transport_cli_overrides() should collect explicit VPN transport values."""
+
+        actual = Controller._collect_transport_cli_overrides({
+            'transport': 'wireguard',
+            'transport_profile': '/tmp/nl.conf',
+            'transport_rotate': 'none',
+            'transport_timeout': 15,
+            'transport_healthcheck_url': 'https://example.com/ip',
+        })
+
+        self.assertEqual(actual, {
+            'transport': 'wireguard',
+            'transport_profile': '/tmp/nl.conf',
+            'transport_rotate': 'none',
+            'transport_timeout': 15,
+            'transport_healthcheck_url': 'https://example.com/ip',
+        })
+
 
 if __name__ == '__main__':
     unittest.main()
