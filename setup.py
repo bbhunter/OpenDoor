@@ -83,17 +83,33 @@ setup(
                 'data/useragents.dat',
             ],
         ),
+        (
+            'data/openvpn-profiles',
+            [
+                'data/openvpn-profiles/example.ovpn',
+            ],
+        ),
+        (
+            'data/wireguard-profiles',
+            [
+                'data/wireguard-profiles/example.conf',
+            ],
+        ),
     ],
     keywords=[
+        'pentesting',
+        'fingerprinting',
+        'reconnaissance',
+        'waf-detection',
+        'tunnel scan',
         'directory scanner',
         'subdomain scanner',
-        'subdomain enumeration',
         'content discovery',
         'asset discovery',
-        'web reconnaissance',
         'security testing',
         'cli',
         'owasp',
+        'gpl-3.0',
     ],
     install_requires=read_requirements('requirements.txt'),
     entry_points={
