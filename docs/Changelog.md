@@ -1,6 +1,28 @@
 Changelog
 =========
 
+v5.11.0 (28.04.2026)
+---------------------------
+- (feature) added smart auto-calibration via `--auto-calibrate`
+- (feature) added baseline filtering for soft-404, wildcard and catch-all responses
+- (feature) added `--calibration-samples` to control the number of random calibration probes
+- (feature) added `--calibration-threshold` to control calibration match strictness
+- (feature) added multi-signal calibration signatures based on status code, OpenDoor bucket, normalized body hash, HTML skeleton hash, title, redirect target, stable headers, size, word count and line count
+- (feature) added `calibrated` result bucket for responses filtered by auto-calibration
+- (enhancement) auto-calibration remains strict opt-in and does not change default scan behaviour when disabled
+- (enhancement) auto-calibration forces `HEAD` to `GET` only when enabled because response body analysis is required
+- (enhancement) dynamic response fragments such as UUIDs, timestamps, long numeric IDs, nonce and CSRF-like values are normalized before hashing
+- (enhancement) calibration matches now preserve `calibration_score` and `calibration_reason` in detailed report items
+- (enhancement) calibration baseline is persisted in session checkpoints and restored on resume
+- (enhancement) auto-calibration options are preserved for wizard and session resume flows
+- (enhancement) blocked WAF probe responses are skipped during calibration baseline creation
+- (enhancement) failed calibration probes no longer stop the scan; OpenDoor safely continues without a usable baseline
+- (enhancement) CI/CD `--fail-on-bucket` remains compatible with auto-calibration and can explicitly target the `calibrated` bucket
+- (tests) added unittest coverage for calibration signatures, normalization, scoring, matching and fallback paths
+- (tests) added regression coverage for Browser calibration runtime, session persistence and controller orchestration
+- (tests) full unittest suite passes after integration (`999` tests)
+- (tests) coverage gate passes at `98%`
+
 v5.10.0 (28.04.2026)
 ---------------------------
 - (feature) added CI/CD fail-on exit codes via `--fail-on-bucket`

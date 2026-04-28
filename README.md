@@ -30,28 +30,27 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
     - Directories: 115092
     - Subdomains: 1507134
 
-##### v5.10.0 (28.04.2026)
+##### v5.11.0 (28.04.2026)
 
-- (feature) added CI/CD fail-on exit codes via `--fail-on-bucket`
-- (feature) added optional pipeline failure rules for selected result buckets, e.g. `success,auth,forbidden,blocked`
-- (feature) CI/CD mode now returns exit code `1` when configured buckets are found
-- (enhancement) default scan exit behaviour remains unchanged when `--fail-on-bucket` is not used
-- (enhancement) CI/CD fail-on rules are applied after all targets are scanned
-- (enhancement) added `fail_on_bucket` support to wizard configuration
-- (enhancement) added explicit CI/CD mode startup and final result messages
-- (enhancement) `--fail-on-bucket` is preserved for wizard and session resume flows
-- (enhancement) add CSV report plugin (`--reports csv`)
-- (enhancement) wizard configuration
-- (enhancement) increase WAF Safe Mode cooldown on blocked/challenge responses
-- (enhancement) react to 429 rate-limit responses
-- (enhancement) respect numeric Retry-After values for temporary 503 responses
-- (enhancement) avoid treating plain 403 Forbidden as rate limiting
-- (enhancement) gradually recover cooldown after clean responses
-- (enhancement) persist adaptive cooldown state in session checkpoints
-- (dictionary) cleaned and normalized directories list
-- (dictionary) refresh subdomains wordlist (added +1251780)
-- (tests) add unittest coverage for CI/CD fail-on exit codes
-- (tests) add unittest coverage for adaptive cooldown behaviour
+- (feature) added smart auto-calibration via `--auto-calibrate`
+- (feature) added baseline filtering for soft-404, wildcard and catch-all responses
+- (feature) added `--calibration-samples` to control the number of random calibration probes
+- (feature) added `--calibration-threshold` to control calibration match strictness
+- (feature) added multi-signal calibration signatures based on status code, OpenDoor bucket, normalized body hash, HTML skeleton hash, title, redirect target, stable headers, size, word count and line count
+- (feature) added `calibrated` result bucket for responses filtered by auto-calibration
+- (enhancement) auto-calibration remains strict opt-in and does not change default scan behaviour when disabled
+- (enhancement) auto-calibration forces `HEAD` to `GET` only when enabled because response body analysis is required
+- (enhancement) dynamic response fragments such as UUIDs, timestamps, long numeric IDs, nonce and CSRF-like values are normalized before hashing
+- (enhancement) calibration matches now preserve `calibration_score` and `calibration_reason` in detailed report items
+- (enhancement) calibration baseline is persisted in session checkpoints and restored on resume
+- (enhancement) auto-calibration options are preserved for wizard and session resume flows
+- (enhancement) blocked WAF probe responses are skipped during calibration baseline creation
+- (enhancement) failed calibration probes no longer stop the scan; OpenDoor safely continues without a usable baseline
+- (enhancement) CI/CD `--fail-on-bucket` remains compatible with auto-calibration and can explicitly target the `calibrated` bucket
+- (tests) added unittest coverage for calibration signatures, normalization, scoring, matching and fallback paths
+- (tests) added regression coverage for Browser calibration runtime, session persistence and controller orchestration
+- (tests) full unittest suite passes after integration (`999` tests)
+- (tests) coverage gate passes at `98%`
 
 #### [Changelog](CHANGELOG.md) (last changes)
 
@@ -70,6 +69,16 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
     * returns exit code `1` only when configured fail-on buckets are found
     * keeps default scan exit behaviour unchanged without fail-on rules
     * scans all targets before returning the final CI/CD exit code
+- ✅ smart auto-calibration
+    * opt-in baseline filtering via `--auto-calibrate`
+    * configurable random probes via `--calibration-samples`
+    * configurable match strictness via `--calibration-threshold`
+    * filters soft-404, wildcard and catch-all responses into the `calibrated` bucket
+    * uses normalized body hash, HTML skeleton hash, title, redirect target, stable headers, size, word count and line count
+    * normalizes dynamic tokens such as UUIDs, timestamps, long numeric IDs, nonce and CSRF-like values
+    * stores calibration score and reason in detailed report items
+    * persists calibration baseline in session checkpoints
+    * stays compatible with CI/CD fail-on rules
 - ✅ technology fingerprinting
     * heuristic application stack detection via `--fingerprint`
     * identify probable CMS, ecommerce platforms, frameworks, site builders, and static-site tooling
@@ -455,11 +464,12 @@ This is summarizing the platform families currently recognized by the heuristic 
 usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session-load SESSION_LOAD] [-p PORT] [-m METHOD] [--scheme SCHEME] [--raw-request RAW_REQUEST] [--session-save SESSION_SAVE]
                    [--session-autosave-sec SESSION_AUTOSAVE_SEC] [--session-autosave-items SESSION_AUTOSAVE_ITEMS] [-t THREADS] [-d DELAY] [--timeout TIMEOUT] [-r RETRIES] [--keep-alive] [--header HEADER]
                    [--cookie COOKIE] [--accept-cookies] [--fingerprint] [--waf-detect] [--waf-safe-mode] [--debug DEBUG] [--tor] [--torlist TORLIST] [--proxy PROXY] [-s SCAN] [-w WORDLIST]
-                   [--fail-on-bucket FAIL_ON_BUCKET] [--reports REPORTS] [--reports-dir REPORTS_DIR] [--random-agent] [--random-list] [--prefix PREFIX] [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive]
-                   [--recursive-depth RECURSIVE_DEPTH] [--recursive-status RECURSIVE_STATUS] [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF] [--include-status INCLUDE_STATUS]
-                   [--exclude-status EXCLUDE_STATUS] [--exclude-size EXCLUDE_SIZE] [--exclude-size-range EXCLUDE_SIZE_RANGE] [--match-text MATCH_TEXT] [--exclude-text EXCLUDE_TEXT]
-                   [--match-regex MATCH_REGEX] [--exclude-regex EXCLUDE_REGEX] [--min-response-length MIN_RESPONSE_LENGTH] [--max-response-length MAX_RESPONSE_LENGTH] [--update] [--version]
-                   [--examples] [--docs] [--wizard [WIZARD]]
+                   [--fail-on-bucket FAIL_ON_BUCKET] [--auto-calibrate] [--calibration-samples CALIBRATION_SAMPLES] [--calibration-threshold CALIBRATION_THRESHOLD] [--reports REPORTS]
+                   [--reports-dir REPORTS_DIR] [--random-agent] [--random-list] [--prefix PREFIX] [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive] [--recursive-depth RECURSIVE_DEPTH]
+                   [--recursive-status RECURSIVE_STATUS] [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF] [--include-status INCLUDE_STATUS] [--exclude-status EXCLUDE_STATUS]
+                   [--exclude-size EXCLUDE_SIZE] [--exclude-size-range EXCLUDE_SIZE_RANGE] [--match-text MATCH_TEXT] [--exclude-text EXCLUDE_TEXT] [--match-regex MATCH_REGEX]
+                   [--exclude-regex EXCLUDE_REGEX] [--min-response-length MIN_RESPONSE_LENGTH] [--max-response-length MAX_RESPONSE_LENGTH] [--update] [--version] [--examples] [--docs]
+                   [--wizard [WIZARD]]
 ```
 
 ##### Options
@@ -478,6 +488,9 @@ usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session
 | Application tools | `--wizard [WIZARD]` | Run scanner wizard from your config |
 | Debug tools | `--debug DEBUG` | Debug level `-1` (silent), `1 - 3` |
 | CI/CD tools | `--fail-on-bucket FAIL_ON_BUCKET` | Exit with code `1` when selected result buckets are found, e.g. `success,auth,forbidden,blocked` |
+| Auto-calibration tools | `--auto-calibrate` | Enable smart baseline filtering for soft-404, wildcard and catch-all responses |
+| Auto-calibration tools | `--calibration-samples CALIBRATION_SAMPLES` | Number of random calibration probes before scan |
+| Auto-calibration tools | `--calibration-threshold CALIBRATION_THRESHOLD` | Auto-calibration match threshold from `0.01` to `1.0` |
 | Response filters | `--include-status INCLUDE_STATUS` | Include only response codes, e.g. `200-299,301,302,403` |
 | Response filters | `--exclude-status EXCLUDE_STATUS` | Exclude response codes, e.g. `404,429,500-599` |
 | Response filters | `--exclude-size EXCLUDE_SIZE` | Exclude exact response sizes in bytes, e.g. `0,1234` |
