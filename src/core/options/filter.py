@@ -67,7 +67,14 @@ class Filter(object):
                     key='--session-autosave-items'
                 )
 
+            if args.get('fail_on_bucket') is not None:
+                filtered['fail_on_bucket'] = Filter.bucket_values(
+                    args.get('fail_on_bucket'),
+                    key='--fail-on-bucket'
+                )
+
             return filtered
+
         raw_request = Filter.raw_request(args.get('raw_request'), scheme=args.get('scheme'))
         targets = Filter.targets(args, raw_request=raw_request)
 
@@ -96,6 +103,8 @@ class Filter(object):
                 filtered[key] = Filter.text_values(value)
             elif key in ['min_response_length', 'max_response_length']:
                 filtered[key] = Filter.non_negative_int(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['fail_on_bucket']:
+                filtered[key] = Filter.bucket_values(value, key='--{0}'.format(key.replace('_', '-')))
             else:
                 filtered[key] = value
 
@@ -499,6 +508,33 @@ class Filter(object):
         if choose not in ['directories', 'subdomains']:
             choose = 'directories'
         return choose
+
+    @staticmethod
+    def bucket_values(value, key='--bucket'):
+        """Normalize comma-separated result bucket names."""
+
+        buckets = []
+        seen = set()
+
+        for item in Filter._split_csv(value):
+            bucket = str(item).strip().lower()
+
+            if not bucket:
+                continue
+
+            if not re.match(r'^[a-z][a-z0-9_-]*$', bucket):
+                raise FilterError('"{0}" is invalid value in {1}. Use comma-separated bucket names'.format(item, key))
+
+            if bucket in seen:
+                continue
+
+            buckets.append(bucket)
+            seen.add(bucket)
+
+        if len(buckets) <= 0:
+            raise FilterError('{0} requires at least one bucket'.format(key))
+
+        return buckets
 
     @staticmethod
     def status_ranges(value, key='--status'):

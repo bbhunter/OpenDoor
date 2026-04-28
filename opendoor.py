@@ -34,6 +34,6 @@ if __name__ == "__main__":
 
     try:
         bootstrap = Controller()
-        bootstrap.run()
+        sys.exit(bootstrap.run() or 0)
     except SrcError:
-        sys.exit()
+        sys.exit(1)

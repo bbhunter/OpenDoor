@@ -525,5 +525,33 @@ class TestFilter(unittest.TestCase):
         with self.assertRaises(FilterError):
             Filter.positive_int('bad', key='--session-autosave-items')
 
+    def test_bucket_values_should_normalize_ci_fail_on_buckets(self):
+        """Filter.bucket_values() should normalize fail-on bucket names."""
+
+        self.assertEqual(
+            Filter.bucket_values('success, AUTH,blocked,success', key='--fail-on-bucket'),
+            ['success', 'auth', 'blocked']
+        )
+
+    def test_bucket_values_should_reject_invalid_ci_fail_on_buckets(self):
+        """Filter.bucket_values() should reject malformed bucket names."""
+
+        with self.assertRaises(FilterError):
+            Filter.bucket_values('success,403', key='--fail-on-bucket')
+
+        with self.assertRaises(FilterError):
+            Filter.bucket_values('success,bad bucket', key='--fail-on-bucket')
+
+    def test_filter_should_keep_fail_on_bucket_with_session_load(self):
+        """Filter.filter() should preserve invocation-level CI policy for session resume."""
+
+        actual = Filter.filter({
+            'session_load': '/tmp/session.json',
+            'fail_on_bucket': 'blocked,forbidden',
+        })
+
+        self.assertEqual(actual['session_load'], '/tmp/session.json')
+        self.assertEqual(actual['fail_on_bucket'], ['blocked', 'forbidden'])
+
 if __name__ == '__main__':
     unittest.main()

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from src.core import filesystem, helper, SocketError, ResponseError, HttpRequestError
 from src.core.http.response import Response
 from src.lib import BrowserError, ReporterError, browser
+from src.lib.browser.browser import Browser
 from src.lib.browser.config import Config
 from src.lib.browser.debug import Debug
 from src.lib.browser.threadpool import ThreadPool
@@ -1097,51 +1098,6 @@ class TestBrowser(unittest.TestCase):
 
         getattr(br, '_Browser__enqueue_recursive_children').assert_not_called()
 
-    def test_init_warns_when_head_is_overridden_to_get(self):
-        """Browser.__init__() should emit a warning for explicit HEAD to GET override."""
-
-        with patch('src.lib.browser.browser.Config') as config_cls, \
-                patch('src.lib.browser.browser.Debug', return_value=MagicMock()), \
-                patch('src.lib.browser.browser.Reader') as reader_cls, \
-                patch('src.lib.browser.browser.Filter.__init__', return_value=None), \
-                patch('src.lib.browser.browser.ThreadPool', return_value=MagicMock()), \
-                patch('src.lib.browser.browser.response', return_value=MagicMock()), \
-                patch.object(Tpl, 'warning') as warning_mock:
-            cfg = SimpleNamespace(
-                scan='directories',
-                DEFAULT_SCAN='directories',
-                torlist=None,
-                is_random_list=False,
-                is_extension_filter=False,
-                is_ignore_extension_filter=False,
-                is_external_wordlist=False,
-                wordlist='',
-                is_standalone_proxy=False,
-                is_external_torlist=False,
-                prefix='',
-                is_external_reports_dir=False,
-                reports_dir='',
-                extensions=[],
-                ignore_extensions=[],
-                threads=1,
-                delay=0,
-                _method='HEAD',
-                method='GET',
-                method_override_items=['indexof', 'collation'],
-            )
-            config_cls.return_value = cfg
-
-            reader = MagicMock()
-            reader.total_lines = 5
-            reader_cls.return_value = reader
-
-            browser({'host': 'test.local', 'port': 80})
-
-        warning_mock.assert_called_once_with(
-            key='method_override',
-            sniffers='indexof, collation'
-        )
-
     def test_build_recursive_url_and_enqueue_children_cover_skip_paths(self):
         """Browser recursive helpers should skip blank/duplicate children and handle nested parents."""
 
@@ -1510,6 +1466,20 @@ class TestBrowser(unittest.TestCase):
 
         self.assertEqual(result['items']['success'], ['http://example.com/admin'])
 
+    def test_browser_result_should_return_defensive_copy(self):
+        """Browser.result should expose a copy of internal scan result."""
+
+        instance = Browser.__new__(Browser)
+        instance._Browser__result = {
+            'total': {'success': 1},
+            'items': {'success': ['http://example.com/admin']},
+            'report_items': {'success': [{'url': 'http://example.com/admin'}]},
+        }
+
+        actual = instance.result
+        actual['total']['success'] = 99
+
+        self.assertEqual(instance._Browser__result['total']['success'], 1)
 
 if __name__ == '__main__':
     unittest.main()

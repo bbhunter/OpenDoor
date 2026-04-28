@@ -43,6 +43,7 @@ class Options(object):
             'wordlist': "Wordlist tools",
             'sniff': "Sniff tools",
             'session': "Session tools",
+            'ci': "CI/CD tools",
             'report': "Reports tools",
             'filter': "Response filters",
             'app': "Application tools"
@@ -263,6 +264,15 @@ class Options(object):
                 "default": None,
                 "action": "store",
                 "help": "Path to custom wordlist",
+                "type": str
+            },
+            {
+                "group": "ci",
+                "args": None,
+                "argl": "--fail-on-bucket",
+                "default": None,
+                "action": "store",
+                "help": "Exit with code 1 when selected result buckets are found, e.g. success,auth,forbidden,blocked",
                 "type": str
             },
             {
@@ -536,61 +546,24 @@ class Options(object):
                 else:
                     const = None
 
-                if arg['args'] is None:
-                    if bool == arg['type']:
-                        groupped[arg['group']].add_argument(
-                            arg['argl'],
-                            default=arg['default'],
-                            action=arg['action'],
-                            help=arg['help']
-                        )
-                    elif None is not const:
-                        groupped[arg['group']].add_argument(
-                            arg['argl'],
-                            default=arg['default'],
-                            action=arg['action'],
-                            help=arg['help'],
-                            nargs=arg['nargs'],
-                            const=const,
-                            type=arg['type']
-                        )
-                    else:
-                        groupped[arg['group']].add_argument(
-                            arg['argl'],
-                            default=arg['default'],
-                            action=arg['action'],
-                            help=arg['help'],
-                            type=arg['type']
-                        )
-                else:
-                    if bool == arg['type']:
-                        groupped[arg['group']].add_argument(
-                            arg['args'],
-                            arg['argl'],
-                            default=arg['default'],
-                            action=arg['action'],
-                            help=arg['help']
-                        )
-                    elif None is not const:
-                        groupped[arg['group']].add_argument(
-                            arg['args'],
-                            arg['argl'],
-                            default=arg['default'],
-                            action=arg['action'],
-                            help=arg['help'],
-                            nargs=arg['nargs'],
-                            const=const,
-                            type=arg['type']
-                        )
-                    else:
-                        groupped[arg['group']].add_argument(
-                            arg['args'],
-                            arg['argl'],
-                            default=arg['default'],
-                            action=arg['action'],
-                            help=arg['help'],
-                            type=arg['type']
-                        )
+                argument_names = [arg['argl']]
+                if arg['args'] is not None:
+                    argument_names.insert(0, arg['args'])
+
+                argument_kwargs = {
+                    'default': arg['default'],
+                    'action': arg['action'],
+                    'help': arg['help'],
+                }
+
+                if bool != arg['type']:
+                    argument_kwargs['type'] = arg['type']
+
+                if const is not None:
+                    argument_kwargs['nargs'] = arg['nargs']
+                    argument_kwargs['const'] = const
+
+                groupped[arg['group']].add_argument(*argument_names, **argument_kwargs)
 
             self.args = self.parser.parse_args()
         except (ArgumentParserError, KeyError) as error:

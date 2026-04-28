@@ -98,6 +98,35 @@ class TestTerminal(unittest.TestCase):
         with patch('src.core.system.terminal.shutil.get_terminal_size', return_value=SimpleNamespace(columns=101, lines=33)):
             self.assertEqual(getattr(Terminal, '_Terminal__get_ts_fallback')(), (101, 33))
 
+    def test_get_ts_unix_accepts_text_output(self):
+        """Terminal.__get_ts_unix() should parse text output without bytes decoding."""
+
+        with patch('src.core.system.terminal.subprocess.check_output', return_value='33 101\n'):
+            actual = getattr(Terminal, '_Terminal__get_ts_unix')()
+
+        self.assertEqual(actual, (101, 33))
+
+    def test_get_ts_unix_returns_none_for_non_numeric_dimensions(self):
+        """Terminal.__get_ts_unix() should return None when stty output has non-numeric dimensions."""
+
+        with patch('src.core.system.terminal.subprocess.check_output', return_value=b'24 wide\n'):
+            actual = getattr(Terminal, '_Terminal__get_ts_unix')()
+
+        self.assertIsNone(actual)
+
+    def test_legacy_call_uses_kwargs_args_for_called_process_error(self):
+        """Terminal.__legacy_call() should use kwargs args when raising CalledProcessError."""
+
+        process = MagicMock()
+        process.communicate.return_value = (b'', b'error')
+        process.poll.return_value = 2
+
+        with patch('src.core.system.terminal.subprocess.Popen', return_value=process):
+            with self.assertRaises(subprocess.CalledProcessError) as context:
+                getattr(Terminal, '_Terminal__legacy_call')(args=['stty', 'size'])
+
+        self.assertEqual(context.exception.returncode, 2)
+        self.assertEqual(context.exception.cmd, ['stty', 'size'])
 
 if __name__ == '__main__':
     unittest.main()

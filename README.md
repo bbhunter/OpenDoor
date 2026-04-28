@@ -27,12 +27,19 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 [![CodeQL](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/github-code-scanning/codeql)
 
 * *Built-in dictionaries*
-    - Directories: 115274
-    - Subdomains: 255359
+    - Directories: 115092
+    - Subdomains: 1507134
 
-##### v5.9.3 (28.04.2026)
+##### v5.10.0 (28.04.2026)
 
-- (dictionary) cleaned and normalized directories list
+- (feature) added CI/CD fail-on exit codes via `--fail-on-bucket`
+- (feature) added optional pipeline failure rules for selected result buckets, e.g. `success,auth,forbidden,blocked`
+- (feature) CI/CD mode now returns exit code `1` when configured buckets are found
+- (enhancement) default scan exit behaviour remains unchanged when `--fail-on-bucket` is not used
+- (enhancement) CI/CD fail-on rules are applied after all targets are scanned
+- (enhancement) added `fail_on_bucket` support to wizard configuration
+- (enhancement) added explicit CI/CD mode startup and final result messages
+- (enhancement) `--fail-on-bucket` is preserved for wizard and session resume flows
 - (enhancement) add CSV report plugin (`--reports csv`)
 - (enhancement) wizard configuration
 - (enhancement) increase WAF Safe Mode cooldown on blocked/challenge responses
@@ -41,6 +48,9 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
 - (enhancement) avoid treating plain 403 Forbidden as rate limiting
 - (enhancement) gradually recover cooldown after clean responses
 - (enhancement) persist adaptive cooldown state in session checkpoints
+- (dictionary) cleaned and normalized directories list
+- (dictionary) refresh subdomains wordlist (added +1251780)
+- (tests) add unittest coverage for CI/CD fail-on exit codes
 - (tests) add unittest coverage for adaptive cooldown behaviour
 
 #### [Changelog](CHANGELOG.md) (last changes)
@@ -54,6 +64,12 @@ The project is part of [BlackArch Linux](https://blackarch.org/webapp.html) and 
     * single target via `--host`
     * multi-target file via `--hostlist`
     * standard input via `--stdin`
+- ✅ CI/CD pipeline controls
+    * optional fail-on result buckets via `--fail-on-bucket`
+    * supports buckets such as `success`, `auth`, `forbidden`, `blocked`
+    * returns exit code `1` only when configured fail-on buckets are found
+    * keeps default scan exit behaviour unchanged without fail-on rules
+    * scans all targets before returning the final CI/CD exit code
 - ✅ technology fingerprinting
     * heuristic application stack detection via `--fingerprint`
     * identify probable CMS, ecommerce platforms, frameworks, site builders, and static-site tooling
@@ -438,11 +454,12 @@ This is summarizing the platform families currently recognized by the heuristic 
 ```bash
 usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session-load SESSION_LOAD] [-p PORT] [-m METHOD] [--scheme SCHEME] [--raw-request RAW_REQUEST] [--session-save SESSION_SAVE]
                    [--session-autosave-sec SESSION_AUTOSAVE_SEC] [--session-autosave-items SESSION_AUTOSAVE_ITEMS] [-t THREADS] [-d DELAY] [--timeout TIMEOUT] [-r RETRIES] [--keep-alive] [--header HEADER]
-                   [--cookie COOKIE] [--accept-cookies] [--fingerprint] [--waf-detect] [--debug DEBUG] [--tor] [--torlist TORLIST] [--proxy PROXY] [-s SCAN] [-w WORDLIST] [--reports REPORTS]
-                   [--reports-dir REPORTS_DIR] [--random-agent] [--random-list] [--prefix PREFIX] [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive] [--recursive-depth RECURSIVE_DEPTH]
-                   [--recursive-status RECURSIVE_STATUS] [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF] [--include-status INCLUDE_STATUS] [--exclude-status EXCLUDE_STATUS]
-                   [--exclude-size EXCLUDE_SIZE] [--exclude-size-range EXCLUDE_SIZE_RANGE] [--match-text MATCH_TEXT] [--exclude-text EXCLUDE_TEXT] [--match-regex MATCH_REGEX] [--exclude-regex EXCLUDE_REGEX]
-                   [--min-response-length MIN_RESPONSE_LENGTH] [--max-response-length MAX_RESPONSE_LENGTH] [--update] [--version] [--examples] [--docs] [--wizard [WIZARD]]
+                   [--cookie COOKIE] [--accept-cookies] [--fingerprint] [--waf-detect] [--waf-safe-mode] [--debug DEBUG] [--tor] [--torlist TORLIST] [--proxy PROXY] [-s SCAN] [-w WORDLIST]
+                   [--fail-on-bucket FAIL_ON_BUCKET] [--reports REPORTS] [--reports-dir REPORTS_DIR] [--random-agent] [--random-list] [--prefix PREFIX] [-e EXTENSIONS] [-i IGNORE_EXTENSIONS] [--recursive]
+                   [--recursive-depth RECURSIVE_DEPTH] [--recursive-status RECURSIVE_STATUS] [--recursive-exclude RECURSIVE_EXCLUDE] [--sniff SNIFF] [--include-status INCLUDE_STATUS]
+                   [--exclude-status EXCLUDE_STATUS] [--exclude-size EXCLUDE_SIZE] [--exclude-size-range EXCLUDE_SIZE_RANGE] [--match-text MATCH_TEXT] [--exclude-text EXCLUDE_TEXT]
+                   [--match-regex MATCH_REGEX] [--exclude-regex EXCLUDE_REGEX] [--min-response-length MIN_RESPONSE_LENGTH] [--max-response-length MAX_RESPONSE_LENGTH] [--update] [--version]
+                   [--examples] [--docs] [--wizard [WIZARD]]
 ```
 
 ##### Options
@@ -460,6 +477,7 @@ usage: opendoor.py [-h] [--host HOST | --hostlist HOSTLIST | --stdin | --session
 | Application tools | `--docs` | Open documentation |
 | Application tools | `--wizard [WIZARD]` | Run scanner wizard from your config |
 | Debug tools | `--debug DEBUG` | Debug level `-1` (silent), `1 - 3` |
+| CI/CD tools | `--fail-on-bucket FAIL_ON_BUCKET` | Exit with code `1` when selected result buckets are found, e.g. `success,auth,forbidden,blocked` |
 | Response filters | `--include-status INCLUDE_STATUS` | Include only response codes, e.g. `200-299,301,302,403` |
 | Response filters | `--exclude-status EXCLUDE_STATUS` | Exclude response codes, e.g. `404,429,500-599` |
 | Response filters | `--exclude-size EXCLUDE_SIZE` | Exclude exact response sizes in bytes, e.g. `0,1234` |

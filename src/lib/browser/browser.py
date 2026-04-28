@@ -908,6 +908,13 @@ class Browser(Filter):
         self.__result['items'][status] += [url]
         self.__result['report_items'][status] += [item]
 
+    @property
+    def result(self):
+        """Return a defensive copy of the current scan result."""
+
+        self.__ensure_session_runtime_state()
+        return copy.deepcopy(self.__result)
+
     def done(self):
         """
         Scan finish action

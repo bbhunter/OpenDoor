@@ -1,6 +1,29 @@
 Changelog
 =========
 
+v5.10.0 (28.04.2026)
+---------------------------
+- (feature) added CI/CD fail-on exit codes via `--fail-on-bucket`
+- (feature) added optional pipeline failure rules for selected result buckets, e.g. `success,auth,forbidden,blocked`
+- (feature) CI/CD mode now returns exit code `1` when configured buckets are found
+- (enhancement) default scan exit behaviour remains unchanged when `--fail-on-bucket` is not used
+- (enhancement) CI/CD fail-on rules are applied after all targets are scanned
+- (enhancement) added `fail_on_bucket` support to wizard configuration
+- (enhancement) added explicit CI/CD mode startup and final result messages
+- (enhancement) `--fail-on-bucket` is preserved for wizard and session resume flows
+- (enhancement) add CSV report plugin (`--reports csv`)
+- (enhancement) wizard configuration
+- (enhancement) increase WAF Safe Mode cooldown on blocked/challenge responses
+- (enhancement) react to 429 rate-limit responses
+- (enhancement) respect numeric Retry-After values for temporary 503 responses
+- (enhancement) avoid treating plain 403 Forbidden as rate limiting
+- (enhancement) gradually recover cooldown after clean responses
+- (enhancement) persist adaptive cooldown state in session checkpoints
+- (dictionary) cleaned and normalized directories list
+- (dictionary) refresh subdomains wordlist (added +1251780)
+- (tests) add unittest coverage for CI/CD fail-on exit codes
+- (tests) add unittest coverage for adaptive cooldown behaviour
+
 v5.9.2 (27.04.2026)
 ---------------------------
 - (dictionary) cleaned and normalized directories list

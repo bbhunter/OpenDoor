@@ -347,5 +347,146 @@ class TestController(unittest.TestCase):
         browser_mock.scan.assert_called_once()
         browser_mock.done.assert_called_once()
 
+    def test_run_returns_scan_action_exit_code(self):
+        """Controller.run() should propagate scan_action() exit code."""
+
+        controller = self.make_controller({'host': 'http://example.com'})
+
+        with patch('src.controller.package.banner', return_value='banner'), \
+                patch('src.controller.tpl.message'), \
+                patch.object(Controller, 'scan_action', return_value=1), \
+                patch('src.controller.tpl.debug'):
+            actual = controller.run()
+
+        self.assertEqual(actual, 1)
+
+    def test_scan_action_returns_one_when_fail_on_bucket_matches(self):
+        """Controller.scan_action() should return 1 when selected CI bucket is found."""
+
+        browser_instance = MagicMock()
+        browser_instance.result = {
+            'total': {
+                'success': 2,
+                'auth': 1,
+                'items': 10,
+                'workers': 1,
+            }
+        }
+
+        params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'fail_on_bucket': ['auth', 'blocked'],
+        }
+
+        with patch('src.controller.browser', return_value=browser_instance), \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info') as info_mock, \
+                patch('src.controller.tpl.warning') as warning_mock, \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 1)
+        info_mock.assert_any_call(msg='CI/CD mode enabled: fail-on-bucket=auth,blocked')
+        warning_mock.assert_called_once()
+        browser_instance.ping.assert_called_once_with()
+        browser_instance.scan.assert_called_once_with()
+        browser_instance.done.assert_called_once_with()
+
+    def test_scan_action_returns_zero_when_fail_on_bucket_has_no_matches(self):
+        """Controller.scan_action() should return 0 when selected CI buckets are absent."""
+
+        browser_instance = MagicMock()
+        browser_instance.result = {
+            'total': {
+                'success': 2,
+                'items': 10,
+                'workers': 1,
+            }
+        }
+
+        params = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'reports': 'std',
+            'fail_on_bucket': ['blocked', 'forbidden'],
+        }
+
+        with patch('src.controller.browser', return_value=browser_instance), \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info') as info_mock, \
+                patch('src.controller.tpl.warning') as warning_mock, \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 0)
+        info_mock.assert_any_call(msg='CI/CD fail-on passed: no matched buckets. Exit code: 0')
+        warning_mock.assert_not_called()
+
+    def test_scan_action_scans_all_targets_before_ci_fail_exit(self):
+        """Controller.scan_action() should finish all targets before returning CI failure."""
+
+        browser_first = MagicMock()
+        browser_first.result = {
+            'total': {
+                'success': 0,
+            }
+        }
+
+        browser_second = MagicMock()
+        browser_second.result = {
+            'total': {
+                'blocked': 3,
+            }
+        }
+
+        params = {
+            'targets': [
+                {'host': 'first.example.com', 'scheme': 'http://', 'ssl': False},
+                {'host': 'second.example.com', 'scheme': 'https://', 'ssl': True},
+            ],
+            'reports': 'std',
+            'fail_on_bucket': ['blocked'],
+        }
+
+        with patch('src.controller.browser', side_effect=[browser_first, browser_second]) as browser_mock, \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.tpl.warning') as warning_mock, \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 1)
+        self.assertEqual(browser_mock.call_count, 2)
+        browser_first.done.assert_called_once_with()
+        browser_second.done.assert_called_once_with()
+        warning_mock.assert_called_once()
+
+    def test_match_fail_on_buckets_should_ignore_missing_and_non_numeric_counts(self):
+        """Controller._match_fail_on_buckets() should only return positive numeric bucket counts."""
+
+        actual = Controller._match_fail_on_buckets(
+            'example.com',
+            {
+                'total': {
+                    'success': 2,
+                    'blocked': 'bad',
+                    'items': 10,
+                }
+            },
+            ['success', 'blocked', 'auth']
+        )
+
+        self.assertEqual(actual, [
+            {
+                'host': 'example.com',
+                'bucket': 'success',
+                'count': 2,
+            }
+        ])
+
 if __name__ == '__main__':
     unittest.main()

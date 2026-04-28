@@ -761,5 +761,96 @@ class TestOptions(unittest.TestCase):
 
         self.assertTrue(actual['waf_detect'])
 
+    def test_get_arg_values_should_enable_waf_detect_when_waf_safe_mode_is_enabled(self):
+        """Options.get_arg_values() should enable waf_detect when waf_safe_mode is enabled."""
+
+        namespace = Namespace(
+            host='example.com',
+            hostlist=None,
+            stdin=False,
+            raw_request=None,
+            session_load=None,
+            version=False,
+            update=False,
+            examples=False,
+            docs=False,
+            wizard=None,
+            waf_safe_mode=True,
+        )
+        option = self.make_options(namespace)
+
+        filtered = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'waf_safe_mode': True,
+        }
+
+        with patch('src.core.options.options.Filter.filter', return_value=filtered) as filter_mock:
+            actual = option.get_arg_values()
+
+        self.assertEqual(actual, {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'waf_safe_mode': True,
+            'waf_detect': True,
+        })
+        filter_mock.assert_called_once_with({
+            'host': 'example.com',
+            'waf_safe_mode': True,
+        })
+
+    def test_init_should_parse_fail_on_bucket_argument(self):
+        """Options.__init__() should parse CI/CD fail-on bucket argument."""
+
+        with patch(
+                'src.core.options.options.sys.argv',
+                [
+                    'opendoor.py',
+                    '--host',
+                    'example.com',
+                    '--fail-on-bucket',
+                    'success,auth,forbidden,blocked',
+                ]
+        ):
+            option = Options()
+
+        self.assertEqual(option.args.fail_on_bucket, 'success,auth,forbidden,blocked')
+
+    def test_get_arg_values_should_pass_fail_on_bucket_through_filter(self):
+        """Options.get_arg_values() should pass CI/CD fail-on bucket argument through Filter.filter()."""
+
+        namespace = Namespace(
+            host='example.com',
+            hostlist=None,
+            stdin=False,
+            raw_request=None,
+            session_load=None,
+            version=False,
+            update=False,
+            examples=False,
+            docs=False,
+            wizard=None,
+            fail_on_bucket='success,auth',
+        )
+        option = self.make_options(namespace)
+
+        filtered = {
+            'host': 'example.com',
+            'scheme': 'http://',
+            'ssl': False,
+            'fail_on_bucket': ['success', 'auth'],
+        }
+
+        with patch('src.core.options.options.Filter.filter', return_value=filtered) as filter_mock:
+            actual = option.get_arg_values()
+
+        self.assertEqual(actual, filtered)
+        filter_mock.assert_called_once_with({
+            'host': 'example.com',
+            'fail_on_bucket': 'success,auth',
+        })
+
 if __name__ == '__main__':
     unittest.main()

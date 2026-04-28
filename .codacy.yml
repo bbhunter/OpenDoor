@@ -1,0 +1,10 @@
+exclude_paths:
+  - "benchmarks/results/**"
+  - "results.sarif"
+  - "reports/**"
+  - "syslog/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - ".coverage"
+  - ".DS_Store"
+  - "**/.DS_Store"

@@ -65,20 +65,22 @@ class Controller(object):
         """
         Bootstrap action
         :raise SrcError
-        :return: None
+        :return: int
         """
 
         try:
             tpl.message(package.banner())
 
             if 'host' in self.ioargs or 'targets' in self.ioargs or 'wizard' in self.ioargs or 'session_load' in self.ioargs:
-                getattr(self, 'scan_action')(self.ioargs)
-            else:
-                for action in self.ioargs.keys():
-                    if hasattr(self, '{0}_action'.format(action)) \
-                            and args().is_arg_callable(getattr(self, '{0}_action'.format(action))):
-                        getattr(self, '{func}_action'.format(func=action))()
-                        break
+                return getattr(self, 'scan_action')(self.ioargs) or 0
+
+            for action in self.ioargs.keys():
+                if hasattr(self, '{0}_action'.format(action)) \
+                        and args().is_arg_callable(getattr(self, '{0}_action'.format(action))):
+                    getattr(self, '{func}_action'.format(func=action))()
+                    return 0
+
+            return 0
 
         except (SrcError, PackageError, BrowserError, AttributeError) as error:
             raise SrcError(tpl.error(error))
@@ -153,13 +155,18 @@ class Controller(object):
         URL scan action
         :param dict params: console input args
         :raise SrcError
-        :return: None
+        :return: int
         """
 
         try:
+            cli_fail_on_bucket = params.get('fail_on_bucket')
+
             if 'wizard' in params:
                 tpl.info(key='load_wizard', config=params['wizard'])
                 params = package.wizard(params['wizard'])
+
+                if cli_fail_on_bucket is not None:
+                    params['fail_on_bucket'] = cli_fail_on_bucket
 
             if params.get('session_load'):
                 snapshot = SessionManager.load(params.get('session_load'))
@@ -173,15 +180,26 @@ class Controller(object):
                 if params.get('session_autosave_items') is not None:
                     restored['session_autosave_items'] = params.get('session_autosave_items')
 
+                if cli_fail_on_bucket is not None:
+                    restored['fail_on_bucket'] = cli_fail_on_bucket
+
                 params = restored
-                tpl.info(msg='Loaded session checkpoint from {0}'.format(snapshot.get('_loaded_from', restored['session_save'])))
+                tpl.info(msg='Loaded session checkpoint from {0}'.format(
+                    snapshot.get('_loaded_from', restored['session_save'])))
 
             targets = cls._resolve_scan_targets(params)
 
             if params.get('session_save') and len(targets) > 1:
                 raise BrowserError(Exception('Persistent sessions currently support one target per run'))
 
-            if reporter.default is params.get('reports'):
+            fail_on_buckets = params.get('fail_on_bucket') or []
+            ci_mode_enabled = len(fail_on_buckets) > 0
+            fail_on_matches = []
+
+            if ci_mode_enabled is True:
+                tpl.info(msg='CI/CD mode enabled: fail-on-bucket={0}'.format(','.join(fail_on_buckets)))
+
+            if reporter.default == params.get('reports'):
                 tpl.info(key='use_reports')
 
             for target in targets:
@@ -203,10 +221,83 @@ class Controller(object):
                 brows.scan()
                 brows.done()
 
+                if ci_mode_enabled is True:
+                    fail_on_matches.extend(
+                        cls._match_fail_on_buckets(
+                            target_params.get('host'),
+                            brows.result,
+                            fail_on_buckets
+                        )
+                    )
+
+            if ci_mode_enabled is True:
+                if len(fail_on_matches) > 0:
+                    tpl.warning(
+                        msg='CI/CD fail-on matched: {0}. Exit code: 1'.format(
+                            cls._format_fail_on_matches(fail_on_matches)
+                        )
+                    )
+                    return 1
+
+                tpl.info(msg='CI/CD fail-on passed: no matched buckets. Exit code: 0')
+
+            return 0
+
         except (AttributeError, BrowserError, ReporterError, TplError, SessionError) as error:
             raise SrcError(error)
         except (KeyboardInterrupt, SystemExit):
             tpl.cancel(key='abort')
+            return 0
+
+    @staticmethod
+    def _match_fail_on_buckets(host, result, buckets):
+        """
+        Match CI/CD fail-on buckets against a scan result.
+
+        :param str host:
+        :param dict result:
+        :param list[str] buckets:
+        :return: list[dict]
+        """
+
+        if not isinstance(result, dict):
+            return []
+
+        totals = result.get('total') or {}
+        matches = []
+
+        for bucket in buckets:
+            try:
+                count = int(totals.get(bucket, 0))
+            except (TypeError, ValueError):
+                count = 0
+
+            if count > 0:
+                matches.append({
+                    'host': host,
+                    'bucket': bucket,
+                    'count': count,
+                })
+
+        return matches
+
+    @staticmethod
+    def _format_fail_on_matches(matches):
+        """
+        Format CI/CD fail-on matches for terminal output.
+
+        :param list[dict] matches:
+        :return: str
+        """
+
+        return '; '.join([
+            '{0} {1}={2}'.format(
+                item.get('host') or '-',
+                item.get('bucket'),
+                item.get('count')
+            )
+            for item in matches
+        ])
 
     @staticmethod
     def _resolve_scan_targets(params):

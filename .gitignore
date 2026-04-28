@@ -44,3 +44,12 @@ opendoor.pub
 
 # Tokens
 .tokens
+
+# Benchmark generated results
+benchmarks/results/
+
+# Codacy/GitHub code scanning generated output
+results.sarif
+
+# Misc
+TODO
