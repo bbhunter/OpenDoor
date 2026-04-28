@@ -18,7 +18,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 | 3.13 | [![CI Linux Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py313.yml) | [![CI macOS Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py313.yml) | [![CI Windows Python 3.13](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py313.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py313.yml) |
 | 3.14 | [![CI Linux Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-linux-py314.yml) | [![CI macOS Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-macos-py314.yml) | [![CI Windows Python 3.14](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py314.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/ci-windows-py314.yml) |
 
-[![Documentation Status](https://app.readthedocs.org/projects/opendoor/badge/?version=latest)](https://opendoor.readthedocs.io/en/latest/)
+[![Documentation Status](https://app.readthedocs.org/projects/opendoor/badge/?version=latest)](https://opendoor.readthedocs.io/)
 [![PyPI - Version](https://img.shields.io/pypi/v/opendoor)](https://pypi.org/project/opendoor/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-green.svg)](https://www.python.org/)
 [![codecov](https://codecov.io/github/stanislav-web/OpenDoor/graph/badge.svg?token=dyBxutYBso)](https://codecov.io/github/stanislav-web/OpenDoor)
@@ -32,10 +32,10 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 ## 🚀 Quick links
 
 - [Documentation](https://opendoor.readthedocs.io/)
-- [Quickstart](https://opendoor.readthedocs.io/en/latest/quickstart/)
-- [Installation and update](https://opendoor.readthedocs.io/en/latest/Installation-and-update/)
-- [Usage guide](https://opendoor.readthedocs.io/en/latest/Usage/)
-- [Practical examples](https://opendoor.readthedocs.io/en/latest/examples/basic-scans/)
+- [Quickstart](https://opendoor.readthedocs.io/quickstart/)
+- [Installation and update](https://opendoor.readthedocs.io/Installation-and-update/)
+- [Usage guide](https://opendoor.readthedocs.io/Usage/)
+- [Practical examples](https://opendoor.readthedocs.io/examples/basic-scans/)
 - [Changelog](CHANGELOG.md)
 - [PyPI package](https://pypi.org/project/opendoor/)
 - [Issues](https://github.com/stanislav-web/OpenDoor/issues)
@@ -47,21 +47,48 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - directory discovery;
 - recursive directory discovery;
 - subdomain enumeration;
+- multi-threading scans;
 - single target, target file, and stdin input modes;
 - custom wordlists, prefixes, and extension filters;
 - custom request headers, cookies, and raw HTTP request templates;
 - response filters by status, size, text, regex, and body length;
 - smart auto-calibration for soft-404, wildcard, and catch-all responses;
-- technology fingerprint detection;
+- technology fingerprint detection CMS, ecommerce platforms, frameworks;
 - passive WAF detection and WAF-safe scan mode;
 - resumable scan sessions with checkpoint autosave;
 - CI/CD fail-on result bucket rules;
-- reports in terminal, text, JSON, HTML, and SQLite formats;
+- reports in terminal, text, JSON, CSV, HTML, and SQLite formats;
 - proxy, OpenVPN, and WireGuard transport profiles;
 - sequential per-target transport rotation for batch workflows;
 - configuration wizard for repeatable scan profiles.
 
 ---
+
+
+## 🧬 Recognized technologies
+
+OpenDoor includes a heuristic fingerprint engine for detecting probable application stacks, CMS platforms, frameworks, site builders, static-site tooling, infrastructure providers, and WAF / anti-bot systems.
+
+| Category | Examples |
+|---|---|
+| CMS | WordPress, Drupal, Joomla, TYPO3, Open Journal Systems, Moodle, Nextcloud, ownCloud, phpMyAdmin |
+| E-commerce | Magento, WooCommerce, Shopify, PrestaShop, OpenCart, Shopware |
+| Frameworks / app platforms | Laravel, Symfony, Django, Flask, FastAPI, Express, NestJS, Next.js, Nuxt, Rails, Spring |
+| Site builders | Wix, Webflow, Squarespace, Tilda |
+| Static / docs generators | MkDocs, Docusaurus, Hugo, Jekyll, VitePress |
+| Infrastructure / hosting | Cloudflare, AWS, Vercel, Netlify, GitHub Pages, GitLab Pages, Heroku, Azure, Google Cloud, Fastly, Akamai |
+| WAF / anti-bot | Cloudflare, AWS WAF, Azure Front Door, Akamai, Imperva, Sucuri, ModSecurity, DataDome, Kasada, F5 BIG-IP ASM |
+
+Run fingerprint detection:
+
+```bash
+opendoor --host https://example.com --fingerprint
+```
+
+Read more:
+
+- [Fingerprinting guide](https://opendoor.readthedocs.io/en/latest/detection/fingerprinting/)
+- [WAF detection guide](https://opendoor.readthedocs.io/en/latest/detection/waf-detection/)
 
 ## 📦 Installation
 
@@ -97,7 +124,7 @@ python3 -m pip install -r requirements.txt
 python3 opendoor.py --help
 ```
 
-See the full [installation guide](https://opendoor.readthedocs.io/en/latest/Installation-and-update/).
+See the full [installation guide](https://opendoor.readthedocs.io/Installation-and-update/).
 
 ---
 
@@ -138,7 +165,7 @@ opendoor \
   --exclude-status 404,429,500-599 \
   --exclude-size-range 0-256 \
   --sniff skipempty,collation,indexof,file \
-  --reports std,json
+  --reports std,json,csv
 ```
 
 ### Authenticated scan from raw request
@@ -149,7 +176,7 @@ opendoor \
   --scheme https \
   --method GET \
   --auto-calibrate \
-  --reports json,html
+  --reports json,html,sqlite
 ```
 
 ### WAF-safe scan
@@ -183,12 +210,12 @@ opendoor \
 
 More examples:
 
-- [Basic scans](https://opendoor.readthedocs.io/en/latest/examples/basic-scans/)
-- [Batch scans](https://opendoor.readthedocs.io/en/latest/examples/batch-scans/)
-- [Authenticated scans](https://opendoor.readthedocs.io/en/latest/examples/authenticated-scans/)
-- [WAF-safe scans](https://opendoor.readthedocs.io/en/latest/examples/waf-safe-scans/)
-- [VPN transport scans](https://opendoor.readthedocs.io/en/latest/examples/vpn-transport-scans/)
-- [CI/CD examples](https://opendoor.readthedocs.io/en/latest/examples/ci-cd/)
+- [Basic scans](https://opendoor.readthedocs.io/examples/basic-scans/)
+- [Batch scans](https://opendoor.readthedocs.io/examples/batch-scans/)
+- [Authenticated scans](https://opendoor.readthedocs.io/examples/authenticated-scans/)
+- [WAF-safe scans](https://opendoor.readthedocs.io/examples/waf-safe-scans/)
+- [VPN transport scans](https://opendoor.readthedocs.io/examples/vpn-transport-scans/)
+- [CI/CD examples](https://opendoor.readthedocs.io/examples/ci-cd/)
 
 ---
 
@@ -197,20 +224,20 @@ More examples:
 The full documentation is available on ReadTheDocs:
 
 - [Home](https://opendoor.readthedocs.io/)
-- [Quickstart](https://opendoor.readthedocs.io/en/latest/quickstart/)
-- [Installation and update](https://opendoor.readthedocs.io/en/latest/Installation-and-update/)
-- [Usage guide](https://opendoor.readthedocs.io/en/latest/Usage/)
-- [Target input](https://opendoor.readthedocs.io/en/latest/concepts/target-input/)
-- [Reports](https://opendoor.readthedocs.io/en/latest/concepts/reports/)
-- [Fingerprinting](https://opendoor.readthedocs.io/en/latest/detection/fingerprinting/)
-- [WAF detection and safe mode](https://opendoor.readthedocs.io/en/latest/detection/waf-detection/)
-- [Auto-calibration](https://opendoor.readthedocs.io/en/latest/detection/auto-calibration/)
-- [Network transports](https://opendoor.readthedocs.io/en/latest/transports/overview/)
-- [OpenVPN transport](https://opendoor.readthedocs.io/en/latest/transports/openvpn/)
-- [WireGuard transport](https://opendoor.readthedocs.io/en/latest/transports/wireguard/)
-- [Practical examples](https://opendoor.readthedocs.io/en/latest/examples/basic-scans/)
-- [Testing](https://opendoor.readthedocs.io/en/latest/Testing/)
-- [Contribution](https://opendoor.readthedocs.io/en/latest/Contribution/)
+- [Quickstart](https://opendoor.readthedocs.io/quickstart/)
+- [Installation and update](https://opendoor.readthedocs.io/Installation-and-update/)
+- [Usage guide](https://opendoor.readthedocs.io/Usage/)
+- [Target input](https://opendoor.readthedocs.io/concepts/target-input/)
+- [Reports](https://opendoor.readthedocs.io/concepts/reports/)
+- [Fingerprinting](https://opendoor.readthedocs.io/detection/fingerprinting/)
+- [WAF detection and safe mode](https://opendoor.readthedocs.io/detection/waf-detection/)
+- [Auto-calibration](https://opendoor.readthedocs.io/detection/auto-calibration/)
+- [Network transports](https://opendoor.readthedocs.io/transports/overview/)
+- [OpenVPN transport](https://opendoor.readthedocs.io/transports/openvpn/)
+- [WireGuard transport](https://opendoor.readthedocs.io/transports/wireguard/)
+- [Practical examples](https://opendoor.readthedocs.io/examples/basic-scans/)
+- [Testing](https://opendoor.readthedocs.io/Testing/)
+- [Contribution](https://opendoor.readthedocs.io/Contribution/)
 
 ---
 
@@ -255,7 +282,7 @@ Build package artifacts:
 python -m build
 ```
 
-See the full [testing guide](https://opendoor.readthedocs.io/en/latest/Testing/) and [contribution guide](https://opendoor.readthedocs.io/en/latest/Contribution/).
+See the full [testing guide](https://opendoor.readthedocs.io/Testing/) and [contribution guide](https://opendoor.readthedocs.io/Contribution/).
 
 ---
 
@@ -298,7 +325,7 @@ See [CHANGELOG.md](CHANGELOG.md) and [GitHub Releases](https://github.com/stanis
 
 Pull requests are welcome.
 
-Before contributing, read the [contribution guide](https://opendoor.readthedocs.io/en/latest/Contribution/) and run the relevant tests.
+Before contributing, read the [contribution guide](https://opendoor.readthedocs.io/Contribution/) and run the relevant tests.
 
 ---
 

@@ -15,9 +15,10 @@ opendoor --host https://example.com --fingerprint
 Fingerprinting can help identify probable:
 
 - CMS platforms;
-- frameworks;
-- static-site tooling;
-- application stacks;
+- e-commerce platforms;
+- frameworks and application platforms;
+- site builders;
+- static-site and documentation generators;
 - hosting platforms;
 - infrastructure providers;
 - CDN or edge infrastructure signals.
@@ -70,6 +71,118 @@ A detected technology can influence:
 
 ---
 
+## Recognized systems
+
+The heuristic fingerprint engine currently recognizes the following platform families.
+
+### CMS
+
+- Bitrix
+- Bludit
+- Bolt CMS
+- Concrete CMS
+- Contao
+- Craft CMS
+- Directus
+- Discourse
+- Drupal
+- Ghost
+- GravCMS
+- Joomla
+- Matomo
+- MediaWiki
+- Open Journal Systems
+- MODX
+- Moodle
+- Neos
+- Nextcloud
+- OctoberCMS
+- ownCloud
+- phpBB
+- phpMyAdmin
+- Pimcore
+- TYPO3
+- Umbraco
+- WordPress
+
+### E-commerce
+
+- Magento
+- nopCommerce
+- OpenCart
+- PrestaShop
+- Shopify
+- Shopware
+- WooCommerce
+
+### Frameworks and app platforms
+
+- Angular
+- ASP.NET
+- Astro
+- Django
+- Express
+- FastAPI
+- Fastify
+- Flask
+- Gatsby
+- Hapi
+- Koa
+- Laravel
+- NestJS
+- Next.js
+- Nuxt
+- Phoenix
+- React
+- Remix
+- Ruby on Rails
+- Spring
+- Strapi
+- SvelteKit
+- Symfony
+- Vue
+
+### Site builders
+
+- Squarespace
+- Tilda
+- Webflow
+- Wix
+
+### Static and docs generators
+
+- Docusaurus
+- Hugo
+- Jekyll
+- MkDocs
+- VitePress
+
+### Infrastructure providers and hosting edge signals
+
+- AWS
+- AWS API Gateway
+- AWS Amplify
+- AWS CloudFront
+- AWS ELB / ALB
+- AWS S3
+- Akamai
+- Cloudflare
+- Fastly
+- GitHub Pages
+- GitLab Pages
+- Google App Engine
+- Google Cloud
+- Google Cloud / Google Frontend
+- Google Cloud Run
+- Heroku
+- Microsoft Azure
+- Microsoft Azure App Service
+- Netlify
+- OpenResty
+- Vercel
+
+---
+
 ## Recommended workflow
 
 ```shell
@@ -77,7 +190,7 @@ opendoor \
   --host https://example.com \
   --fingerprint \
   --auto-calibrate \
-  --reports std,json
+  --reports std,json,csv
 ```
 
 This gives a better initial view of the target before deeper scans.
@@ -89,3 +202,5 @@ This gives a better initial view of the target before deeper scans.
 Fingerprinting is heuristic. Treat results as probable signals, not as guaranteed facts.
 
 Always verify important findings manually.
+
+For WAF and anti-bot detection, see [WAF detection and safe mode](waf-detection.md).

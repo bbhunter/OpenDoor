@@ -30,6 +30,36 @@ It is intended for safer scan classification and better operator awareness.
 
 ---
 
+## Recognized WAF, anti-bot, and edge protection systems
+
+The heuristic WAF detection engine currently recognizes probable signals for:
+
+- Akamai
+- Anubis
+- AppTrana
+- AWS WAF
+- Azure Front Door
+- Barracuda
+- Cloudflare
+- DataDome
+- Distil
+- F5 BIG-IP ASM
+- Fastly
+- FortiWeb
+- Huawei Cloud WAF
+- Imperva
+- Kasada
+- ModSecurity
+- NetScaler / Citrix WAF
+- PerimeterX / HUMAN
+- Radware
+- Reblaze
+- Sucuri
+
+Detection is heuristic. Treat results as probable signals and verify important findings manually.
+
+---
+
 ## Safe mode
 
 Safe mode enables a more cautious runtime profile after WAF or anti-bot behavior is detected.
@@ -80,7 +110,7 @@ This can help track whether protective infrastructure behavior changed between r
 
 This feature is for detection and cautious scanning of authorized targets.
 
-Do not use OpenDoor documentation or examples as a bypass guide for third-party systems.
+Do not use OpenDoor documentation or examples as bypass guidance for third-party systems.
 
 ---
 
