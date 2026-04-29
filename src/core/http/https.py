@@ -86,10 +86,12 @@ class HttpsRequest(RequestProvider, DebugProvider):
         except Exception as error:
             raise HttpsRequestError(str(error))
 
-    def request(self, url):
+    def request(self, url, extra_headers=None):
         """
         Client request SSL
+
         :param str url: request uri
+        :param dict | list | tuple | None extra_headers: temporary per-request headers
         :return: urllib3.HTTPResponse
         """
 
@@ -101,14 +103,16 @@ class HttpsRequest(RequestProvider, DebugProvider):
         if 'default' != self.__connection_header and self.__headers.get('Connection') is None:
             self.__headers.update({'Connection': self.__connection_header})
 
+        request_headers = self._build_request_headers(self.__headers, extra_headers)
+
         if self._HTTP_DBG_LEVEL <= self.__debug.level:
-            self.__debug.debug_request(self.__headers, url, self.__cfg.method)
+            self.__debug.debug_request(request_headers, url, self.__cfg.method)
         try:
             disable_warnings(InsecureRequestWarning)
             if self.__cfg.DEFAULT_SCAN == self.__cfg.scan:  # directories requests
                 response = self.__pool.request(self.__cfg.method,
                                                helper.parse_url(url).path,
-                                               headers=self.__headers,
+                                               headers=request_headers,
                                                body=self._request_body,
                                                retries=self.__cfg.retries,
                                                assert_same_host=False,
@@ -117,7 +121,7 @@ class HttpsRequest(RequestProvider, DebugProvider):
             else:  # subdomains
 
                 response = PoolManager().request(self.__cfg.method, url,
-                                                 headers=self.__headers,
+                                                 headers=request_headers,
                                                  body=self._request_body,
                                                  retries=self.__cfg.retries,
                                                  assert_same_host=False,

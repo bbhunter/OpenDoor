@@ -24,11 +24,24 @@ class TestSqliteReportPlugin(unittest.TestCase):
                 'success': ['http://example.com/admin'],
                 'indexof': ['http://example.com/public'],
                 'failed': ['http://example.com/missing'],
+                'bypass': ['http://example.com/admin'],
             },
             'report_items': {
                 'success': [{'url': 'http://example.com/admin', 'size': '9B', 'code': '200'}],
                 'indexof': [{'url': 'http://example.com/public', 'size': '1KB', 'code': '200'}],
                 'failed': [{'url': 'http://example.com/missing', 'size': '0B', 'code': '404'}],
+                'bypass': [
+                    {
+                        'url': 'http://example.com/admin',
+                        'size': '90B',
+                        'code': '200',
+                        'bypass': 'header',
+                        'bypass_header': 'X-Original-URL',
+                        'bypass_value': '/admin',
+                        'bypass_from_code': '403',
+                        'bypass_to_code': '200',
+                    }
+                ],
             },
             'total': {
                 'success': 1,
@@ -36,6 +49,7 @@ class TestSqliteReportPlugin(unittest.TestCase):
                 'failed': 1,
                 'items': 3,
                 'workers': 1,
+                'bypass': 1,
             },
             'fingerprint': {
                 'category': 'framework',
@@ -93,7 +107,19 @@ class TestSqliteReportPlugin(unittest.TestCase):
                 ('success', 'http://example.com/admin', '200', '9B'),
                 ('indexof', 'http://example.com/public', '200', '1KB'),
                 ('failed', 'http://example.com/missing', '404', '0B'),
+                ('bypass', 'http://example.com/admin', '200', '90B'),
             ]
+        )
+
+        bypass = cursor.execute(
+            'SELECT bypass, bypass_header, bypass_value, bypass_from_code, bypass_to_code '
+            'FROM items WHERE status = ?',
+            ('bypass',)
+        ).fetchone()
+
+        self.assertEqual(
+            bypass,
+            ('header', 'X-Original-URL', '/admin', '403', '200')
         )
 
         fingerprint = cursor.execute(

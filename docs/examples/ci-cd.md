@@ -19,10 +19,12 @@ opendoor \
 ```shell
 opendoor \
   --host https://example.com \
-  --fail-on-bucket success,auth,forbidden
+  --fail-on-bucket success,auth,forbidden,blocked,bypass
 ```
 
 OpenDoor completes the scan and exits with code `1` if selected result buckets are found.
+
+Use the `bypass` bucket when Header Injection Bypass candidates should fail the pipeline.
 
 ---
 
@@ -35,9 +37,26 @@ opendoor \
   --auto-calibrate \
   --include-status 200-299,301,302,403 \
   --exclude-status 404,429,500-599 \
-  --reports json,sqlite \
-  --fail-on-bucket success,auth,forbidden
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden,bypass
 ```
+
+---
+
+## CI gate with Header Injection Bypass
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --header-bypass \
+  --header-bypass-limit 32 \
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden,bypass
+```
+
+Use this only for authorized exposure regression checks.
 
 ---
 
@@ -47,8 +66,8 @@ opendoor \
 opendoor \
   --hostlist targets.txt \
   --auto-calibrate \
-  --reports json,sqlite \
-  --fail-on-bucket success,auth,forbidden
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden,bypass
 ```
 
 ---
@@ -82,9 +101,11 @@ jobs:
             --host https://example.com \
             --method GET \
             --auto-calibrate \
-            --reports json,sqlite \
+            --header-bypass \
+            --header-bypass-limit 32 \
+            --reports json,sqlite,csv \
             --reports-dir ./reports \
-            --fail-on-bucket success,auth,forbidden
+            --fail-on-bucket success,auth,forbidden,bypass
 
       - name: Upload reports
         if: always()
@@ -110,9 +131,11 @@ opendoor:
         --host https://example.com \
         --method GET \
         --auto-calibrate \
-        --reports json,sqlite \
+        --header-bypass \
+        --header-bypass-limit 32 \
+        --reports json,sqlite,csv \
         --reports-dir ./reports \
-        --fail-on-bucket success,auth,forbidden
+        --fail-on-bucket success,auth,forbidden,bypass
   artifacts:
     when: always
     paths:

@@ -100,7 +100,9 @@ Common report formats:
 | Format | Usage |
 |---|---|
 | `std` | Terminal output |
+| `txt` | Plain text output |
 | `json` | Automation and processing |
+| `csv` | Spreadsheet-friendly output |
 | `html` | Human-readable report |
 | `sqlite` | Structured local analysis |
 
@@ -148,6 +150,39 @@ opendoor --host https://example.com --waf-safe-mode
 ```
 
 Safe mode is designed to reduce aggressive behavior after WAF or anti-bot signals are detected.
+
+---
+
+## 🧩 Probe Header Injection Bypass
+
+Header Injection Bypass is an opt-in check for authorized testing of blocked `401` and `403` paths.
+
+It sends controlled, temporary per-request headers and records exact evidence when a blocked response changes to a meaningful result.
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --header-bypass \
+  --header-bypass-limit 32 \
+  --reports std,json,csv,sqlite
+```
+
+Customize trigger statuses, trusted IP values, and tested headers:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --header-bypass \
+  --header-bypass-status 401,403 \
+  --header-bypass-ips 127.0.0.1,10.0.0.1 \
+  --header-bypass-headers X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP \
+  --reports json,html,sqlite
+```
+
+Use this only on systems you own or have explicit permission to test.
 
 ---
 
@@ -220,11 +255,14 @@ Never commit real VPN private keys or credentials to the repository.
 ```shell
 opendoor \
   --host https://example.com \
-  --fail-on-bucket success,auth,forbidden \
+  --header-bypass \
+  --fail-on-bucket success,auth,forbidden,bypass \
   --reports json,sqlite
 ```
 
 OpenDoor will complete the scan and return exit code `1` only if selected result buckets are found.
+
+The `bypass` bucket can be used as a CI/CD signal when Header Injection Bypass candidates should fail the pipeline.
 
 ---
 

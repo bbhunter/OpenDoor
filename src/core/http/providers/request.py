@@ -86,10 +86,75 @@ class RequestProvider(CookiesProvider, HeaderProvider, UserAgentHeaderProvider, 
         if cookies:
             self.add_header('Cookie', '; '.join(cookies))
 
-    def request(self, url):
+    @staticmethod
+    def _iter_extra_headers(extra_headers):
+        """
+        Normalize temporary per-request headers.
+
+        :param dict | list | tuple | None extra_headers: temporary headers
+        :return: list[tuple[str, str]]
+        """
+
+        if extra_headers is None:
+            return []
+
+        if isinstance(extra_headers, dict):
+            items = extra_headers.items()
+        else:
+            items = extra_headers
+
+        headers = []
+
+        for item in items:
+            if isinstance(item, str):
+                if ':' not in item:
+                    continue
+
+                key, value = item.split(':', 1)
+            else:
+                try:
+                    key, value = item
+                except (TypeError, ValueError):
+                    continue
+
+            key = str(key).strip()
+            value = str(value).strip()
+
+            if not key or not value:
+                continue
+
+            if '\r' in key or '\n' in key or '\r' in value or '\n' in value:
+                continue
+
+            headers.append((key, value))
+
+        return headers
+
+    def _build_request_headers(self, base_headers, extra_headers=None):
+        """
+        Build request headers without mutating the shared provider headers.
+
+        :param dict base_headers: shared request headers
+        :param dict | list | tuple | None extra_headers: temporary headers
+        :return: dict
+        """
+
+        try:
+            headers = base_headers.copy()
+        except AttributeError:
+            headers = dict(base_headers)
+
+        for key, value in self._iter_extra_headers(extra_headers):
+            headers.update({key: value})
+
+        return headers
+
+    def request(self, url, extra_headers=None):
         """
         Client request
+
         :param str url: request uri
+        :param dict | list | tuple | None extra_headers: temporary per-request headers
         :return: None
         """
 

@@ -175,6 +175,50 @@ Use it for authorized targets protected by CDN, WAF, or anti-bot infrastructure.
 
 ---
 
+## 🧩 Header Injection Bypass
+
+Enable controlled header-bypass probes:
+
+```ini
+header_bypass = True
+```
+
+Customize trigger statuses:
+
+```ini
+header_bypass_status = 401,403
+```
+
+Customize trusted IP values:
+
+```ini
+header_bypass_ips = 127.0.0.1,10.0.0.1,192.168.1.1
+```
+
+Customize tested headers:
+
+```ini
+header_bypass_headers = X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP
+```
+
+Limit the number of probe variants per blocked URL:
+
+```ini
+header_bypass_limit = 32
+```
+
+Use `0` for unlimited variants:
+
+```ini
+header_bypass_limit = 0
+```
+
+Header-bypass probes are temporary per-request headers. They do not mutate global headers configured with `header`.
+
+Use this feature only on systems you are authorized to test.
+
+---
+
 ## 🧠 Auto-calibration
 
 Auto-calibration helps reduce soft-404, wildcard, and catch-all noise.
@@ -402,6 +446,8 @@ Common formats:
 | `csv`    | Column-separated report                       |
 | `sqlite` | Structured local database for post-processing |
 
+Header-bypass metadata is preserved in reports when `header_bypass = True` finds a candidate. CSV and SQLite expose dedicated bypass fields, while JSON and HTML preserve full `report_items` metadata.
+
 If your local build supports additional report plugins, use the formats shown by:
 
 ```shell
@@ -435,10 +481,12 @@ Sessions are useful for large scans, unstable networks, recursive discovery, and
 Enable CI/CD fail-on behavior by selected result buckets:
 
 ```ini
-fail_on_bucket = success,auth,forbidden,blocked
+fail_on_bucket = success,auth,forbidden,blocked,bypass
 ```
 
 When at least one selected bucket is found, OpenDoor exits with code `1`.
+
+Use the `bypass` bucket when header-bypass candidates should fail the pipeline.
 
 This is useful for:
 
@@ -529,13 +577,55 @@ retries = 5
 waf_safe_mode = True
 auto_calibrate = True
 
-reports = std,json
+header_bypass = True
+header_bypass_limit = 32
+header_bypass_status = 401,403
+
+reports = std,json,csv,sqlite
 ```
 
 Run:
 
 ```shell
 opendoor --wizard ./configs/waf-safe-example.conf
+```
+
+---
+
+## ✅ Example: Header-bypass profile
+
+```ini
+[general]
+
+host = example.com
+scheme = https://
+ssl = True
+port = 443
+
+scan = directories
+method = GET
+threads = 3
+delay = 1
+timeout = 60
+retries = 5
+
+waf_detect = True
+waf_safe_mode = True
+
+header_bypass = True
+header_bypass_status = 401,403
+header_bypass_ips = 127.0.0.1,10.0.0.1,192.168.1.1
+header_bypass_headers = X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP
+header_bypass_limit = 32
+
+reports = std,json,csv,sqlite
+reports_dir = ./reports
+```
+
+Run:
+
+```shell
+opendoor --wizard ./configs/header-bypass-example.conf
 ```
 
 ---
@@ -591,7 +681,7 @@ exclude_status = 404,429,500-599
 reports = json,sqlite
 reports_dir = ./reports
 
-fail_on_bucket = success,auth,forbidden
+fail_on_bucket = success,auth,forbidden,bypass
 ```
 
 Run:
@@ -612,6 +702,7 @@ Recommended disabled value:
 keep_alive = None
 accept_cookies = None
 random_list = None
+header_bypass = None
 ```
 
 Recommended enabled value:
@@ -620,6 +711,7 @@ Recommended enabled value:
 keep_alive = True
 accept_cookies = True
 random_list = True
+header_bypass = True
 ```
 
 Avoid storing secrets in configuration files committed to Git.

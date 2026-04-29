@@ -215,6 +215,51 @@ class Options(object):
                 "type": bool
             },
             {
+                "group": "request",
+                "args": None,
+                "argl": "--header-bypass",
+                "default": False,
+                "action": "store_true",
+                "help": "Probe blocked 401/403 paths with controlled header-injection bypass variants",
+                "type": bool
+            },
+            {
+                "group": "request",
+                "args": None,
+                "argl": "--header-bypass-headers",
+                "default": None,
+                "action": "store",
+                "help": "Comma-separated header names for --header-bypass",
+                "type": str
+            },
+            {
+                "group": "request",
+                "args": None,
+                "argl": "--header-bypass-ips",
+                "default": None,
+                "action": "store",
+                "help": "Comma-separated trusted IP values for --header-bypass",
+                "type": str
+            },
+            {
+                "group": "request",
+                "args": None,
+                "argl": "--header-bypass-status",
+                "default": None,
+                "action": "store",
+                "help": "Comma-separated status codes that trigger --header-bypass, default 401,403",
+                "type": str
+            },
+            {
+                "group": "request",
+                "args": None,
+                "argl": "--header-bypass-limit",
+                "default": 32,
+                "action": "store",
+                "help": "Maximum header-bypass variants per blocked URL, default 32, use 0 for unlimited",
+                "type": int
+            },
+            {
                 "group": "debug",
                 "args": None,
                 "argl": "--debug",
@@ -693,7 +738,7 @@ class Options(object):
                         break
             else:
                 for arg, value in vars(self.args).items():
-                    if value:
+                    if value or (arg == 'header_bypass_limit' and value == 0):
                         args[arg] = value
                 args = Filter.filter(args)
 

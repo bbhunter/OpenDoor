@@ -33,6 +33,7 @@ class Filter(object):
     URL_REGEX = r"^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|(?:[-A-Za-z0-9]+\.)+([-A-Za-z]|\w){2,8})$"
     STATUS_RANGE_REGEX = re.compile(r'^\d{3}(?:-\d{3})?$')
     INTEGER_RANGE_REGEX = re.compile(r'^\d+(?:-\d+)?$')
+    HEADER_NAME_REGEX = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
 
     TRANSPORTS = ('direct', 'proxy', 'openvpn', 'wireguard')
     TRANSPORT_ROTATES = ('none', 'per-target')
@@ -69,6 +70,33 @@ class Filter(object):
                 filtered['session_autosave_items'] = Filter.positive_int(
                     args.get('session_autosave_items'),
                     key='--session-autosave-items'
+                )
+
+            if args.get('header_bypass') is True:
+                filtered['header_bypass'] = True
+
+            if args.get('header_bypass_headers') is not None:
+                filtered['header_bypass_headers'] = Filter.header_names(
+                    args.get('header_bypass_headers'),
+                    key='--header-bypass-headers'
+                )
+
+            if args.get('header_bypass_ips') is not None:
+                filtered['header_bypass_ips'] = Filter.header_values(
+                    args.get('header_bypass_ips'),
+                    key='--header-bypass-ips'
+                )
+
+            if args.get('header_bypass_status') is not None:
+                filtered['header_bypass_status'] = Filter.status_ranges(
+                    args.get('header_bypass_status'),
+                    key='--header-bypass-status'
+                )
+
+            if args.get('header_bypass_limit') is not None:
+                filtered['header_bypass_limit'] = Filter.non_negative_int(
+                    args.get('header_bypass_limit'),
+                    key='--header-bypass-limit'
                 )
 
             if args.get('fail_on_bucket') is not None:
@@ -165,6 +193,14 @@ class Filter(object):
                 filtered[key] = Filter.non_negative_int(value, key='--{0}'.format(key.replace('_', '-')))
             elif key in ['fail_on_bucket']:
                 filtered[key] = Filter.bucket_values(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['header_bypass_headers']:
+                filtered[key] = Filter.header_names(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['header_bypass_ips']:
+                filtered[key] = Filter.header_values(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['header_bypass_status']:
+                filtered[key] = Filter.status_ranges(value, key='--{0}'.format(key.replace('_', '-')))
+            elif key in ['header_bypass_limit']:
+                filtered[key] = Filter.non_negative_int(value, key='--{0}'.format(key.replace('_', '-')))
             elif key in ['calibration_samples']:
                 filtered[key] = Filter.positive_int(value, key='--{0}'.format(key.replace('_', '-')))
             elif key in ['calibration_threshold']:
@@ -584,6 +620,61 @@ class Filter(object):
         if choose not in ['directories', 'subdomains']:
             choose = 'directories'
         return choose
+
+    @staticmethod
+    def header_names(value, key='--headers'):
+        """Validate comma-separated HTTP header names."""
+
+        headers = []
+        seen = set()
+
+        for item in Filter._split_csv(value):
+            header = str(item).strip()
+            header_key = header.lower()
+
+            if not Filter.HEADER_NAME_REGEX.match(header):
+                raise FilterError('"{0}" is invalid value in {1}. Use comma-separated HTTP header names'.format(
+                    item,
+                    key
+                ))
+
+            if header_key in seen:
+                continue
+
+            headers.append(header)
+            seen.add(header_key)
+
+        if len(headers) <= 0:
+            raise FilterError('{0} requires at least one HTTP header name'.format(key))
+
+        return headers
+
+    @staticmethod
+    def header_values(value, key='--header-values'):
+        """Validate comma-separated header values without allowing header injection payloads."""
+
+        values = []
+        seen = set()
+
+        for item in Filter._split_csv(value):
+            header_value = str(item).strip()
+
+            if not header_value or '\r' in header_value or '\n' in header_value:
+                raise FilterError('"{0}" is invalid value in {1}. Use comma-separated safe header values'.format(
+                    item,
+                    key
+                ))
+
+            if header_value in seen:
+                continue
+
+            values.append(header_value)
+            seen.add(header_value)
+
+        if len(values) <= 0:
+            raise FilterError('{0} requires at least one header value'.format(key))
+
+        return values
 
     @staticmethod
     def bucket_values(value, key='--bucket'):

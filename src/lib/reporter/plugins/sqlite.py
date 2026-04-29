@@ -74,7 +74,12 @@ class SqliteReportPlugin(PluginProvider):
                 'status TEXT NOT NULL, '
                 'url TEXT NOT NULL, '
                 'code TEXT NOT NULL, '
-                'size TEXT NOT NULL'
+                'size TEXT NOT NULL, '
+                'bypass TEXT, '
+                'bypass_header TEXT, '
+                'bypass_value TEXT, '
+                'bypass_from_code TEXT, '
+                'bypass_to_code TEXT'
                 ')'
             )
             cursor.execute(
@@ -120,12 +125,20 @@ class SqliteReportPlugin(PluginProvider):
                             str(item.get('url', '')),
                             str(item.get('code', '-')),
                             str(item.get('size', '0B')),
+                            None if item.get('bypass') is None else str(item.get('bypass')),
+                            None if item.get('bypass_header') is None else str(item.get('bypass_header')),
+                            None if item.get('bypass_value') is None else str(item.get('bypass_value')),
+                            None if item.get('bypass_from_code') is None else str(item.get('bypass_from_code')),
+                            None if item.get('bypass_to_code') is None else str(item.get('bypass_to_code')),
                         )
                     )
 
             if len(rows) > 0:
                 cursor.executemany(
-                    'INSERT INTO items(status, url, code, size) VALUES(?, ?, ?, ?)',
+                    'INSERT INTO items('
+                    'status, url, code, size, '
+                    'bypass, bypass_header, bypass_value, bypass_from_code, bypass_to_code'
+                    ') VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     rows
                 )
 

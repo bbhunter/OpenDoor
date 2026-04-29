@@ -100,10 +100,12 @@ class Proxy(RequestProvider, DebugProvider):
                 ) from error
             raise ProxyRequestError(error)
 
-    def request(self, url):
+    def request(self, url, extra_headers=None):
         """
         Client request using Proxy
+
         :param str url: request uri
+        :param dict | list | tuple | None extra_headers: temporary per-request headers
         :return: urllib3.HTTPResponse
         """
 
@@ -111,26 +113,35 @@ class Proxy(RequestProvider, DebugProvider):
         if self.__connection_header != 'default':
             self.__headers.update({'Connection': self.__connection_header})
 
+        request_headers = self._build_request_headers(self.__headers, extra_headers)
+
         if self._HTTP_DBG_LEVEL <= self.__debug.level:
-            self.__debug.debug_request(self.__headers, url, self.__cfg.method)
+            self.__debug.debug_request(request_headers, url, self.__cfg.method)
 
         try:
-            response = self.__pool_request(url)
+            if extra_headers is None:
+                response = self.__pool_request(url)
+            else:
+                response = self.__pool_request(url, headers=request_headers)
             return response
 
         except MaxRetryError:
             if self.__cfg.DEFAULT_SCAN == self.__cfg.scan:
                 self.__tpl.warning(key='proxy_max_retry_error', url=helper.parse_url(url).path, proxy=self.__server)
-                return self.__pool_request(url)
+                if extra_headers is None:
+                    return self.__pool_request(url)
+                return self.__pool_request(url, headers=request_headers)
 
         except ReadTimeoutError:
             if self.__cfg.DEFAULT_SCAN == self.__cfg.scan:
                 self.__tpl.warning(key='read_timeout_error', url=helper.parse_url(url).path)
 
-    def __pool_request(self, url):
+    def __pool_request(self, url, headers=None):
         """
         Shadow pool request
+
         :param string url: target url
+        :param dict | None headers: request headers
         :return: urllib3.HTTPResponse
         """
 
@@ -138,7 +149,7 @@ class Proxy(RequestProvider, DebugProvider):
         response = pool.request(
             self.__cfg.method,
             url,
-            headers=self.__headers,
+            headers=self.__headers if headers is None else headers,
             retries=self.__cfg.retries,
             redirect=False,
         )

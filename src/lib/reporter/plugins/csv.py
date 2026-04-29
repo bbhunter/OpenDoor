@@ -40,6 +40,11 @@ class CsvReportPlugin(PluginProvider):
         'waf',
         'waf_confidence',
         'waf_signals',
+        'bypass',
+        'bypass_header',
+        'bypass_value',
+        'bypass_from_code',
+        'bypass_to_code',
         'fingerprint_category',
         'fingerprint_name',
         'fingerprint_confidence',
@@ -136,6 +141,13 @@ class CsvReportPlugin(PluginProvider):
                     'waf': str(item.get('waf', '')),
                     'waf_confidence': '' if item.get('waf_confidence') is None else str(item.get('waf_confidence')),
                     'waf_signals': self.__format_list(item.get('waf_signals', [])),
+                    'bypass': str(item.get('bypass', '')),
+                    'bypass_header': str(item.get('bypass_header', '')),
+                    'bypass_value': str(item.get('bypass_value', '')),
+                    'bypass_from_code': '' if item.get('bypass_from_code') is None else str(
+                        item.get('bypass_from_code')
+                    ),
+                    'bypass_to_code': '' if item.get('bypass_to_code') is None else str(item.get('bypass_to_code')),
                 }
                 row.update(fingerprint_fields)
                 rows.append(row)

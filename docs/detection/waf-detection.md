@@ -93,6 +93,27 @@ opendoor \
 
 ---
 
+## WAF-safe scan with Header Injection Bypass
+
+For authorized blocked-resource validation, Header Injection Bypass can be enabled as a separate opt-in feature.
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --waf-safe-mode \
+  --header-bypass \
+  --header-bypass-limit 32 \
+  --reports json,sqlite,csv
+```
+
+Header-bypass probes are temporary per-request headers and do not mutate global scan headers.
+
+For details, see [Header Injection Bypass](header-bypass.md).
+
+---
+
 ## WAF detection with CI/CD
 
 ```shell
@@ -103,6 +124,17 @@ opendoor \
 ```
 
 This can help track whether protective infrastructure behavior changed between releases.
+
+Header-bypass candidates can also be used as CI/CD signals:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --header-bypass \
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden,bypass
+```
 
 ---
 

@@ -49,7 +49,47 @@ opendoor \
   --include-status 200-299,301,302,403 \
   --exclude-status 404,429,500-599 \
   --exclude-size-range 0-256 \
-  --reports json,sqlite
+  --reports json,sqlite,csv
+```
+
+---
+
+## WAF-safe Header Injection Bypass scan
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --waf-safe-mode \
+  --threads 3 \
+  --delay 1 \
+  --timeout 60 \
+  --retries 5 \
+  --header-bypass \
+  --header-bypass-limit 32 \
+  --reports json,sqlite,csv
+```
+
+Header-bypass probes are temporary per-request headers. They do not mutate global scan headers.
+
+Use this only on systems you are authorized to test.
+
+---
+
+## Custom header-bypass profile
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-safe-mode \
+  --header-bypass \
+  --header-bypass-status 401,403 \
+  --header-bypass-ips 127.0.0.1,10.0.0.1,192.168.1.1 \
+  --header-bypass-headers X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP \
+  --header-bypass-limit 32 \
+  --reports json,html,sqlite
 ```
 
 ---
@@ -61,8 +101,9 @@ opendoor \
   --host https://example.com \
   --waf-safe-mode \
   --auto-calibrate \
-  --reports json,sqlite \
-  --fail-on-bucket success,auth,forbidden
+  --header-bypass \
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden,bypass
 ```
 
 ---
@@ -70,5 +111,7 @@ opendoor \
 ## Notes
 
 WAF detection is for classification and safer authorized scanning.
+
+Header Injection Bypass is a separate opt-in validation feature for blocked resources. It records evidence only when a controlled probe changes the response into a meaningful result.
 
 Do not treat these examples as bypass guidance for third-party systems.

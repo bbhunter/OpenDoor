@@ -71,7 +71,7 @@ opendoor \
   --hostlist targets.txt \
   --auto-calibrate \
   --reports json,sqlite \
-  --fail-on-bucket success,auth,forbidden
+  --fail-on-bucket success,auth,forbidden,bypass
 ```
 
 OpenDoor completes the scan and exits with code `1` if selected buckets are found.

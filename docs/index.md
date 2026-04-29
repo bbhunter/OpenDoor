@@ -4,7 +4,7 @@
 
 It helps security researchers, penetration testers, bug bounty hunters, DevSecOps engineers, and developers identify exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets.
 
-OpenDoor supports single-target and batch scanning, custom wordlists, response filtering, recursive discovery, fingerprint detection, passive WAF detection, smart auto-calibration, resumable sessions, CI/CD fail-on rules, multiple report formats, and optional network transport profiles for proxy, OpenVPN, and WireGuard workflows.
+OpenDoor supports single-target and batch scanning, custom wordlists, response filtering, recursive discovery, fingerprint detection, passive WAF detection, controlled Header Injection Bypass probes, smart auto-calibration, resumable sessions, CI/CD fail-on rules, multiple report formats, and optional network transport profiles for proxy, OpenVPN, and WireGuard workflows.
 
 > Use OpenDoor only on systems you own or have explicit permission to test.
 
@@ -110,6 +110,31 @@ Safe mode enables a more cautious runtime profile after probable WAF or anti-bot
 
 ---
 
+## 🧩 Header Injection Bypass
+
+OpenDoor can optionally probe blocked `401` and `403` paths with controlled Header Injection Bypass variants.
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --header-bypass \
+  --header-bypass-limit 32
+```
+
+The scanner records exact bypass evidence in detailed reports:
+
+- bypass type;
+- header name;
+- header value;
+- original status code;
+- resulting status code.
+
+Header-bypass probes are temporary per-request headers and do not mutate the global scan headers.
+
+---
+
 ## 🔁 Resumable sessions
 
 Long-running scans can be saved and resumed later.
@@ -156,6 +181,8 @@ opendoor --host https://example.com --reports json,sqlite --reports-dir ./report
 | `html` | Human-readable report |
 | `sqlite` | Structured local database for post-processing |
 
+Header-bypass evidence is preserved in detailed report formats. CSV and SQLite reports expose dedicated bypass fields, while JSON and HTML keep the full `report_items` metadata.
+
 ---
 
 ## 🧪 CI/CD fail-on rules
@@ -163,15 +190,19 @@ opendoor --host https://example.com --reports json,sqlite --reports-dir ./report
 OpenDoor can be used as a pipeline gate.
 
 ```shell
-opendoor --host https://example.com --fail-on-bucket success,auth,forbidden
+opendoor --host https://example.com --fail-on-bucket success,auth,forbidden,blocked,bypass
 ```
 
 This allows OpenDoor to complete the scan and return exit code `1` only when selected result buckets are found.
+
+Use the `bypass` bucket when Header Injection Bypass candidates should fail the pipeline.
 
 ---
 
 ## ⚖️ Responsible use
 
 OpenDoor is a security testing tool. Use it only against systems where you have authorization.
+
+Features such as WAF detection, WAF-safe scanning, raw request replay, transport profiles, and Header Injection Bypass probes are intended for authorized security testing, defensive validation, and exposure regression checks.
 
 Do not use OpenDoor to scan third-party infrastructure, public services, organizations, or commercial systems without explicit permission.

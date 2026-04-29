@@ -1,6 +1,42 @@
 CHANGELOG
 =======
 
+v5.13.0 (29.04.2026)
+---------------------------
+- (feature) added controlled Header Injection Bypass via `--header-bypass`
+- (feature) added per-header bypass probes for blocked `401` and `403` responses
+- (feature) added `--header-bypass-headers` to customize header names used for bypass probes
+- (feature) added `--header-bypass-ips` to customize trusted IP values used in bypass probes
+- (feature) added `--header-bypass-status` to customize response status codes that trigger bypass probing
+- (feature) added `--header-bypass-limit` to limit bypass probe variants per blocked URL, with `0` meaning unlimited
+- (feature) added the `bypass` result bucket for successful header-injection bypass candidates
+- (enhancement) header bypass probes are strict opt-in and do not affect default scan behaviour when disabled
+- (enhancement) bypass probing runs as a controlled scanner extension instead of mutating global request headers
+- (enhancement) HTTP, HTTPS and proxy request providers now support temporary per-request `extra_headers`
+- (enhancement) temporary bypass headers are applied only to the current probe request and never leak into normal scan requests
+- (enhancement) bypass detection records exact evidence: bypass type, header name, header value, original status code and resulting status code
+- (enhancement) bypass scoring reports only meaningful status transitions, such as `401/403 -> 2xx/3xx` or another non-blocked response
+- (enhancement) bypass probe generation is deterministic and supports path-based, host/origin, trusted-IP and URL-style header families
+- (enhancement) header-bypass options are preserved in session checkpoints and restored through session resume flows
+- (enhancement) bypass metadata is preserved in detailed report items
+- (enhancement) TXT reports now include header-bypass evidence in bypass lines
+- (enhancement) STD reports automatically include the `bypass` bucket in scan statistics
+- (enhancement) JSON and HTML reports preserve full bypass metadata through `report_items`
+- (enhancement) CSV reports now include `bypass`, `bypass_header`, `bypass_value`, `bypass_from_code` and `bypass_to_code` columns
+- (enhancement) SQLite reports now persist bypass metadata in nullable item columns while preserving legacy payload compatibility
+- (enhancement) legacy report formatting remains backward-compatible for plain URL-only items and WAF metadata
+- (enhancement) header-bypass input validation rejects invalid header names and unsafe CRLF header values
+- (enhancement) session resume, wizard and filtered option flows preserve explicit header-bypass CLI overrides
+- (tests) added unittest coverage for header-bypass probe generation, limits, deduplication, scoring and metadata
+- (tests) added regression coverage for CLI parsing, config normalization and option validation
+- (tests) added regression coverage for HTTP, HTTPS and proxy per-request `extra_headers`
+- (tests) added Browser runtime coverage for disabled mode, configured statuses, successful bypass candidates and empty probe responses
+- (tests) added session export coverage for header-bypass settings
+- (tests) added report coverage for TXT, JSON, HTML, CSV and SQLite bypass metadata
+- (tests) added formatter edge coverage for WAF-only and partial bypass metadata variants
+- (tests) full unittest suite passes after integration (`1177` tests)
+- (tests) coverage gate passes at `99%`
+
 v5.12.0 (28.04.2026)
 ---------------------------
 - (feature) added Network Transport Profiles via `--transport`

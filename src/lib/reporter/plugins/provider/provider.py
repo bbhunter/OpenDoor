@@ -68,26 +68,49 @@ class PluginProvider(object):
     @staticmethod
     def format_report_item(item):
         """
-        Format report item for text-based report sinks.
-        :param dict|str item: report item payload
+        Format one report item for plain text reports.
+
+        :param dict | str item: report item
         :return: str
         """
 
-        if isinstance(item, dict):
-            result = '{0} - {1} - {2}'.format(
-                item.get('url', ''),
-                item.get('code', '-'),
-                item.get('size', '0B')
-            )
+        if not isinstance(item, dict):
+            return str(item)
 
-            if item.get('waf'):
-                result += ' - WAF: {0} ({1}%)'.format(
-                    item.get('waf'),
-                    item.get('waf_confidence', '-')
-                )
+        value = '{0} - {1} - {2}'.format(
+            item.get('url', ''),
+            item.get('code', '-'),
+            item.get('size', '0B')
+        )
 
-            return result
-        return str(item)
+        if item.get('waf'):
+            waf_value = 'WAF: {0}'.format(item.get('waf'))
+
+            if item.get('waf_confidence') is not None:
+                waf_value = '{0} ({1}%)'.format(waf_value, item.get('waf_confidence'))
+
+            value = '{0} - {1}'.format(value, waf_value)
+
+        if item.get('bypass'):
+            details = [
+                'bypass={0}'.format(item.get('bypass')),
+            ]
+
+            if item.get('bypass_header'):
+                details.append('header={0}'.format(item.get('bypass_header')))
+
+            if item.get('bypass_value'):
+                details.append('value={0}'.format(item.get('bypass_value')))
+
+            if item.get('bypass_from_code') is not None and item.get('bypass_to_code') is not None:
+                details.append('{0}->{1}'.format(
+                    item.get('bypass_from_code'),
+                    item.get('bypass_to_code')
+                ))
+
+            value = '{0} | {1}'.format(value, ', '.join(details))
+
+        return value
 
     def process(self):
         """

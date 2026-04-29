@@ -73,6 +73,12 @@ class Config(object):
         self._is_fingerprint = params.get('fingerprint') is True
         self._is_waf_safe_mode = params.get('waf_safe_mode') is True
         self._is_waf_detect = params.get('waf_detect') is True or self._is_waf_safe_mode is True
+        self._is_header_bypass = params.get('header_bypass') is True
+        self._header_bypass_headers = self._normalize_csv(params.get('header_bypass_headers'))
+        self._header_bypass_ips = self._normalize_csv(params.get('header_bypass_ips'))
+        self._header_bypass_status = self._normalize_csv(params.get('header_bypass_status'))
+        self._header_bypass_limit = 32 if params.get('header_bypass_limit') is None else int(
+            params.get('header_bypass_limit'))
         self._is_auto_calibrate = params.get('auto_calibrate') is True
         self._calibration_samples = 5 if params.get('calibration_samples') is None else int(
             params.get('calibration_samples'))
@@ -395,6 +401,48 @@ class Config(object):
         """If smart auto-calibration is enabled."""
 
         return self._is_auto_calibrate
+
+    @property
+    def is_header_bypass(self):
+        """If controlled header-injection bypass probes are enabled."""
+
+        return self._is_header_bypass
+
+    @property
+    def header_bypass_headers(self):
+        """Header names used by header-injection bypass probes."""
+
+        if self._header_bypass_headers is None:
+            from .header_bypass import HeaderBypassProbe
+            return list(HeaderBypassProbe.DEFAULT_HEADERS)
+
+        return [str(item).strip() for item in self._header_bypass_headers if str(item).strip()]
+
+    @property
+    def header_bypass_ips(self):
+        """Trusted IP values used by header-injection bypass probes."""
+
+        if self._header_bypass_ips is None:
+            from .header_bypass import HeaderBypassProbe
+            return list(HeaderBypassProbe.DEFAULT_IP_VALUES)
+
+        return [str(item).strip() for item in self._header_bypass_ips if str(item).strip()]
+
+    @property
+    def header_bypass_status(self):
+        """HTTP status codes that trigger header-injection bypass probes."""
+
+        if self._header_bypass_status is None:
+            from .header_bypass import HeaderBypassProbe
+            return list(HeaderBypassProbe.DEFAULT_STATUS_CODES)
+
+        return [int(item) for item in self._expand_numeric_tokens(self._header_bypass_status)]
+
+    @property
+    def header_bypass_limit(self):
+        """Maximum header-injection bypass variants per blocked URL."""
+
+        return self._header_bypass_limit
 
     @property
     def calibration_samples(self):

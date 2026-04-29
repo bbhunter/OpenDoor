@@ -73,10 +73,12 @@ class HttpRequest(RequestProvider, DebugProvider):
         except Exception as error:
             raise HttpRequestError(str(error))
 
-    def request(self, url):
+    def request(self, url, extra_headers=None):
         """
         Client request HTTP
+
         :param str url: request uri
+        :param dict | list | tuple | None extra_headers: temporary per-request headers
         :return: urllib3.HTTPResponse
         """
 
@@ -88,15 +90,17 @@ class HttpRequest(RequestProvider, DebugProvider):
         if self.__connection_header != 'default' and self.__headers.get('Connection') is None:
             self.__headers.update({'Connection': self.__connection_header})
 
+        request_headers = self._build_request_headers(self.__headers, extra_headers)
+
         if self._HTTP_DBG_LEVEL <= self.__debug.level:
-            self.__debug.debug_request(self.__headers, url, self.__cfg.method)
+            self.__debug.debug_request(request_headers, url, self.__cfg.method)
 
         try:
             if self.__cfg.DEFAULT_SCAN == self.__cfg.scan:
                 response = self.__pool.request(
                     self.__cfg.method,
                     helper.parse_url(url).path,
-                    headers=self.__headers,
+                    headers=request_headers,
                     body=self._request_body,
                     retries=self.__cfg.retries,
                     assert_same_host=True,
@@ -107,7 +111,7 @@ class HttpRequest(RequestProvider, DebugProvider):
                 response = PoolManager().request(
                     self.__cfg.method,
                     url,
-                    headers=self.__headers,
+                    headers=request_headers,
                     body=self._request_body,
                     retries=self.__cfg.retries,
                     assert_same_host=False,

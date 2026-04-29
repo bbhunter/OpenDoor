@@ -23,6 +23,7 @@ opendoor --host https://example.com --reports json,sqlite --reports-dir ./report
 | `std` | Terminal output |
 | `txt` | Plain text output |
 | `json` | Machine-readable output |
+| `csv` | Spreadsheet-friendly output |
 | `html` | Human-readable report |
 | `sqlite` | Structured local database for post-processing |
 
@@ -44,6 +45,24 @@ opendoor --host https://example.com --reports std
 
 Use `std` for interactive work.
 
+The terminal summary includes all result buckets, including `bypass` when Header Injection Bypass candidates are found.
+
+---
+
+## Text
+
+```shell
+opendoor --host https://example.com --reports txt
+```
+
+Use `txt` when you want one plain text file per result bucket.
+
+Header-bypass candidates include evidence in the bypass report lines, for example:
+
+```text
+https://example.com/admin - 200 - 90B | bypass=header, header=X-Original-URL, value=/admin, 403->200
+```
+
 ---
 
 ## JSON
@@ -54,6 +73,28 @@ opendoor --host https://example.com --reports json
 
 Use JSON for automation, pipelines, post-processing, and CI/CD artifact uploads.
 
+JSON preserves detailed `report_items` metadata, including WAF, fingerprint, calibration, and header-bypass fields.
+
+---
+
+## CSV
+
+```shell
+opendoor --host https://example.com --reports csv
+```
+
+Use CSV for spreadsheets, simple data analysis, and CI artifacts that need stable columns.
+
+CSV includes dedicated Header Injection Bypass columns:
+
+| Column | Meaning |
+|---|---|
+| `bypass` | Bypass type, currently `header` |
+| `bypass_header` | Header that produced the candidate |
+| `bypass_value` | Header value used for the probe |
+| `bypass_from_code` | Original blocked status code |
+| `bypass_to_code` | Resulting status code |
+
 ---
 
 ## HTML
@@ -63,6 +104,8 @@ opendoor --host https://example.com --reports html
 ```
 
 Use HTML for a readable standalone report.
+
+HTML preserves detailed `report_items` metadata, including header-bypass evidence.
 
 ---
 
@@ -82,6 +125,16 @@ SQLite is useful for:
 - recurring exposure checks;
 - historical comparison.
 
+SQLite persists Header Injection Bypass metadata in nullable item columns:
+
+| Column | Meaning |
+|---|---|
+| `bypass` | Bypass type |
+| `bypass_header` | Header that produced the candidate |
+| `bypass_value` | Header value used for the probe |
+| `bypass_from_code` | Original blocked status code |
+| `bypass_to_code` | Resulting status code |
+
 ---
 
 ## Multiple reports
@@ -97,16 +150,45 @@ This is useful when one scan needs both human-readable and machine-readable outp
 
 ---
 
+## Header-bypass evidence
+
+When `--header-bypass` is enabled and a candidate is found, OpenDoor stores the result in the `bypass` bucket.
+
+Detailed report items include:
+
+| Field | Meaning |
+|---|---|
+| `bypass` | Bypass type, currently `header` |
+| `bypass_header` | Header that produced the candidate |
+| `bypass_value` | Header value used for the probe |
+| `bypass_from_code` | Original blocked status code |
+| `bypass_to_code` | Resulting status code |
+
+Report support:
+
+| Report | Header-bypass evidence |
+|---|---|
+| `std` | Shows the `bypass` bucket in summary statistics |
+| `txt` | Includes bypass evidence in bypass report lines |
+| `json` | Preserves full metadata in `report_items` |
+| `csv` | Adds dedicated bypass columns |
+| `html` | Preserves detailed `report_items` metadata |
+| `sqlite` | Stores bypass metadata in nullable item columns |
+
+---
+
 ## CI/CD reports
 
 ```shell
 opendoor \
   --host https://example.com \
-  --reports json,sqlite \
-  --fail-on-bucket success,auth,forbidden
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden,bypass
 ```
 
-In CI/CD, prefer machine-readable formats such as `json` and `sqlite`.
+In CI/CD, prefer machine-readable formats such as `json`, `sqlite`, and `csv`.
+
+Use the `bypass` bucket when Header Injection Bypass candidates should fail the pipeline.
 
 ---
 

@@ -21,6 +21,7 @@ nav:
   - Detection:
       - Fingerprinting: detection/fingerprinting.md
       - WAF detection and safe mode: detection/waf-detection.md
+      - Header Injection Bypass: detection/header-bypass.md
       - Auto-calibration: detection/auto-calibration.md
   - Network transports:
       - Overview: transports/overview.md
@@ -32,6 +33,7 @@ nav:
       - Batch scans: examples/batch-scans.md
       - Authenticated scans: examples/authenticated-scans.md
       - WAF-safe scans: examples/waf-safe-scans.md
+      - Header-bypass scans: examples/header-bypass-scans.md
       - VPN transport scans: examples/vpn-transport-scans.md
       - CI/CD: examples/ci-cd.md
   - Reference:

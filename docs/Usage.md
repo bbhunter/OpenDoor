@@ -454,6 +454,120 @@ Use this mode when scanning authorized targets protected by WAF, CDN, or anti-bo
 
 ---
 
+## 🧩 Header Injection Bypass
+
+Header Injection Bypass is an opt-in feature for authorized testing of blocked resources.
+
+When enabled, OpenDoor probes configured blocked statuses with controlled, temporary per-request headers. If a probe changes a blocked response into a meaningful result, OpenDoor records it in the `bypass` result bucket with exact evidence.
+
+### Enable header-bypass probes
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --header-bypass
+```
+
+By default, OpenDoor probes `401` and `403` responses.
+
+### Recommended WAF-aware usage
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --waf-safe-mode \
+  --header-bypass \
+  --header-bypass-limit 32 \
+  --reports std,json,csv,sqlite
+```
+
+### Customize trigger statuses
+
+```shell
+opendoor \
+  --host https://example.com \
+  --header-bypass \
+  --header-bypass-status 401,403
+```
+
+The value accepts comma-separated HTTP statuses and status ranges.
+
+Examples:
+
+```shell
+opendoor --host https://example.com --header-bypass --header-bypass-status 401,403
+opendoor --host https://example.com --header-bypass --header-bypass-status 401-403
+```
+
+### Customize trusted IP values
+
+```shell
+opendoor \
+  --host https://example.com \
+  --header-bypass \
+  --header-bypass-ips 127.0.0.1,10.0.0.1,192.168.1.1
+```
+
+These values are used with trusted-IP style headers such as `X-Forwarded-For`, `X-Real-IP`, `Client-IP`, and similar headers.
+
+### Customize header names
+
+```shell
+opendoor \
+  --host https://example.com \
+  --header-bypass \
+  --header-bypass-headers X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP
+```
+
+OpenDoor supports path-based, host/origin, trusted-IP, and URL-style bypass header families.
+
+### Limit probe variants
+
+```shell
+opendoor \
+  --host https://example.com \
+  --header-bypass \
+  --header-bypass-limit 32
+```
+
+Use `0` for unlimited variants:
+
+```shell
+opendoor \
+  --host https://example.com \
+  --header-bypass \
+  --header-bypass-limit 0
+```
+
+### Reported evidence
+
+Successful candidates are stored in the `bypass` bucket.
+
+Detailed report items include:
+
+| Field | Meaning |
+|---|---|
+| `bypass` | Bypass type, currently `header` |
+| `bypass_header` | Header that produced the candidate |
+| `bypass_value` | Header value used for the probe |
+| `bypass_from_code` | Original blocked status code |
+| `bypass_to_code` | Resulting status code |
+
+CSV reports include dedicated columns for these fields. SQLite reports persist them in nullable item columns. JSON and HTML reports preserve them in `report_items`.
+
+### Notes
+
+- Header-bypass probes are disabled by default.
+- Probe headers are temporary per-request headers.
+- Normal scan headers are not mutated.
+- Use this only on systems you are authorized to test.
+- Combine with `--waf-safe-mode`, `--delay`, lower `--threads`, and higher `--timeout` for cautious WAF-protected scans.
+
+---
+
 ## 🔁 Sessions
 
 Sessions allow long-running scans to be saved and resumed.
@@ -639,6 +753,17 @@ Available report formats:
 | `html`   | Human-readable report                         |
 | `sqlite` | Structured local database for post-processing |
 
+When `--header-bypass` is enabled and a candidate is found, report formats preserve bypass evidence:
+
+| Report | Header-bypass evidence |
+|---|---|
+| `std` | Shows the `bypass` bucket in summary statistics |
+| `txt` | Includes bypass evidence in bypass report lines |
+| `json` | Preserves full metadata in `report_items` |
+| `csv` | Adds dedicated bypass columns |
+| `html` | Preserves detailed `report_items` metadata |
+| `sqlite` | Stores bypass metadata in nullable item columns |
+
 ### Custom reports directory
 
 ```shell
@@ -652,10 +777,12 @@ opendoor --host https://example.com --reports json,html --reports-dir ./reports
 OpenDoor can behave as a CI/CD quality gate.
 
 ```shell
-opendoor --host https://example.com --fail-on-bucket success,auth,forbidden,blocked
+opendoor --host https://example.com --fail-on-bucket success,auth,forbidden,blocked,bypass
 ```
 
 When selected buckets are found, OpenDoor exits with code `1`.
+
+The `bypass` bucket can be used as a CI/CD signal when header-bypass candidates should fail the pipeline.
 
 This is useful for:
 
@@ -671,7 +798,7 @@ Example:
 opendoor \
   --host https://example.com \
   --reports json,sqlite \
-  --fail-on-bucket success,auth,forbidden
+  --fail-on-bucket success,auth,forbidden,bypass
 ```
 
 ---
@@ -786,6 +913,19 @@ opendoor \
   --delay 0.5
 ```
 
+### Header-bypass scan
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --waf-safe-mode \
+  --header-bypass \
+  --header-bypass-limit 32 \
+  --reports std,json,csv,sqlite
+```
+
 ### Batch scan with reports
 
 ```shell
@@ -802,5 +942,16 @@ opendoor \
   --host https://example.com \
   --auto-calibrate \
   --reports json,sqlite,csv \
-  --fail-on-bucket success,auth,forbidden
+  --fail-on-bucket success,auth,forbidden,bypass
+```
+
+### CI/CD gate with header-bypass candidates
+
+```shell
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --header-bypass \
+  --reports json,sqlite,csv \
+  --fail-on-bucket success,auth,forbidden,bypass
 ```

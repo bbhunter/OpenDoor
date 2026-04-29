@@ -5,10 +5,12 @@ import os
 import unittest
 from unittest.mock import patch
 
+from src.lib.reporter.plugins.provider.provider import PluginProvider
 from src.core.filesystem.exceptions import FileSystemError
 from src.lib.reporter.plugins.html import HtmlReportPlugin
 from src.lib.reporter.plugins.json import JsonReportPlugin
 from src.lib.reporter.plugins.txt import TextReportPlugin
+
 
 
 class TestReporterPluginsFullCoverage(unittest.TestCase):
@@ -178,6 +180,179 @@ class TestReporterPluginsFullCoverage(unittest.TestCase):
                 with self.assertRaises(Exception):
                     plugin.process()
 
+    def test_text_process_formats_header_bypass_metadata(self):
+        """TextReportPlugin should include header-bypass evidence in bypass report lines."""
+
+        data = {
+            'items': {
+                'bypass': ['http://example.com/admin'],
+            },
+            'report_items': {
+                'bypass': [
+                    {
+                        'url': 'http://example.com/admin',
+                        'code': '200',
+                        'size': '90B',
+                        'bypass': 'header',
+                        'bypass_header': 'X-Original-URL',
+                        'bypass_value': '/admin',
+                        'bypass_from_code': '403',
+                        'bypass_to_code': '200',
+                    }
+                ],
+            },
+        }
+
+        with patch('src.lib.reporter.plugins.txt.filesystem.makedir', return_value='/tmp/reports'), \
+                patch('src.lib.reporter.plugins.txt.filesystem.clear'):
+            plugin = TextReportPlugin(self.target, data, directory='/custom/')
+            with patch.object(plugin, 'record') as record_mock:
+                plugin.process()
+
+        record_mock.assert_called_once_with(
+            '/tmp/reports',
+            'bypass',
+            [
+                'http://example.com/admin - 200 - 90B | '
+                'bypass=header, header=X-Original-URL, value=/admin, 403->200'
+            ],
+            '\n'
+        )
+
+    def test_html_process_preserves_header_bypass_report_items(self):
+            """HtmlReportPlugin should preserve header-bypass metadata inside report_items."""
+
+            data = {
+                'items': {
+                    'bypass': ['http://example.com/admin'],
+                },
+                'report_items': {
+                    'bypass': [
+                        {
+                            'url': 'http://example.com/admin',
+                            'code': '200',
+                            'size': '90B',
+                            'bypass': 'header',
+                            'bypass_header': 'X-Original-URL',
+                            'bypass_value': '/admin',
+                            'bypass_from_code': '403',
+                            'bypass_to_code': '200',
+                        }
+                    ],
+                },
+            }
+
+            with patch('src.lib.reporter.plugins.html.filesystem.makedir', return_value='/tmp/reports'), \
+                    patch('src.lib.reporter.plugins.html.filesystem.clear'), \
+                    patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
+                json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+
+                plugin = HtmlReportPlugin(self.target, data, directory='/custom/')
+                with patch.object(plugin, 'record'):
+                    plugin.process()
+
+            payload = json2html_cls.return_value.convert.call_args.kwargs['json']
+
+            self.assertEqual(payload['report_items']['bypass'][0]['bypass_header'], 'X-Original-URL')
+            self.assertEqual(payload['report_items']['bypass'][0]['bypass_from_code'], '403')
+            self.assertEqual(payload['report_items']['bypass'][0]['bypass_to_code'], '200')
+
+    def test_json_process_preserves_header_bypass_payload(self):
+            """JsonReportPlugin should serialize the original payload with header-bypass metadata."""
+
+            data = {
+                'items': {
+                    'bypass': ['http://example.com/admin'],
+                },
+                'report_items': {
+                    'bypass': [
+                        {
+                            'url': 'http://example.com/admin',
+                            'code': '200',
+                            'size': '90B',
+                            'bypass': 'header',
+                            'bypass_header': 'X-Original-URL',
+                            'bypass_value': '/admin',
+                            'bypass_from_code': '403',
+                            'bypass_to_code': '200',
+                        }
+                    ],
+                },
+            }
+
+            with patch('src.lib.reporter.plugins.json.filesystem.makedir', return_value='/tmp/reports'), \
+                    patch('src.lib.reporter.plugins.json.helper.to_json', return_value='{"ok": true}') as to_json_mock, \
+                    patch('src.lib.reporter.plugins.json.filesystem.clear'):
+                plugin = JsonReportPlugin(self.target, data, directory='/custom/')
+                with patch.object(plugin, 'record'):
+                    plugin.process()
+
+            to_json_mock.assert_called_once_with(data)
+
+    def test_format_report_item_formats_waf_without_confidence(self):
+        """PluginProvider.format_report_item() should format WAF metadata without confidence."""
+
+        actual = PluginProvider.format_report_item({
+            'url': 'https://example.com/login',
+            'code': '403',
+            'size': '25B',
+            'waf': 'Cloudflare',
+        })
+
+        self.assertEqual(
+            actual,
+            'https://example.com/login - 403 - 25B - WAF: Cloudflare'
+        )
+
+    def test_format_report_item_formats_bypass_without_header_value_and_codes(self):
+        """PluginProvider.format_report_item() should format minimal bypass metadata."""
+
+        actual = PluginProvider.format_report_item({
+            'url': 'https://example.com/admin',
+            'code': '200',
+            'size': '90B',
+            'bypass': 'header',
+        })
+
+        self.assertEqual(
+            actual,
+            'https://example.com/admin - 200 - 90B | bypass=header'
+        )
+
+    def test_format_report_item_formats_bypass_with_only_transition_codes(self):
+        """PluginProvider.format_report_item() should format bypass transition without header/value evidence."""
+
+        actual = PluginProvider.format_report_item({
+            'url': 'https://example.com/admin',
+            'code': '200',
+            'size': '90B',
+            'bypass': 'header',
+            'bypass_from_code': '403',
+            'bypass_to_code': '200',
+        })
+
+        self.assertEqual(
+            actual,
+            'https://example.com/admin - 200 - 90B | bypass=header, 403->200'
+        )
+
+    def test_format_report_item_formats_bypass_without_transition_codes(self):
+        """PluginProvider.format_report_item() should format header/value bypass metadata without transition codes."""
+
+        actual = PluginProvider.format_report_item({
+            'url': 'https://example.com/admin',
+            'code': '200',
+            'size': '90B',
+            'bypass': 'header',
+            'bypass_header': 'X-Original-URL',
+            'bypass_value': '/admin',
+        })
+
+        self.assertEqual(
+            actual,
+            'https://example.com/admin - 200 - 90B | '
+            'bypass=header, header=X-Original-URL, value=/admin'
+        )
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,7 +2,7 @@
 
 ![OpenDoor](https://raw.githubusercontent.com/stanislav-web/OpenDoor/master/logo.png)
 
-**OpenDoor** is an open-source CLI scanner for authorized web reconnaissance, directory discovery, subdomain enumeration, fingerprint detection, WAF detection, response filtering, reporting, and transport-based scanning workflows.
+**OpenDoor** is an open-source CLI scanner for authorized web reconnaissance, directory discovery, subdomain enumeration, fingerprint detection, WAF detection, controlled header-bypass probing, response filtering, reporting, and transport-based scanning workflows.
 
 It helps security researchers, penetration testers, bug bounty hunters, DevSecOps engineers, and developers identify exposed paths, login panels, directory listings, restricted resources, backup files, web shells, subdomains, and other potentially sensitive web assets.
 
@@ -55,6 +55,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - smart auto-calibration for soft-404, wildcard, and catch-all responses;
 - technology fingerprint detection CMS, ecommerce platforms, frameworks;
 - passive WAF detection and WAF-safe scan mode;
+- controlled Header Injection Bypass probes for blocked `401` and `403` paths;
 - resumable scan sessions with checkpoint autosave;
 - CI/CD fail-on result bucket rules;
 - reports in terminal, text, JSON, CSV, HTML, and SQLite formats;
@@ -66,7 +67,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 
 ## 🧭 Where does OpenDoor make sense?
 
-It is designed for real targets where speed alone is not enough: WAFs, CDNs, soft-404 pages, wildcard routes, authenticated areas, unstable networks, multi-target batches, and transport-controlled scans.
+It is designed for real targets where speed alone is not enough: WAFs, CDNs, soft-404 pages, wildcard routes, restricted resources, authenticated areas, unstable networks, multi-target batches, and transport-controlled scans.
 OpenDoor focuses on **context-aware discovery** instead of blind enumeration.
 
 ### What makes OpenDoor different
@@ -75,6 +76,7 @@ OpenDoor focuses on **context-aware discovery** instead of blind enumeration.
 |---|---|
 | **Fingerprint-first scanning** | OpenDoor can identify probable CMS platforms, frameworks, infrastructure providers, and WAF signals before deeper discovery. This helps you scan with context instead of blindly throwing a generic wordlist at the target. |
 | **WAF-aware behavior** | OpenDoor can detect probable WAF / anti-bot behavior and switch to a safer runtime profile with `--waf-safe-mode`, reducing noisy blocked scans and making defensive responses easier to understand. |
+| **Controlled header-bypass evidence** | OpenDoor can optionally probe blocked `401` and `403` paths with controlled per-request header-injection variants. It records exact evidence such as the header name, value, original status code, and resulting status code without mutating global scan headers. |
 | **Multi-signal auto-calibration** | OpenDoor does not rely only on status code or response size. It compares multiple response signals such as body hashes, HTML structure, titles, redirects, stable headers, word count, line count, and normalized dynamic tokens to reduce soft-404 and wildcard false positives. |
 | **Transport-level workflows** | OpenDoor supports direct, proxy, OpenVPN, and WireGuard transport modes. It can also rotate transport profiles per target in authorized batch scans, which is not the same as manually starting a VPN before running a scanner. |
 | **Resumable long scans** | OpenDoor can save scan checkpoints and resume later. This matters when scans are interrupted by crashes, unstable networks, blocked routes, terminal disconnects, or long multi-target jobs. |
@@ -205,6 +207,31 @@ opendoor \
   --retries 5 \
   --delay 0.5
 ```
+### Header Injection Bypass probes
+
+Use this only on systems you are authorized to test. The feature is opt-in and probes blocked paths with temporary per-request headers.
+
+```bash
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --waf-detect \
+  --header-bypass \
+  --header-bypass-limit 32 \
+  --reports std,json,csv,sqlite
+```
+Customize trigger statuses, trusted IP values, and headers:
+
+```bash
+opendoor \
+  --host https://example.com \
+  --method GET \
+  --header-bypass \
+  --header-bypass-status 401,403 \
+  --header-bypass-ips 127.0.0.1,10.0.0.1 \
+  --header-bypass-headers X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP \
+  --reports json,html,sqlite
+```
 
 ### OpenVPN transport
 
@@ -230,6 +257,7 @@ More examples:
 - [Batch scans](https://opendoor.readthedocs.io/examples/batch-scans/)
 - [Authenticated scans](https://opendoor.readthedocs.io/examples/authenticated-scans/)
 - [WAF-safe scans](https://opendoor.readthedocs.io/examples/waf-safe-scans/)
+- [Header-bypass scans](https://opendoor.readthedocs.io/examples/header-bypass-scans/)
 - [VPN transport scans](https://opendoor.readthedocs.io/examples/vpn-transport-scans/)
 - [CI/CD examples](https://opendoor.readthedocs.io/examples/ci-cd/)
 
@@ -247,6 +275,7 @@ The full documentation is available on ReadTheDocs:
 - [Reports](https://opendoor.readthedocs.io/concepts/reports/)
 - [Fingerprinting](https://opendoor.readthedocs.io/detection/fingerprinting/)
 - [WAF detection and safe mode](https://opendoor.readthedocs.io/detection/waf-detection/)
+- [Header Injection Bypass](https://opendoor.readthedocs.io/detection/header-bypass/)
 - [Auto-calibration](https://opendoor.readthedocs.io/detection/auto-calibration/)
 - [Network transports](https://opendoor.readthedocs.io/transports/overview/)
 - [OpenVPN transport](https://opendoor.readthedocs.io/transports/openvpn/)
@@ -326,6 +355,8 @@ Use placeholder examples only.
 OpenDoor is a security testing tool.
 
 Use it only against systems you own or have explicit permission to test.
+
+Features such as WAF detection, WAF-safe scanning, raw request replay, transport profiles, and Header Injection Bypass probes are intended for authorized security testing, defensive validation, and exposure regression checks.
 
 The project does not grant permission to scan third-party systems, organizations, commercial services, or public infrastructure without authorization.
 

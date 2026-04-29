@@ -24,6 +24,7 @@ class TestCsvReportPlugin(unittest.TestCase):
                 'success': ['http://example.com/admin'],
                 'blocked': ['http://example.com/login'],
                 'failed': ['http://example.com/missing'],
+                'bypass': ['http://example.com/admin'],
             },
             'report_items': {
                 'success': [
@@ -50,6 +51,18 @@ class TestCsvReportPlugin(unittest.TestCase):
                         'code': '404',
                     }
                 ],
+                'bypass': [
+                    {
+                        'url': 'http://example.com/admin',
+                        'size': '90B',
+                        'code': '200',
+                        'bypass': 'header',
+                        'bypass_header': 'X-Original-URL',
+                        'bypass_value': '/admin',
+                        'bypass_from_code': '403',
+                        'bypass_to_code': '200',
+                    }
+                ],
             },
             'fingerprint': {
                 'category': 'cms',
@@ -66,6 +79,7 @@ class TestCsvReportPlugin(unittest.TestCase):
                 'failed': 1,
                 'items': 3,
                 'workers': 1,
+                'bypass': 1,
             },
         }
 
@@ -100,7 +114,7 @@ class TestCsvReportPlugin(unittest.TestCase):
 
         rows = self.read_report_rows()
 
-        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(rows), 3)
         self.assertEqual(list(rows[0].keys()), CsvReportPlugin.COLUMNS)
         self.assertEqual(rows[0]['target'], self.target)
         self.assertEqual(rows[0]['status'], 'success')
@@ -113,6 +127,12 @@ class TestCsvReportPlugin(unittest.TestCase):
         self.assertEqual(rows[1]['waf'], 'Cloudflare')
         self.assertEqual(rows[1]['waf_confidence'], '92')
         self.assertEqual(rows[1]['waf_signals'], 'cf-ray;server-header')
+        self.assertEqual(rows[2]['status'], 'bypass')
+        self.assertEqual(rows[2]['bypass'], 'header')
+        self.assertEqual(rows[2]['bypass_header'], 'X-Original-URL')
+        self.assertEqual(rows[2]['bypass_value'], '/admin')
+        self.assertEqual(rows[2]['bypass_from_code'], '403')
+        self.assertEqual(rows[2]['bypass_to_code'], '200')
 
     def test_csv_plugin_falls_back_to_legacy_items(self):
         """CsvReportPlugin.process() should support legacy URL-only report payloads."""
@@ -144,7 +164,11 @@ class TestCsvReportPlugin(unittest.TestCase):
         with open(report_file, 'r', encoding='utf-8') as handler:
             content = handler.read()
 
-        self.assertIn('target,status,url,code,size,waf,waf_confidence,waf_signals', content)
+        self.assertIn(
+            'target,status,url,code,size,waf,waf_confidence,waf_signals,'
+            'bypass,bypass_header,bypass_value,bypass_from_code,bypass_to_code',
+            content
+        )
 
     def test_csv_plugin_uses_default_reports_directory(self):
         """CsvReportPlugin.__init__() should use default reports directory when custom directory is absent."""

@@ -38,6 +38,7 @@ from .calibration import Calibration
 from .exceptions import BrowserError
 from .fingerprint import Fingerprint
 from .filter import Filter
+from .header_bypass import HeaderBypassProbe
 from .threadpool import ThreadPool
 
 
@@ -80,6 +81,7 @@ class Browser(Filter):
             self.__waf_safe_vendor = None
             self.__waf_safe_confidence = None
             self.__calibration = None
+            self.__header_bypass = HeaderBypassProbe(self.__config)
 
             requested_method = str(getattr(self.__config, '_method', '') or '').upper()
             effective_method = str(getattr(self.__config, 'method', '') or '').upper()
@@ -388,28 +390,41 @@ class Browser(Filter):
                 self.__client = request_http(self.__config, agent_list=self.__reader.get_user_agents(),
                                              debug=self.__debug, tpl=tpl)
 
-    def __request_with_waf_safe_mode(self, url):
+    def __request_with_waf_safe_mode(self, url, extra_headers=None):
         """
         Serialize outbound requests when WAF safe mode is active.
 
-        :param str url:
-        :return:
+        :param str url: request URL
+        :param dict | None extra_headers: temporary per-request headers
+        :return: urllib3.HTTPResponse | None
         """
 
         self.__ensure_session_runtime_state()
 
+        def request_once():
+            """
+            Execute one request while preserving the old request call shape.
+
+            :return: urllib3.HTTPResponse | None
+            """
+
+            if extra_headers is None:
+                return self.__client.request(url)
+
+            return self.__client.request(url, extra_headers=extra_headers)
+
         if True is not getattr(self.__config, 'is_waf_safe_mode', False):
-            return self.__client.request(url)
+            return request_once()
 
         if True is not self.__waf_safe_active:
-            return self.__client.request(url)
+            return request_once()
 
         with self.__waf_safe_lock:
             now = time.monotonic()
             if now < self.__waf_safe_next_at:
                 time.sleep(self.__waf_safe_next_at - now)
 
-            response = self.__client.request(url)
+            response = request_once()
             self.__waf_safe_next_at = time.monotonic() + self.__waf_safe_delay
             return response
 
@@ -723,6 +738,52 @@ class Browser(Filter):
 
         return self.__calibration.match(response_object, response_data)
 
+    def __probe_header_bypass(self, url, base_response_data):
+        """
+        Run controlled header-injection bypass probes for blocked responses.
+
+        :param str url: original blocked request URL
+        :param tuple base_response_data: original handled response data
+        :return: None
+        """
+
+        self.__ensure_session_runtime_state()
+
+        if self.__header_bypass is None:
+            return
+
+        if True is not self.__header_bypass.should_probe(base_response_data):
+            return
+
+        for variant in self.__header_bypass.build_variants(url):
+            headers = {variant.get('header'): variant.get('value')}
+            response_object = self.__request_with_waf_safe_mode(url, extra_headers=headers)
+
+            if response_object is None:
+                continue
+
+            probe_response_data = self.__response.handle(
+                response_object,
+                request_url=url,
+                items_size=self.__pool.items_size,
+                total_size=self.__pool.total_items_size,
+                ignore_list=self.__reader.get_ignored_list()
+            )
+
+            if probe_response_data is None:
+                continue
+
+            if HeaderBypassProbe.is_promising(base_response_data, probe_response_data):
+                metadata = HeaderBypassProbe.metadata(variant, base_response_data, probe_response_data)
+                self.__catch_report_data(
+                    'bypass',
+                    probe_response_data[1],
+                    probe_response_data[2],
+                    probe_response_data[3],
+                    metadata=metadata
+                )
+                return
+
     def __http_request(self, url, depth=0):
         """
         Make HTTP request
@@ -759,6 +820,7 @@ class Browser(Filter):
                 )
 
             self.__update_waf_safe_backoff(resp, response_data)
+            self.__probe_header_bypass(url, response_data)
 
             calibration_match = self.__match_calibrated_response(resp, response_data)
             if calibration_match is not None:
@@ -1055,6 +1117,16 @@ class Browser(Filter):
                 item['calibration_score'] = float(metadata.get('calibration_score'))
             if metadata.get('calibration_reason'):
                 item['calibration_reason'] = metadata.get('calibration_reason')
+            if metadata.get('bypass'):
+                item['bypass'] = metadata.get('bypass')
+            if metadata.get('bypass_header'):
+                item['bypass_header'] = metadata.get('bypass_header')
+            if metadata.get('bypass_value'):
+                item['bypass_value'] = metadata.get('bypass_value')
+            if metadata.get('bypass_from_code') is not None:
+                item['bypass_from_code'] = str(metadata.get('bypass_from_code'))
+            if metadata.get('bypass_to_code') is not None:
+                item['bypass_to_code'] = str(metadata.get('bypass_to_code'))
 
         self.__result['total'].update((status,))
         self.__result['items'][status] += [url]
@@ -1210,6 +1282,16 @@ class Browser(Filter):
             'auto_calibrate': getattr(self.__config, 'is_auto_calibrate', False),
             'calibration_samples': getattr(self.__config, 'calibration_samples', None),
             'calibration_threshold': getattr(self.__config, 'calibration_threshold', None),
+            'header_bypass': getattr(self.__config, 'is_header_bypass', False),
+            'header_bypass_headers': ','.join(getattr(self.__config, 'header_bypass_headers', []))
+            if getattr(self.__config, 'is_header_bypass', False) is True else None,
+            'header_bypass_ips': ','.join(getattr(self.__config, 'header_bypass_ips', []))
+            if getattr(self.__config, 'is_header_bypass', False) is True else None,
+            'header_bypass_status': ','.join([
+                str(status) for status in getattr(self.__config, 'header_bypass_status', [])
+            ]) if getattr(self.__config, 'is_header_bypass', False) is True else None,
+            'header_bypass_limit': getattr(self.__config, 'header_bypass_limit', None)
+            if getattr(self.__config, 'is_header_bypass', False) is True else None,
             'session_save': getattr(self.__config, 'session_save', None),
             'session_autosave_sec': getattr(self.__config, 'session_autosave_sec', None),
             'session_autosave_items': getattr(self.__config, 'session_autosave_items', None),
@@ -1381,3 +1463,9 @@ class Browser(Filter):
 
         if not hasattr(self, '_Browser__calibration'):
             self.__calibration = None
+
+        if not hasattr(self, '_Browser__header_bypass') or self.__header_bypass is None:
+            if hasattr(self, '_Browser__config'):
+                self.__header_bypass = HeaderBypassProbe(self.__config)
+            else:
+                self.__header_bypass = None
