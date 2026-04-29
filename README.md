@@ -64,6 +64,22 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 
 ---
 
+## 🧭 Where does OpenDoor make sense?
+
+It is designed for real targets where speed alone is not enough: WAFs, CDNs, soft-404 pages, wildcard routes, authenticated areas, unstable networks, multi-target batches, and transport-controlled scans.
+OpenDoor focuses on **context-aware discovery** instead of blind enumeration.
+
+### What makes OpenDoor different
+
+| Capability | Why it matters |
+|---|---|
+| **Fingerprint-first scanning** | OpenDoor can identify probable CMS platforms, frameworks, infrastructure providers, and WAF signals before deeper discovery. This helps you scan with context instead of blindly throwing a generic wordlist at the target. |
+| **WAF-aware behavior** | OpenDoor can detect probable WAF / anti-bot behavior and switch to a safer runtime profile with `--waf-safe-mode`, reducing noisy blocked scans and making defensive responses easier to understand. |
+| **Multi-signal auto-calibration** | OpenDoor does not rely only on status code or response size. It compares multiple response signals such as body hashes, HTML structure, titles, redirects, stable headers, word count, line count, and normalized dynamic tokens to reduce soft-404 and wildcard false positives. |
+| **Transport-level workflows** | OpenDoor supports direct, proxy, OpenVPN, and WireGuard transport modes. It can also rotate transport profiles per target in authorized batch scans, which is not the same as manually starting a VPN before running a scanner. |
+| **Resumable long scans** | OpenDoor can save scan checkpoints and resume later. This matters when scans are interrupted by crashes, unstable networks, blocked routes, terminal disconnects, or long multi-target jobs. |
+| **CI/CD-ready results** | OpenDoor can return a failing exit code only when selected result buckets are found, making it usable as a release gate or exposure regression check without custom post-processing scripts. |
+| **Auditable engineering** | OpenDoor is maintained with multi-platform CI, coverage checks, package checks, documentation builds, and a large unittest suite, making it easier to audit, contribute to, and depend on. |
 
 ## 🧬 Recognized technologies
 

@@ -23578,7 +23578,10 @@ bank
 Bank
 bank2.php
 bank.asp
+bank.dat
 bank.php
+bank.sql
+bank.txt
 Bank/services/Transfer_SEI
 Bank/services/Transfer_SEI/wsdl
 Bank/services/Transfer_SEIwsdl
@@ -39922,9 +39925,11 @@ directorderform
 directori
 directories
 directories1.html
+directories.dat
 directories.htm
 directories.html
 directories.php
+directories.txt
 directories/.env
 directorio
 directorio.php
@@ -39943,7 +39948,9 @@ directory.html
 Directory.php
 directory.php
 directory.phtml
+directory.txt
 directory/contenu.asp?id_cat=
+directory/whos-who
 directory_pop.html
 directoryadm
 directoryadmin
@@ -64105,6 +64112,7 @@ loggedin.cfm
 loggedin.php
 loggedout.php
 logger
+logger.js
 Logger.php
 logger.php
 logger_render.php
@@ -77853,7 +77861,9 @@ pass.asp
 pass.dat
 pass.html
 pass.json
+pass.md
 pass.php
+pass.sql
 pass.txt
 Pass.txt
 pass_6.php
@@ -82007,6 +82017,8 @@ prepare.php
 prepay
 prepend.php
 preprod
+preprod.php
+preprod.txt
 prepros-6.config
 prepurchase.x
 prerelease.html
