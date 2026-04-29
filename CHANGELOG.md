@@ -1,6 +1,25 @@
 CHANGELOG
 =======
 
+v5.13.1 (30.04.2026)
+---------------------------
+- (enhancement) improved `--keep-alive` transport behaviour for HTTP and HTTPS scans
+- (enhancement) non-default HTTP and HTTPS scan paths now reuse long-lived `PoolManager` instances instead of creating a new manager per request
+- (enhancement) proxy mode now reuses cached proxy managers per proxy endpoint
+- (enhancement) proxy-list scans now reuse `ProxyManager` and `SOCKSProxyManager` instances when the same proxy endpoint is selected again
+- (enhancement) HTTPS connection pools now use blocking pool semantics aligned with HTTP pools
+- (bugfix) fixed `keep_alive=False` being treated as enabled in browser configuration
+- (bugfix) fixed shared request header mutation when applying `Connection: keep-alive`
+- (bugfix) fixed ineffective keep-alive behaviour in proxy mode caused by per-request proxy manager creation
+- (bugfix) fixed ineffective keep-alive behaviour in non-default HTTP and HTTPS paths caused by per-request `PoolManager` creation
+- (bugfix) fixed lazy SOCKS proxy manager initialization check
+- (tests) added regression coverage for keep-alive configuration parsing
+- (tests) added regression coverage for HTTP and HTTPS keep-alive request behaviour
+- (tests) added regression coverage for proxy manager reuse and SOCKS proxy initialization
+- (tests) added regression coverage to ensure per-request headers do not mutate shared request headers
+- (tests) full unittest suite passes after integration (`1178` tests)
+- (tests) coverage gate passes at `99%`
+
 v5.13.0 (29.04.2026)
 ---------------------------
 - (feature) added controlled Header Injection Bypass via `--header-bypass`
