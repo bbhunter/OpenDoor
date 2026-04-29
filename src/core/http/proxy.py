@@ -49,6 +49,7 @@ class Proxy(RequestProvider, DebugProvider):
                 self.__connection_header = self._keep_alive
             self.__server = None
             self.__pm = None
+            self.__proxy_pools = {}
             self.__cfg = config
             self.__debug = debug
             self.__debug.debug_proxy_pool()
@@ -61,7 +62,8 @@ class Proxy(RequestProvider, DebugProvider):
 
     def __proxy_pool(self):
         """
-        Create Proxy connection pool
+        Create or reuse Proxy connection pool.
+
         :raise ProxyRequestError
         :return: urllib3.HTTPConnectionPool
         """
@@ -70,17 +72,20 @@ class Proxy(RequestProvider, DebugProvider):
             server = self.__cfg.proxy if True is self.__cfg.is_standalone_proxy else self.__get_random_proxy()
             self.__server = self.__normalize_proxy_server(server)
 
+            if self.__server in self.__proxy_pools:
+                return self.__proxy_pools[self.__server]
+
             if self.__get_proxy_type(self.__server) == 'socks':
                 disable_warnings(InsecureRequestWarning)
 
-                if not hasattr(self, '__pm'):
+                if self.__pm is None:
                     package_module = importlib.import_module('urllib3.contrib.socks')
                     self.__pm = getattr(package_module, 'SOCKSProxyManager')
 
                 pool = self.__pm(
                     self.__server,
                     num_pools=self.__cfg.threads,
-                    timeout=Timeout(self.__cfg.timeout, read=self.__cfg.timeout),
+                    timeout=Timeout(connect=self.__cfg.timeout, read=self.__cfg.timeout),
                     block=True,
                 )
             else:
@@ -90,6 +95,8 @@ class Proxy(RequestProvider, DebugProvider):
                     timeout=Timeout(connect=self.__cfg.timeout, read=self.__cfg.timeout),
                     block=True,
                 )
+
+            self.__proxy_pools[self.__server] = pool
             return pool
         except (DependencyWarning, ProxySchemeUnknown) as error:
             raise ProxyRequestError(error)
@@ -110,26 +117,21 @@ class Proxy(RequestProvider, DebugProvider):
         """
 
         self.__headers.update({'User-Agent': self._user_agent})
-        if self.__connection_header != 'default':
-            self.__headers.update({'Connection': self.__connection_header})
-
         request_headers = self._build_request_headers(self.__headers, extra_headers)
+
+        if self.__connection_header != 'default' and request_headers.get('Connection') is None:
+            request_headers.update({'Connection': self.__connection_header})
 
         if self._HTTP_DBG_LEVEL <= self.__debug.level:
             self.__debug.debug_request(request_headers, url, self.__cfg.method)
 
         try:
-            if extra_headers is None:
-                response = self.__pool_request(url)
-            else:
-                response = self.__pool_request(url, headers=request_headers)
+            response = self.__pool_request(url, headers=request_headers)
             return response
 
         except MaxRetryError:
             if self.__cfg.DEFAULT_SCAN == self.__cfg.scan:
                 self.__tpl.warning(key='proxy_max_retry_error', url=helper.parse_url(url).path, proxy=self.__server)
-                if extra_headers is None:
-                    return self.__pool_request(url)
                 return self.__pool_request(url, headers=request_headers)
 
         except ReadTimeoutError:

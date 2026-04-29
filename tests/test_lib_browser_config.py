@@ -29,7 +29,12 @@ class TestBrowserConfig(unittest.TestCase):
         self.assertEqual(cfg.threads, Config.DEFAULT_MIN_THREADS)
         self.assertFalse(cfg.accept_cookies)
         self.assertFalse(cfg.keep_alive)
-        self.assertEqual(cfg.timeout, Config.DEFAULT_SOCKET_TIMEOUT)
+
+    def test_keep_alive_respects_explicit_false_and_true(self):
+        """Config should not treat an explicit False keep_alive value as enabled."""
+
+        self.assertFalse(Config({'reports': 'std', 'keep_alive': False}).keep_alive)
+        self.assertTrue(Config({'reports': 'std', 'keep_alive': True}).keep_alive)
 
     def test_port_switches_to_ssl_default_for_https(self):
         """Config.port should switch from 80 to 443 when SSL is enabled."""

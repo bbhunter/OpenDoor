@@ -91,8 +91,10 @@ class TestProxyExtra(unittest.TestCase):
 
         with patch('src.core.http.proxy.ProxyManager', return_value=pool) as proxy_manager_mock:
             actual = getattr(proxy, '_Proxy__proxy_pool')()
+            cached = getattr(proxy, '_Proxy__proxy_pool')()
 
         self.assertIs(actual, pool)
+        self.assertIs(cached, pool)
         proxy_manager_mock.assert_called_once()
 
     def test_proxy_pool_uses_socks_manager_and_disables_warnings(self):
@@ -115,8 +117,10 @@ class TestProxyExtra(unittest.TestCase):
                 patch('src.core.http.proxy.disable_warnings') as disable_mock, \
                 patch('src.core.http.proxy.importlib.import_module', return_value=package_module):
             actual = getattr(proxy, '_Proxy__proxy_pool')()
+            cached = getattr(proxy, '_Proxy__proxy_pool')()
 
         self.assertIs(actual, pool)
+        self.assertIs(cached, pool)
         disable_mock.assert_called_once()
         socks_manager.assert_called_once()
 
@@ -161,7 +165,9 @@ class TestProxyExtra(unittest.TestCase):
             actual = proxy.request('http://example.com/path')
 
         self.assertEqual(actual.status, 200)
-        pool_request_mock.assert_called_once_with('http://example.com/path')
+        pool_request_mock.assert_called_once()
+        self.assertEqual(pool_request_mock.call_args.args[0], 'http://example.com/path')
+        self.assertIn('headers', pool_request_mock.call_args.kwargs)
         debug.debug_request.assert_called_once()
 
         headers = debug.debug_request.call_args.args[0]

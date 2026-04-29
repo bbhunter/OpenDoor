@@ -64,7 +64,7 @@ class Config(object):
         self._raw_request = params.get('raw_request')
         self._request_body = params.get('request_body')
         self._accept_cookies = params.get('accept_cookies') is not None
-        self._keep_alive = params.get('keep_alive') is not None
+        self._keep_alive = params.get('keep_alive') is True
         self._port = params.get('port')
         self._wordlist = params.get('wordlist')
         self._reports_dir = params.get('reports_dir')

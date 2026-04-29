@@ -48,9 +48,12 @@ class HttpRequest(RequestProvider, DebugProvider):
 
         self.__cfg = config
         self.__debug = debug
+        self.__manager = None
 
         if self.__cfg.DEFAULT_SCAN == self.__cfg.scan:
             self.__pool = self.__http_pool()
+        else:
+            self.__manager = self.__pool_manager()
 
     def __http_pool(self):
         """
@@ -73,6 +76,24 @@ class HttpRequest(RequestProvider, DebugProvider):
         except Exception as error:
             raise HttpRequestError(str(error))
 
+    def __pool_manager(self):
+        """
+        Create reusable HTTP pool manager for non-default scans.
+
+        :raise HttpRequestError
+        :return: urllib3.PoolManager
+        """
+
+        try:
+            return PoolManager(
+                num_pools=self.__cfg.threads,
+                maxsize=self.__cfg.threads,
+                timeout=Timeout(connect=self.__cfg.timeout, read=self.__cfg.timeout),
+                block=True,
+            )
+        except Exception as error:
+            raise HttpRequestError(str(error))
+
     def request(self, url, extra_headers=None):
         """
         Client request HTTP
@@ -87,10 +108,10 @@ class HttpRequest(RequestProvider, DebugProvider):
         elif self.__headers.get('User-Agent') is None:
             self.__headers.update({'User-Agent': self._user_agent})
             self.__is_user_agent_managed = True
-        if self.__connection_header != 'default' and self.__headers.get('Connection') is None:
-            self.__headers.update({'Connection': self.__connection_header})
 
         request_headers = self._build_request_headers(self.__headers, extra_headers)
+        if self.__connection_header != 'default' and request_headers.get('Connection') is None:
+            request_headers.update({'Connection': self.__connection_header})
 
         if self._HTTP_DBG_LEVEL <= self.__debug.level:
             self.__debug.debug_request(request_headers, url, self.__cfg.method)
@@ -108,7 +129,7 @@ class HttpRequest(RequestProvider, DebugProvider):
                 )
                 self.cookies_middleware(is_accept=self.__cfg.accept_cookies, response=response)
             else:
-                response = PoolManager().request(
+                response = self.__manager.request(
                     self.__cfg.method,
                     url,
                     headers=request_headers,
@@ -116,7 +137,6 @@ class HttpRequest(RequestProvider, DebugProvider):
                     retries=self.__cfg.retries,
                     assert_same_host=False,
                     redirect=False,
-                    timeout=Timeout(connect=self.__cfg.timeout, read=self.__cfg.timeout),
                 )
             return response
 

@@ -281,10 +281,10 @@ class TestHttpsRequest(unittest.TestCase):
         self.assertIsNone(req.request('https://example.com/x'))
 
         cfg_sub = self.make_cfg(scan='subdomains')
-        req_sub = HttpsRequest(cfg_sub, SimpleNamespace(level=0), tpl=tpl, agent_list=['UA'])
         with patch('src.core.http.https.PoolManager') as pm_cls:
             pm = pm_cls.return_value
             pm.request.side_effect = SSLError(None)
+            req_sub = HttpsRequest(cfg_sub, SimpleNamespace(level=0), tpl=tpl, agent_list=['UA'])
             response = req_sub.request('https://api.example.com')
         self.assertEqual(response.status, 496)
 

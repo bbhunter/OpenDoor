@@ -195,10 +195,10 @@ class TestHttpExtraHeaders(unittest.TestCase):
         req.request('http://example.com/normal')
 
         first_headers = dict(pool_request.call_args_list[0].kwargs['headers'])
-        second_call = pool_request.call_args_list[1]
+        second_headers = dict(pool_request.call_args_list[1].kwargs['headers'])
 
         self.assertEqual(first_headers['X-Host'], 'localhost')
-        self.assertNotIn('headers', second_call.kwargs)
+        self.assertNotIn('X-Host', second_headers)
         self.assertNotIn('X-Host', req._Proxy__headers)
         self.assertEqual(pool_request.call_count, 2)
 

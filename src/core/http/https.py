@@ -50,8 +50,12 @@ class HttpsRequest(RequestProvider, DebugProvider):
 
         self.__cfg = config
         self.__debug = debug
+        self.__manager = None
+
         if self.__cfg.DEFAULT_SCAN == self.__cfg.scan:
             self.__pool = self.__https_pool()
+        else:
+            self.__manager = self.__pool_manager()
 
     def _provide_ssl_auth_required(self):
         """
@@ -78,11 +82,31 @@ class HttpsRequest(RequestProvider, DebugProvider):
                 maxsize=self.__cfg.threads,
                 timeout=Timeout(connect=self.__cfg.timeout, read=self.__cfg.timeout),
                 cert_reqs='CERT_NONE',
+                block=True,
             )
             if self._HTTP_DBG_LEVEL <= self.__debug.level:
                 self.__debug.debug_connection_pool('https_pool_start', pool, self.__connection_header)
 
             return pool
+        except Exception as error:
+            raise HttpsRequestError(str(error))
+
+    def __pool_manager(self):
+        """
+        Create reusable HTTPS pool manager for non-default scans.
+
+        :raise HttpsRequestError
+        :return: urllib3.PoolManager
+        """
+
+        try:
+            return PoolManager(
+                num_pools=self.__cfg.threads,
+                maxsize=self.__cfg.threads,
+                timeout=Timeout(connect=self.__cfg.timeout, read=self.__cfg.timeout),
+                block=True,
+                cert_reqs='CERT_NONE',
+            )
         except Exception as error:
             raise HttpsRequestError(str(error))
 
@@ -100,10 +124,10 @@ class HttpsRequest(RequestProvider, DebugProvider):
         elif self.__headers.get('User-Agent') is None:
             self.__headers.update({'User-Agent': self._user_agent})
             self.__is_user_agent_managed = True
-        if 'default' != self.__connection_header and self.__headers.get('Connection') is None:
-            self.__headers.update({'Connection': self.__connection_header})
 
         request_headers = self._build_request_headers(self.__headers, extra_headers)
+        if 'default' != self.__connection_header and request_headers.get('Connection') is None:
+            request_headers.update({'Connection': self.__connection_header})
 
         if self._HTTP_DBG_LEVEL <= self.__debug.level:
             self.__debug.debug_request(request_headers, url, self.__cfg.method)
@@ -119,14 +143,12 @@ class HttpsRequest(RequestProvider, DebugProvider):
                                                redirect=False)
                 self.cookies_middleware(is_accept=self.__cfg.accept_cookies, response=response)
             else:  # subdomains
-
-                response = PoolManager().request(self.__cfg.method, url,
-                                                 headers=request_headers,
-                                                 body=self._request_body,
-                                                 retries=self.__cfg.retries,
-                                                 assert_same_host=False,
-                                                 redirect=False,
-                                                 timeout=Timeout(connect=self.__cfg.timeout, read=self.__cfg.timeout))
+                response = self.__manager.request(self.__cfg.method, url,
+                                                  headers=request_headers,
+                                                  body=self._request_body,
+                                                  retries=self.__cfg.retries,
+                                                  assert_same_host=False,
+                                                  redirect=False)
             return response
 
         except MaxRetryError:
