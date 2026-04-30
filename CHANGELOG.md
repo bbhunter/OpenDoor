@@ -9,10 +9,19 @@ v5.13.2 (30.04.2026)
 - (enhancement) added passive fingerprint signals based on meta generator, HTTP headers, cookies and static markup markers
 - (enhancement) kept extended fingerprinting lightweight without adding aggressive CMS probing
 - (enhancement) removed foreign project-specific prefixes from internal fingerprint catalog names
+- (enhancement) hardened wordlist orchestration for `--random-list`
+- (fix) fixed `--random-list` behavior on macOS when GNU `shuf` is not installed
+- (fix) replaced shell-based `shuf` command construction with safe subprocess execution
+- (fix) added Python shuffle fallback for systems without `shuf`
+- (fix) fixed source wordlist line counting before temporary randomized list creation
+- (fix) preserved external wordlist handling when randomization is enabled
+- (fix) tightened boolean normalization for `random_list`, `extensions` and `ignore_extensions`
 - (docs) updated fingerprinting documentation with the expanded CMS coverage
 - (tests) added regression coverage for fingerprint progress rendering and callback flow
 - (tests) added regression coverage for Sitecore, Microsoft SharePoint, BigCommerce and RoundCube Webmail detection
-- (tests) full unittest suite passes after integration (`1183` tests)
+- (tests) added regression coverage for wordlist randomization backend selection and fallback behavior
+- (tests) added regression coverage for external wordlist orchestration with randomization and extensions
+- (tests) full unittest suite passes after integration (`1189` tests)
 - (tests) coverage gate passes at `99%`
 
 v5.13.1 (30.04.2026)

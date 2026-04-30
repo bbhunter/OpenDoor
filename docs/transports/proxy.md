@@ -24,7 +24,7 @@ opendoor \
 ## Built-in proxy list mode
 
 ```shell
-opendoor --host https://example.com --tor
+opendoor --host https://example.com --proxy-pool
 ```
 
 ---
@@ -32,7 +32,7 @@ opendoor --host https://example.com --tor
 ## Custom proxy list
 
 ```shell
-opendoor --host https://example.com --torlist proxies.txt
+opendoor --host https://example.com --proxy-list proxies.txt
 ```
 
 Example `proxies.txt`:

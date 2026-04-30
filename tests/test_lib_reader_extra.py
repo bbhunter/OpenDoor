@@ -19,14 +19,14 @@ class TestReaderExtra(unittest.TestCase):
         if browser_config is None:
             browser_config = {
                 'list': 'directories',
-                'torlist': 'external-tor.txt',
+                'proxy_list': 'external-proxy.txt',
                 'use_random': False,
                 'use_extensions': False,
                 'use_ignore_extensions': False,
                 'is_external_wordlist': False,
                 'wordlist': '/tmp/external.txt',
                 'is_standalone_proxy': False,
-                'is_external_torlist': False,
+                'is_external_proxy_list': False,
                 'prefix': '',
             }
 
@@ -50,28 +50,28 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': True,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
         self.assertEqual(reader._get_dirlist_path(), '/tmp/ignore_extensionlist.txt')
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': True,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
         self.assertEqual(reader._get_dirlist_path(), '/tmp/external.txt')
@@ -81,14 +81,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': True,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 
@@ -96,26 +96,26 @@ class TestReaderExtra(unittest.TestCase):
             self.assertEqual(reader.get_proxies(), [])
         read_mock.assert_not_called()
 
-    def test_get_proxies_reads_external_torlist(self):
-        """Reader.get_proxies() should prefer external torlist when enabled."""
+    def test_get_proxies_reads_external_proxy_list(self):
+        """Reader.get_proxies() should prefer external proxy list when enabled."""
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': '/tmp/external-tor.txt',
+            'proxy_list': '/tmp/external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': True,
+            'is_external_proxy_list': True,
             'prefix': '',
         })
 
         with patch('src.lib.reader.reader.filesystem.read', return_value=['1.1.1.1:80']) as read_mock:
             self.assertEqual(reader.get_proxies(), ['1.1.1.1:80'])
 
-        read_mock.assert_called_once_with('/tmp/external-tor.txt')
+        read_mock.assert_called_once_with('/tmp/external-proxy.txt')
 
     def test_get_proxies_returns_cached_default_proxies_without_reread(self):
         """Reader.get_proxies() should reuse cached default proxies."""
@@ -133,14 +133,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'subdomains',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 
@@ -182,14 +182,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': 'api/',
         })
 
@@ -241,14 +241,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': True,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 
@@ -317,14 +317,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'subdomains',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 
@@ -353,14 +353,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 
@@ -376,14 +376,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': True,
             'use_extensions': False,
             'use_ignore_extensions': False,
             'is_external_wordlist': True,
             'wordlist': '/tmp/external list.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 
@@ -402,14 +402,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': False,
             'use_extensions': True,
             'use_ignore_extensions': False,
             'is_external_wordlist': True,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 
@@ -427,14 +427,14 @@ class TestReaderExtra(unittest.TestCase):
 
         reader = self.make_reader({
             'list': 'directories',
-            'torlist': 'external-tor.txt',
+            'proxy_list': 'external-proxy.txt',
             'use_random': True,
             'use_extensions': True,
             'use_ignore_extensions': False,
             'is_external_wordlist': False,
             'wordlist': '/tmp/external.txt',
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
         })
 

@@ -125,15 +125,15 @@ class TestReader(unittest.TestCase):
         self.assertEqual(proxies, ['http://proxy:80\n'])
         read_mock.assert_called_once_with(self.config['proxies'])
 
-    def test_get_proxies_reads_external_torlist(self):
-        """Reader.get_proxies() should prefer an external tor list when configured."""
+    def test_get_proxies_reads_external_proxy_list(self):
+        """Reader.get_proxies() should prefer an external proxy list when configured."""
 
-        torlist_path = os.path.join(self.base_dir, 'torlist.dat')
+        proxy_list_path = os.path.join(self.base_dir, 'proxy-list.dat')
         reader = self.create_reader(
             browser_config={
                 'is_standalone_proxy': False,
-                'is_external_torlist': True,
-                'torlist': torlist_path,
+                'is_external_proxy_list': True,
+                'proxy_list': proxy_list_path,
             }
         )
 
@@ -141,7 +141,7 @@ class TestReader(unittest.TestCase):
             proxies = reader.get_proxies()
 
         self.assertEqual(proxies, ['socks5://127.0.0.1:9050\n'])
-        read_mock.assert_called_once_with(torlist_path)
+        read_mock.assert_called_once_with(proxy_list_path)
 
     def test_get_proxies_raises_reader_error(self):
         """Reader.get_proxies() should wrap file errors."""

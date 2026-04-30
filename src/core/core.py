@@ -77,7 +77,7 @@ CoreConfig = {
         'name': 'Opendoor scanner',
         'repository': 'https://github.com/stanislav-web/OpenDoor.git',
         'remote_version': 'https://raw.githubusercontent.com/stanislav-web/OpenDoor/master/VERSION',
-        'license': 'License: GNU General Public License',
+        'license': 'License: GNU GPL V3 (2016 - 2026)',
         'version': fVersion,
         'documentation': 'https://opendoor.readthedocs.io',
         'required_versions': {
@@ -118,7 +118,7 @@ CoreConfig = {
                 python3 ./opendoor.py --host "http://example.com" -random-list --ignore-extensions aspx,jsp
                 python3 ./opendoor.py --host "http://example.com" --threads 10 --random-list
                 python3 ./opendoor.py --host "http://example.com" --threads 10 --random-agent
-                python3 ./opendoor.py --host "http://example.com" --threads 10 --tor
+                python3 ./opendoor.py --host "http://example.com" --threads 10 --proxy-pool
                 python3 ./opendoor.py --host "http://example.com" --threads 10 --delay 10
                 python3 ./opendoor.py --host "http://example.com" --threads 10 --prefix en/
                 python3 ./opendoor.py --host "http://example.com" --threads 10 --delay 10 --timeout 10

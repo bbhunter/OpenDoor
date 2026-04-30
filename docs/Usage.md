@@ -626,13 +626,13 @@ opendoor --host https://example.com --proxy socks5://127.0.0.1:9050
 ### Built-in proxy list
 
 ```shell
-opendoor --host https://example.com --tor
+opendoor --host https://example.com --proxy-pool
 ```
 
 ### Custom proxy list
 
 ```shell
-opendoor --host https://example.com --torlist proxies.txt
+opendoor --host https://example.com --proxy-list proxies.txt
 ```
 
 ### Transport mode

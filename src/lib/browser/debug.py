@@ -87,11 +87,11 @@ class Debug(DebugProvider):
     def debug_proxy_pool(self):
         """Debug proxy pool message."""
 
-        if self.__cfg.is_external_torlist is True:
+        if self.__cfg.is_external_proxy_list is True:
             tpl.debug(key='proxy_pool_external_start')
         elif self.__cfg.is_standalone_proxy is True:
             tpl.debug(key='proxy_pool_standalone', server=self.__cfg.proxy)
-        elif self.__cfg.is_internal_torlist is True:
+        elif self.__cfg.is_builtin_proxy_pool is True:
             tpl.debug(key='proxy_pool_internal_start')
 
         return True
@@ -163,13 +163,10 @@ class Debug(DebugProvider):
         else:
             if self.__level != -1:
                 tpl.line_log(
-                    key='get_item',
+                    key='scan_progress',
                     percent=percentage,
                     current='{0:0{l}d}'.format(kwargs.get('items_size', 0), l=total_len),
                     total=kwargs.get('total_size', 1),
-                    item=request_uri,
-                    size=kwargs.get('content_size'),
-                    code=kwargs.get('response_code', '-'),
                 )
             self.__catched = False
             if kwargs.get('items_size', 0) == kwargs.get('total_size', 1):

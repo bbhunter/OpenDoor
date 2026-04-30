@@ -95,8 +95,8 @@ class Config(object):
         self._delay = params.get('delay')
         self._timeout = self.DEFAULT_SOCKET_TIMEOUT if params.get('timeout') is None else float(params.get('timeout'))
         self._debug = self.DEFAULT_DEBUG_LEVEL if params.get('debug') is None else params.get('debug')
-        self._is_tor = params.get('tor')
-        self._torlist = '' if 'torlist' not in params or params.get('torlist') is None else params.get('torlist')
+        self._is_proxy_pool = params.get('proxy_pool') is True
+        self._proxy_list = '' if 'proxy_list' not in params or params.get('proxy_list') is None else params.get('proxy_list')
         self._is_random_user_agent = params.get('random_agent')
         self._sniff = self._normalize_csv(params.get('sniff'))
         self._is_random_list = params.get('random_list') is True
@@ -370,9 +370,9 @@ class Config(object):
     def is_proxy(self):
         """If proxy is available."""
 
-        if self._is_tor is True:
+        if self._is_proxy_pool is True:
             return True
-        if self._torlist is not None and len(self._torlist) > 0:
+        if self._proxy_list is not None and len(self._proxy_list) > 0:
             return True
         if self._proxy is not None and len(self._proxy) > 0:
             return True
@@ -514,27 +514,27 @@ class Config(object):
         """If standalone proxy is available."""
 
         if self.is_proxy is True and len(self._proxy) > 0:
-            self._torlist = ''
+            self._proxy_list = ''
             return True
         return False
 
     @property
-    def is_internal_torlist(self):
-        """If internal torlist is available."""
+    def is_builtin_proxy_pool(self):
+        """If built-in proxy pool is available."""
 
-        return self._is_tor is True and len(self._torlist) <= 0
-
-    @property
-    def is_external_torlist(self):
-        """If external torlist is available."""
-
-        return self._torlist is not None and len(self._torlist) > 0
+        return self._is_proxy_pool is True and len(self._proxy_list) <= 0
 
     @property
-    def torlist(self):
-        """Torlist property."""
+    def is_external_proxy_list(self):
+        """If external proxy list is available."""
 
-        return self._torlist
+        return self._proxy_list is not None and len(self._proxy_list) > 0
+
+    @property
+    def proxy_list(self):
+        """Proxy list property."""
+
+        return self._proxy_list
 
     @property
     def is_external_wordlist(self):

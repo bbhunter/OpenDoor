@@ -63,9 +63,9 @@ class TestBrowserDebugExtra(unittest.TestCase):
         self.assertEqual(debug_mock.call_count, 1)
 
     def test_debug_proxy_pool_internal_and_none_modes(self):
-        """Debug.debug_proxy_pool() should handle internal tor mode and no-proxy mode."""
+        """Debug.debug_proxy_pool() should handle built-in proxy pool and no-proxy mode."""
 
-        dbg = self.make_debug({'debug': 1, 'tor': True, 'reports': 'std'})
+        dbg = self.make_debug({'debug': 1, 'proxy_pool': True, 'reports': 'std'})
         with patch('src.lib.browser.debug.tpl.debug') as debug_mock:
             dbg.debug_proxy_pool()
         debug_mock.assert_called_once_with(key='proxy_pool_internal_start')

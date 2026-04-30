@@ -63,9 +63,9 @@ class TestBrowserExtra(unittest.TestCase):
             'timeout': 30,
             'retries': 1,
             'debug': 0,
-            'is_internal_torlist': False,
-            'is_external_torlist': False,
-            'torlist': '',
+            'is_builtin_proxy_pool': False,
+            'is_external_proxy_list': False,
+            'proxy_list': '',
             'requested_method': 'HEAD',
             'session_save': None,
             'session_autosave_sec': 20,
@@ -135,7 +135,12 @@ class TestBrowserExtra(unittest.TestCase):
         ) as writeln_mock:
             browser._Browser__fingerprint_progress(1, 4, 'root')
 
-        line_log_mock.assert_called_once_with(msg='Fingerprint [######------------------] 25.0% root', status='info')
+        line_log_mock.assert_called_once_with(
+            key='fingerprint_progress',
+            status='info',
+            bar='[######------------------] 25.0%',
+            stage='root',
+        )
         writeln_mock.assert_not_called()
 
     def test_fingerprint_progress_writes_final_newline(self):
@@ -148,7 +153,12 @@ class TestBrowserExtra(unittest.TestCase):
         ) as writeln_mock:
             browser._Browser__fingerprint_progress(4, 4, 'done')
 
-        line_log_mock.assert_called_once_with(msg='Fingerprint [########################] 100.0% done', status='info')
+        line_log_mock.assert_called_once_with(
+            key='fingerprint_progress',
+            status='info',
+            bar='[########################] 100.0%',
+            stage='done',
+        )
         writeln_mock.assert_called_once_with('')
 
     def test_request_with_waf_safe_mode_active_without_sleep(self):
@@ -347,14 +357,14 @@ class TestBrowserInitExtra(unittest.TestCase):
             '_method': 'HEAD',
             'method': 'GET',
             'method_override_items': [],
-            'torlist': '',
+            'proxy_list': '',
             'is_random_list': False,
             'is_extension_filter': False,
             'is_ignore_extension_filter': False,
             'is_external_wordlist': False,
             'wordlist': None,
             'is_standalone_proxy': False,
-            'is_external_torlist': False,
+            'is_external_proxy_list': False,
             'prefix': '',
             'is_external_reports_dir': False,
             'reports_dir': None,

@@ -24,7 +24,7 @@ class TestBrowserConfig(unittest.TestCase):
         self.assertFalse(cfg.is_ignore_extension_filter)
         self.assertFalse(cfg.is_external_wordlist)
         self.assertFalse(cfg.is_external_reports_dir)
-        self.assertEqual(cfg.torlist, '')
+        self.assertEqual(cfg.proxy_list, '')
         self.assertEqual(cfg.user_agent, Config.DEFAULT_USER_AGENT)
         self.assertEqual(cfg.threads, Config.DEFAULT_MIN_THREADS)
         self.assertFalse(cfg.accept_cookies)
@@ -101,20 +101,20 @@ class TestBrowserConfig(unittest.TestCase):
         self.assertFalse(cfg.is_ignore_extension_filter)
 
     def test_proxy_related_flags_are_derived_from_input(self):
-        """Config should resolve standalone and tor proxy modes correctly."""
+        """Config should resolve standalone and proxy routing modes correctly."""
 
         standalone = Config({'reports': 'std', 'proxy': 'http://127.0.0.1:8080'})
         self.assertTrue(standalone.is_proxy)
         self.assertTrue(standalone.is_standalone_proxy)
-        self.assertFalse(standalone.is_external_torlist)
+        self.assertFalse(standalone.is_external_proxy_list)
 
-        external = Config({'reports': 'std', 'torlist': 'torlist.txt'})
+        external = Config({'reports': 'std', 'proxy_list': 'proxy-list.txt'})
         self.assertTrue(external.is_proxy)
-        self.assertTrue(external.is_external_torlist)
+        self.assertTrue(external.is_external_proxy_list)
 
-        internal = Config({'reports': 'std', 'tor': True})
+        internal = Config({'reports': 'std', 'proxy_pool': True})
         self.assertTrue(internal.is_proxy)
-        self.assertTrue(internal.is_internal_torlist)
+        self.assertTrue(internal.is_builtin_proxy_pool)
 
     def test_timeout_setter_converts_to_float(self):
         """Config.timeout setter should coerce the value to float."""
@@ -300,17 +300,17 @@ class TestBrowserConfig(unittest.TestCase):
         self.assertEqual(cfg.method_override_warning, '')
         self.assertEqual(cfg.method, 'POST')
 
-    def test_is_standalone_proxy_should_clear_torlist(self):
-        """Config.is_standalone_proxy should clear torlist when standalone proxy mode wins."""
+    def test_is_standalone_proxy_should_clear_proxy_list(self):
+        """Config.is_standalone_proxy should clear proxy_list when standalone proxy mode wins."""
 
         cfg = Config({
             'reports': 'std',
             'proxy': 'http://127.0.0.1:8080',
-            'torlist': 'custom-torlist.txt',
+            'proxy_list': 'custom-proxy-list.txt',
         })
 
         self.assertTrue(cfg.is_standalone_proxy)
-        self.assertEqual(cfg.torlist, '')
+        self.assertEqual(cfg.proxy_list, '')
 
     def test_recursive_exclude_should_return_empty_list_when_not_configured(self):
         """Config.recursive_exclude should safely return an empty list when unset."""

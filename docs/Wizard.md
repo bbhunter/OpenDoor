@@ -364,13 +364,13 @@ proxy = socks5://127.0.0.1:9050
 Use the built-in proxy list:
 
 ```ini
-tor = True
+proxy_pool = True
 ```
 
 Use a custom proxy list:
 
 ```ini
-torlist = ./proxies.txt
+proxy_list = ./proxies.txt
 ```
 
 ### Network transport

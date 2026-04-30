@@ -271,19 +271,19 @@ class Options(object):
             {
                 "group": "request",
                 "args": None,
-                "argl": "--tor",
+                "argl": "--proxy-pool",
                 "default": False,
                 "action": "store_true",
-                "help": "Use built-in proxy list",
+                "help": "Use built-in rotating proxy pool",
                 "type": bool
             },
             {
                 "group": "request",
                 "args": None,
-                "argl": "--torlist",
+                "argl": "--proxy-list",
                 "default": None,
                 "action": "store",
-                "help": "Path to custom proxy list",
+                "help": "Path to custom rotating proxy list",
                 "type": str
             },
             {

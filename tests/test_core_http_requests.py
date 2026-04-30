@@ -324,7 +324,7 @@ class TestProxy(unittest.TestCase):
             user_agent='UA',
             is_standalone_proxy=False,
             proxy='',
-            is_tor=False,
+            is_proxy_pool=False,
         )
         base.update(kwargs)
         return SimpleNamespace(**base)

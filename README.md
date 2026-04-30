@@ -108,8 +108,8 @@ opendoor --host https://example.com --fingerprint
 
 Read more:
 
-- [Fingerprinting guide](https://opendoor.readthedocs.io/en/latest/detection/fingerprinting/)
-- [WAF detection guide](https://opendoor.readthedocs.io/en/latest/detection/waf-detection/)
+- [Fingerprinting guide](https://opendoor.readthedocs.io/detection/fingerprinting/)
+- [WAF detection guide](https://opendoor.readthedocs.io/detection/waf-detection/)
 
 ## 📦 Installation
 
@@ -234,6 +234,26 @@ opendoor \
   --header-bypass-ips 127.0.0.1,10.0.0.1 \
   --header-bypass-headers X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP \
   --reports json,html,sqlite
+```
+
+### Proxy routing
+
+Use a single explicit proxy:
+
+```bash
+opendoor --host https://example.com --proxy socks5://127.0.0.1:9050
+```
+
+Use the bundled rotating proxy pool:
+
+```bash
+opendoor --host https://example.com --proxy-pool
+```
+
+Use a custom rotating proxy list:
+
+```bash
+opendoor --host https://example.com --proxy-list proxies.txt
 ```
 
 ### OpenVPN transport

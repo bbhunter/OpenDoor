@@ -237,8 +237,8 @@ class Reader(object):
 
         try:
             if False is self.__browser_config.get('is_standalone_proxy'):
-                if True is self.__browser_config.get('is_external_torlist'):
-                    self.__proxies = filesystem.read(self.__browser_config.get('torlist'))
+                if True is self.__browser_config.get('is_external_proxy_list'):
+                    self.__proxies = filesystem.read(self.__browser_config.get('proxy_list'))
                 elif not self.__proxies:
                     self.__proxies = filesystem.read(self.__config.get('proxies'))
                 return self.__proxies

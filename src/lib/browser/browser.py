@@ -100,14 +100,14 @@ class Browser(Filter):
             self.__queued_recursive = set()
             self.__reader = Reader(browser_config={
                 'list': self.__config.scan,
-                'torlist': self.__config.torlist,
+                'proxy_list': self.__config.proxy_list,
                 'use_random': self.__config.is_random_list,
                 'use_extensions': self.__config.is_extension_filter,
                 'use_ignore_extensions': self.__config.is_ignore_extension_filter,
                 'is_external_wordlist': self.__config.is_external_wordlist,
                 'wordlist': self.__config.wordlist,
                 'is_standalone_proxy': self.__config.is_standalone_proxy,
-                'is_external_torlist': self.__config.is_external_torlist,
+                'is_external_proxy_list': self.__config.is_external_proxy_list,
                 'prefix': self.__config.prefix
             })
 
@@ -232,7 +232,7 @@ class Browser(Filter):
 
     def __fingerprint_progress(self, current, total, label):
         """
-        Print fingerprinting progress on one dynamic console line.
+        Print fingerprinting progress on one dynamic logger-formatted console line.
 
         :param int current: current progress position
         :param int total: total progress positions
@@ -241,7 +241,7 @@ class Browser(Filter):
         """
 
         bar = self.__render_fingerprint_bar(current, total)
-        tpl.line_log(msg='Fingerprint {0} {1}'.format(bar, label), status='info')
+        tpl.line_log(key='fingerprint_progress', status='info', bar=bar, stage=label)
 
         if int(current or 0) >= int(total or 1):
             output.writeln('')
@@ -1314,8 +1314,8 @@ class Browser(Filter):
             'timeout': self.__config.timeout,
             'retries': self.__config.retries,
             'debug': self.__config.debug,
-            'tor': self.__config.is_internal_torlist,
-            'torlist': self.__config.torlist if self.__config.is_external_torlist else None,
+            'proxy_pool': self.__config.is_builtin_proxy_pool,
+            'proxy_list': self.__config.proxy_list if self.__config.is_external_proxy_list else None,
             'method': self.__config.requested_method,
             'auto_calibrate': getattr(self.__config, 'is_auto_calibrate', False),
             'calibration_samples': getattr(self.__config, 'calibration_samples', None),
