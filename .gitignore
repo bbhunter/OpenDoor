@@ -64,3 +64,21 @@ data/openvpn-profiles/*.conf
 
 # Documentation local virtual environment
 .docs-venv/
+
+# Debian/Kali packaging build artifacts
+.pybuild/
+.pc/
+debian/.debhelper/
+debian/tmp/
+debian/opendoor/
+debian/debhelper-build-stamp
+debian/files
+debian/*.debhelper
+debian/*.substvars
+*.deb
+*.ddeb
+*.build
+*.buildinfo
+*.changes
+*.dsc
+*.tar.xz
