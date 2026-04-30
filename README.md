@@ -38,6 +38,8 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - [Practical examples](https://opendoor.readthedocs.io/examples/basic-scans/)
 - [Changelog](CHANGELOG.md)
 - [PyPI package](https://pypi.org/project/opendoor/)
+- [AUR package](https://aur.archlinux.org/packages/opendoor)
+- [BlackArch package](https://blackarch.org/webapp.html)
 - [Issues](https://github.com/stanislav-web/OpenDoor/issues)
 
 ---
@@ -127,12 +129,29 @@ pipx install opendoor
 python3 -m pip install --upgrade opendoor
 ```
 
+### Arch Linux / AUR
+
+OpenDoor is available in the Arch User Repository:
+
+```bash
+yay -S opendoor
+```
+
 ### Homebrew
 
 When the Homebrew formula is available:
 
 ```bash
 brew install opendoor
+```
+
+### BlackArch Linux
+
+OpenDoor is available in BlackArch Linux:
+
+```bash
+sudo pacman -Syu
+sudo pacman -S opendoor
 ```
 
 ### From source

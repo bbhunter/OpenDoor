@@ -1,7 +1,7 @@
 CHANGELOG
 =======
 
-v5.13.2 (31.04.2026)
+v5.13.2 (01.05.2026)
 ---------------------------
 - (enhancement) added visible progress output for `--fingerprint`
 - (enhancement) extended CMS fingerprinting with a larger passive CMS catalog

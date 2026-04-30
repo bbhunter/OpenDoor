@@ -1,16 +1,91 @@
 # 📦 Installation and update
 
-OpenDoor is distributed as a Python CLI application. It can be installed with Homebrew, pipx, pip, or run directly from a source checkout.
+OpenDoor is distributed as a Python CLI application. It can be installed with Arch Linux AUR, BlackArch Linux, Homebrew, pipx, pip, or run directly from a source checkout.
 
 For most users, the recommended installation methods are:
 
 | Environment | Recommended method |
 |---|---|
+| Arch Linux | AUR |
+| BlackArch Linux | pacman |
 | macOS | Homebrew |
 | General CLI usage | pipx |
 | Existing Python environment | pip |
 | Development | editable source install |
 | Package verification | source build |
+
+---
+
+## 🐧 Arch Linux / AUR
+
+OpenDoor is available in the Arch User Repository.
+
+Install with an AUR helper:
+
+```shell
+yay -S opendoor
+```
+
+Manual AUR installation:
+
+```shell
+git clone https://aur.archlinux.org/opendoor.git
+cd opendoor
+makepkg -si
+```
+
+Verify the installation:
+
+```shell
+opendoor --version
+opendoor --help
+```
+
+Update with an AUR helper:
+
+```shell
+yay -Syu opendoor
+```
+
+For manual AUR installations, update from the package repository:
+
+```shell
+cd opendoor
+git pull
+makepkg -si
+```
+
+---
+
+## 🐉 BlackArch Linux
+
+OpenDoor is available in BlackArch Linux.
+
+Install from BlackArch:
+
+```shell
+sudo pacman -Syu
+sudo pacman -S opendoor
+```
+
+For Arch Linux users with the BlackArch repository enabled:
+
+```shell
+sudo pacman -S opendoor
+```
+
+Verify the installation:
+
+```shell
+opendoor --version
+opendoor --help
+```
+
+Update OpenDoor with the system packages:
+
+```shell
+sudo pacman -Syu opendoor
+```
 
 ---
 
@@ -274,6 +349,9 @@ Use the same package manager that installed OpenDoor.
 
 | Installed with | Update command |
 |---|---|
+| AUR helper | `yay -Syu opendoor` |
+| Manual AUR build | `git pull && makepkg -si` |
+| BlackArch / pacman | `sudo pacman -Syu opendoor` |
 | Homebrew | `brew update && brew upgrade opendoor` |
 | pipx | `pipx upgrade opendoor` |
 | pip | `python3 -m pip install --upgrade opendoor` |
@@ -310,6 +388,18 @@ For pipx:
 
 ```shell
 python3 -m pipx ensurepath
+```
+
+For Arch Linux AUR manual builds, confirm that the package installed successfully:
+
+```shell
+pacman -Qs opendoor
+```
+
+For BlackArch Linux, confirm that the package is available from enabled repositories:
+
+```shell
+pacman -Ss opendoor
 ```
 
 Then reopen the terminal.
