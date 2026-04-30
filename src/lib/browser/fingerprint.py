@@ -546,7 +546,7 @@ class Fingerprint(object):
             self._emit_progress(
                 progress_offset + index,
                 total,
-                'probe {0}/{1} {2}'.format(index, len(self.PROBES), probe_path),
+                'probe {0}/{1}'.format(index, len(self.PROBES))
             )
         return statuses
 

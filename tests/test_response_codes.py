@@ -176,23 +176,26 @@ class TestReporterPlugins(unittest.TestCase):
     def test_html_report_uses_detailed_report_items_and_builds_fallback_codes(self):
         """HTML reports should receive report_items regardless of input payload shape."""
 
-        with patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
-            json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+        with patch('src.lib.reporter.plugins.html.render_html_report') as render_html_report_mock:
+            render_html_report_mock.return_value = '<html>ok</html>'
 
             plugin = HtmlReportPlugin(self.target, self.data, directory=self.base_dir + os.path.sep)
             plugin.process()
 
-            report_payload = json2html_cls.return_value.convert.call_args.kwargs['json']
-            self.assertEqual(report_payload['report_items']['success'], [{'url': 'http://example.com/admin', 'size': '9B', 'code': '200'}])
+            report_payload = render_html_report_mock.call_args.args[1]
+            self.assertEqual(
+                report_payload['report_items']['success'],
+                [{'url': 'http://example.com/admin', 'size': '9B', 'code': '200'}],
+            )
 
-        with patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
-            json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+        with patch('src.lib.reporter.plugins.html.render_html_report') as render_html_report_mock:
+            render_html_report_mock.return_value = '<html>ok</html>'
             legacy_data = {'items': {'success': ['http://example.com/legacy']}}
 
             plugin = HtmlReportPlugin(self.target, legacy_data, directory=self.base_dir + os.path.sep)
             plugin.process()
 
-            report_payload = json2html_cls.return_value.convert.call_args.kwargs['json']
+            report_payload = render_html_report_mock.call_args.args[1]
             self.assertEqual(
                 report_payload['report_items']['success'],
                 [{'url': 'http://example.com/legacy', 'size': '0B', 'code': '-'}],

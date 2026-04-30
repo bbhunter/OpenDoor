@@ -26,32 +26,31 @@ class TestReporterPluginsExtra(unittest.TestCase):
         }
 
     def test_html_plugin_uses_default_reports_directory_and_records_html(self):
-        """HtmlReportPlugin should resolve default report directory and record converted HTML."""
+        """HtmlReportPlugin should resolve default report directory and record rendered HTML."""
 
         with patch('src.lib.reporter.plugins.html.CoreConfig', {'data': {'reports': '/reports/'}}), \
                 patch('src.lib.reporter.plugins.html.filesystem.makedir', return_value='/tmp/reports') as makedir_mock, \
                 patch('src.lib.reporter.plugins.html.filesystem.clear') as clear_mock, \
-                patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
-            json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+                patch('src.lib.reporter.plugins.html.render_html_report') as render_html_report_mock:
+            render_html_report_mock.return_value = '<html>ok</html>'
 
             plugin = HtmlReportPlugin(self.target, self.data)
             with patch.object(plugin, 'record') as record_mock:
                 plugin.process()
 
+        expected_payload = {
+            'items': self.data['items'],
+            'report_items': {
+                'success': [{'url': 'http://example.com/admin', 'size': '0B', 'code': '-'}],
+                'failed': [{'url': 'http://example.com/missing', 'size': '0B', 'code': '-'}],
+                'indexof': [{'url': 'http://example.com/public', 'size': '0B', 'code': '-'}],
+            },
+        }
+
         makedir_mock.assert_called_once_with('/reports/' + self.target)
         clear_mock.assert_called_once_with('/tmp/reports', extension='.html')
-        json2html_cls.return_value.convert.assert_called_once_with(
-            json={
-                'items': self.data['items'],
-                'report_items': {
-                    'success': [{'url': 'http://example.com/admin', 'size': '0B', 'code': '-'}],
-                    'failed': [{'url': 'http://example.com/missing', 'size': '0B', 'code': '-'}],
-                    'indexof': [{'url': 'http://example.com/public', 'size': '0B', 'code': '-'}],
-                },
-            },
-            table_attributes='border="1" cellpadding="2"',
-        )
-        record_mock.assert_called_once_with('/tmp/reports', self.target, '<table>ok</table>')
+        render_html_report_mock.assert_called_once_with(self.target, expected_payload)
+        record_mock.assert_called_once_with('/tmp/reports', self.target, '<html>ok</html>')
 
     def test_html_plugin_uses_custom_directory(self):
         """HtmlReportPlugin should honor a custom output directory."""

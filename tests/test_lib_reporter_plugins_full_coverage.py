@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import copy
+import importlib
 import os
 import unittest
 from unittest.mock import patch
 
 from src.lib.reporter.plugins.provider.provider import PluginProvider
 from src.core.filesystem.exceptions import FileSystemError
-from src.lib.reporter.plugins.html import HtmlReportPlugin
+from src.lib.reporter.plugins.html import HtmlReportPlugin, render_html_report
 from src.lib.reporter.plugins.json import JsonReportPlugin
 from src.lib.reporter.plugins.txt import TextReportPlugin
 
-
+html_report = importlib.import_module('src.lib.reporter.plugins.html')
 
 class TestReporterPluginsFullCoverage(unittest.TestCase):
     """Extra branch tests to close html/json/txt reporter plugin coverage."""
@@ -47,17 +48,17 @@ class TestReporterPluginsFullCoverage(unittest.TestCase):
 
         with patch('src.lib.reporter.plugins.html.filesystem.makedir', return_value='/tmp/reports'), \
                 patch('src.lib.reporter.plugins.html.filesystem.clear'), \
-                patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
-            json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+                patch('src.lib.reporter.plugins.html.render_html_report') as render_html_report_mock:
+            render_html_report_mock.return_value = '<html>ok</html>'
 
             plugin = HtmlReportPlugin(self.target, source, directory='/custom/')
             with patch.object(plugin, 'record') as record_mock:
                 plugin.process()
 
-        payload = json2html_cls.return_value.convert.call_args.kwargs['json']
+        payload = render_html_report_mock.call_args.args[1]
         self.assertEqual(payload['report_items'], self.rich_data['report_items'])
         self.assertEqual(source, self.rich_data)
-        record_mock.assert_called_once_with('/tmp/reports', self.target, '<table>ok</table>')
+        record_mock.assert_called_once_with('/tmp/reports', self.target, '<html>ok</html>')
 
     def test_html_process_handles_missing_items_key(self):
         """HtmlReportPlugin should build an empty report_items map when items are missing."""
@@ -66,14 +67,14 @@ class TestReporterPluginsFullCoverage(unittest.TestCase):
 
         with patch('src.lib.reporter.plugins.html.filesystem.makedir', return_value='/tmp/reports'), \
                 patch('src.lib.reporter.plugins.html.filesystem.clear'), \
-                patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
-            json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+                patch('src.lib.reporter.plugins.html.render_html_report') as render_html_report_mock:
+            render_html_report_mock.return_value = '<html>ok</html>'
 
             plugin = HtmlReportPlugin(self.target, data, directory='/custom/')
             with patch.object(plugin, 'record'):
                 plugin.process()
 
-        payload = json2html_cls.return_value.convert.call_args.kwargs['json']
+        payload = render_html_report_mock.call_args.args[1]
         self.assertEqual(payload, {'total': {'items': 0}, 'report_items': {}})
 
     def test_html_process_wraps_record_filesystem_error(self):
@@ -81,13 +82,187 @@ class TestReporterPluginsFullCoverage(unittest.TestCase):
 
         with patch('src.lib.reporter.plugins.html.filesystem.makedir', return_value='/tmp/reports'), \
                 patch('src.lib.reporter.plugins.html.filesystem.clear'), \
-                patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
-            json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+                patch('src.lib.reporter.plugins.html.render_html_report') as render_html_report_mock:
+            render_html_report_mock.return_value = '<html>ok</html>'
 
             plugin = HtmlReportPlugin(self.target, self.plain_data, directory='/custom/')
             with patch.object(plugin, 'record', side_effect=FileSystemError('boom')):
                 with self.assertRaises(Exception):
                     plugin.process()
+
+    def test_html_renderer_covers_empty_report_items_and_metadata(self):
+        """HTML renderer should render empty findings and metadata blocks."""
+
+        html = html_report.render_html_report('test.local', {
+            'total': {},
+            'items': {
+                'success': [],
+            },
+            'report_items': {},
+            'scanner': 'opendoor',
+            'debug': True,
+            'empty': None,
+            'tags': ['a', 'b'],
+            'nested': {'enabled': False},
+        })
+
+        self.assertIn('<!doctype html>', html)
+        self.assertIn('OpenDoor Report', html)
+        self.assertIn('No findings.', html)
+        self.assertIn('Metadata', html)
+        self.assertIn('opendoor', html)
+        self.assertIn('true', html)
+        self.assertIn('false', html)
+        self.assertIn('<span class="badge">-</span>', html)
+
+    def test_html_renderer_covers_status_groups_and_table_branches(self):
+        """HTML renderer should render status buckets, links, codes, and nested values."""
+
+        html = html_report.render_html_report('example.com', {
+            'total': {
+                'blocked': 1,
+                'success': 2,
+            },
+            'report_items': {
+                'success': [{
+                    'url': 'https://example.com/admin',
+                    'code': '200',
+                    'size': '12KB',
+                    'title': 'Admin <Panel>',
+                    'content_type': 'text/html',
+                    'redirect': 'https://example.com/login',
+                    'waf': 'Cloudflare',
+                    'waf_confidence': 92,
+                    'bypass': True,
+                    'details': {'source': 'unit'},
+                    'notes': ['safe', 'escaped'],
+                }],
+                'redirect': [{
+                    'url': 'http://example.com/old',
+                    'code': '301',
+                    'redirect': 'https://example.com/new',
+                }],
+                'blocked': [{
+                    'url': 'https://example.com/private',
+                    'code': '403',
+                }],
+                'failed': [{
+                    'url': 'https://example.com/error',
+                    'code': '500',
+                }],
+                'custom': [{
+                    'url': 'ftp://example.com/not-linked',
+                    'code': '-',
+                    'value': None,
+                }],
+            },
+        })
+
+        self.assertIn('Summary', html)
+        self.assertIn('Findings', html)
+        self.assertIn('https://example.com/admin', html)
+        self.assertIn('target="_blank"', html)
+        self.assertIn('Admin &lt;Panel&gt;', html)
+        self.assertIn('badge-success', html)
+        self.assertIn('badge-warning', html)
+        self.assertIn('badge-danger', html)
+        self.assertIn('ftp://example.com/not-linked', html)
+        self.assertIn('unit', html)
+        self.assertIn('safe', html)
+
+    def test_html_renderer_covers_plain_list_and_empty_status_items(self):
+        """HTML renderer should render legacy plain lists and empty status buckets."""
+
+        html = html_report.render_html_report('plain.local', {
+            'total': {
+                'items': 2,
+            },
+            'report_items': {
+                'success': [
+                    'http://plain.local/admin',
+                    None,
+                    True,
+                    False,
+                    {'nested': 'value'},
+                    ['child'],
+                ],
+                'warning': [],
+            },
+        })
+
+        self.assertIn('http://plain.local/admin', html)
+        self.assertIn('No items in this bucket.', html)
+        self.assertIn('<th>#</th><th>value</th>', html)
+        self.assertIn('nested', html)
+        self.assertIn('child', html)
+        self.assertIn('true', html)
+        self.assertIn('false', html)
+
+    def test_html_renderer_covers_direct_private_render_helpers(self):
+        """HTML renderer helpers should handle empty, unknown, and scalar branches."""
+
+        self.assertEqual(html_report._render_value(None), '<span class="badge">-</span>')
+        self.assertIn('empty', html_report._render_value({}))
+        self.assertIn('empty', html_report._render_value([]))
+        self.assertIn('plain', html_report._render_value('plain'))
+
+        self.assertIn('badge-success', html_report._render_status_code('204'))
+        self.assertIn('badge-success', html_report._render_status_code('302'))
+        self.assertIn('badge-warning', html_report._render_status_code('404'))
+        self.assertIn('badge-danger', html_report._render_status_code('500'))
+        self.assertIn('badge', html_report._render_status_code('-'))
+
+        self.assertEqual(html_report._get_status_badge_class('index'), 'badge badge-success')
+        self.assertEqual(html_report._get_status_badge_class('indexof'), 'badge badge-success')
+        self.assertEqual(html_report._get_status_badge_class('error'), 'badge badge-danger')
+        self.assertEqual(html_report._get_status_badge_class('blocked'), 'badge badge-danger')
+        self.assertEqual(html_report._get_status_badge_class('warning'), 'badge badge-warning')
+        self.assertEqual(html_report._get_status_badge_class('redirect'), 'badge badge-warning')
+        self.assertEqual(html_report._get_status_badge_class('unknown'), 'badge')
+
+        self.assertEqual(html_report._get_value_class('url'), 'mono break')
+        self.assertEqual(html_report._get_value_class('redirect'), 'mono break')
+        self.assertEqual(html_report._get_value_class('content_type'), 'mono break')
+        self.assertEqual(html_report._get_value_class('bypass_header'), 'mono break')
+        self.assertEqual(html_report._get_value_class('bypass_value'), 'mono break')
+        self.assertEqual(html_report._get_value_class('title'), 'break')
+
+        self.assertTrue(html_report._is_http_url('http://example.com'))
+        self.assertTrue(html_report._is_http_url('https://example.com'))
+        self.assertFalse(html_report._is_http_url('ftp://example.com'))
+        self.assertFalse(html_report._is_http_url(None))
+
+        self.assertEqual(html_report._escape(None), '')
+        self.assertEqual(html_report._escape('<x "y">'), '&lt;x &quot;y&quot;&gt;')
+
+    def test_html_renderer_covers_column_order_and_metadata_filtering(self):
+        """HTML renderer should keep preferred columns first and exclude noisy metadata."""
+
+        columns = html_report._get_columns([
+            {
+                'custom': 'x',
+                'url': 'https://example.com',
+                'code': '200',
+                'bypass_value': '/admin',
+            },
+            {
+                'size': '1KB',
+                'another': 'y',
+            },
+        ])
+
+        self.assertEqual(columns[:4], ['url', 'code', 'size', 'bypass_value'])
+        self.assertIn('custom', columns)
+        self.assertIn('another', columns)
+
+        metadata = html_report._get_metadata({
+            'items': {},
+            'report_items': {},
+            'total': {},
+            'scanner': 'opendoor',
+        })
+
+        self.assertEqual(metadata, {'scanner': 'opendoor'})
 
     def test_text_process_skips_when_only_failed_bucket_exists(self):
         """TextReportPlugin should not write reports when only failed items are present."""
@@ -244,14 +419,14 @@ class TestReporterPluginsFullCoverage(unittest.TestCase):
 
             with patch('src.lib.reporter.plugins.html.filesystem.makedir', return_value='/tmp/reports'), \
                     patch('src.lib.reporter.plugins.html.filesystem.clear'), \
-                    patch('src.lib.reporter.plugins.html.Json2Html') as json2html_cls:
-                json2html_cls.return_value.convert.return_value = '<table>ok</table>'
+                    patch('src.lib.reporter.plugins.html.render_html_report') as render_html_report_mock:
+                render_html_report_mock.return_value = '<html>ok</html>'
 
                 plugin = HtmlReportPlugin(self.target, data, directory='/custom/')
                 with patch.object(plugin, 'record'):
                     plugin.process()
 
-            payload = json2html_cls.return_value.convert.call_args.kwargs['json']
+            payload = render_html_report_mock.call_args.args[1]
 
             self.assertEqual(payload['report_items']['bypass'][0]['bypass_header'], 'X-Original-URL')
             self.assertEqual(payload['report_items']['bypass'][0]['bypass_from_code'], '403')
@@ -353,6 +528,31 @@ class TestReporterPluginsFullCoverage(unittest.TestCase):
             'https://example.com/admin - 200 - 90B | '
             'bypass=header, header=X-Original-URL, value=/admin'
         )
+
+    def test_html_renderer_escapes_values_and_renders_pretty_table(self):
+        """HTML renderer should escape values and render a standalone styled report."""
+
+        html = render_html_report('example.com', {
+            'total': {
+                'success': 1,
+                'items': 1,
+            },
+            'report_items': {
+                'success': [{
+                    'url': 'https://example.com/<admin>',
+                    'code': '200',
+                    'size': '12KB',
+                    'waf': 'Cloudflare',
+                }],
+            },
+        })
+
+        self.assertIn('<!doctype html>', html)
+        self.assertIn('OpenDoor Report', html)
+        self.assertIn('report-table', html)
+        self.assertIn('https://example.com/&lt;admin&gt;', html)
+        self.assertIn('Cloudflare', html)
+        self.assertNotIn('json2html', html)
 
 if __name__ == '__main__':
     unittest.main()

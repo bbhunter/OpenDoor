@@ -20,7 +20,7 @@
 
 import sys
 
-for _ in ['urllib3', 'json2html', 'tabulate', 'importlib', 'packaging']:
+for _ in ['urllib3', 'tabulate', 'importlib', 'packaging']:
     try:
         __import__(_)
     except ImportError as error:
