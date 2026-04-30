@@ -131,7 +131,7 @@ Notes:
 - `GET` is better when body-based filters or body-oriented sniffers are required.
 - `timeout` and `retries` should be increased for slow or unstable targets.
 - `delay` can be used to reduce request pressure.
-- `threads` controls concurrency.
+- `threads` controls concurrency (1 ~ 50).
 
 For body-based analysis:
 

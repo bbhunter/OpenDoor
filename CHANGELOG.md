@@ -1,6 +1,20 @@
 CHANGELOG
 =======
 
+v5.13.2 (30.04.2026)
+---------------------------
+- (enhancement) added visible progress output for `--fingerprint`
+- (enhancement) extended CMS fingerprinting with a larger passive CMS catalog
+- (enhancement) added additional CMS, e-commerce, site-builder and webmail detection signatures
+- (enhancement) added passive fingerprint signals based on meta generator, HTTP headers, cookies and static markup markers
+- (enhancement) kept extended fingerprinting lightweight without adding aggressive CMS probing
+- (enhancement) removed foreign project-specific prefixes from internal fingerprint catalog names
+- (docs) updated fingerprinting documentation with the expanded CMS coverage
+- (tests) added regression coverage for fingerprint progress rendering and callback flow
+- (tests) added regression coverage for Sitecore, Microsoft SharePoint, BigCommerce and RoundCube Webmail detection
+- (tests) full unittest suite passes after integration (`1183` tests)
+- (tests) coverage gate passes at `99%`
+
 v5.13.1 (30.04.2026)
 ---------------------------
 - (enhancement) improved `--keep-alive` transport behaviour for HTTP and HTTPS scans

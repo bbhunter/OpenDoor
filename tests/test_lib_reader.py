@@ -17,6 +17,7 @@
 """
 
 import os
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -263,19 +264,27 @@ class TestReader(unittest.TestCase):
         self.assertEqual(line, 'http://example.com:8080/login.php')
 
     def test_randomize_list_uses_shuf_on_non_windows(self):
-        """Reader.randomize_list() should use shuf on non-Windows systems."""
+        """Reader.randomize_list() should use GNU shuf safely on non-Windows systems."""
 
         reader = self.create_reader(browser_config={})
 
         with patch('src.lib.reader.reader.filesystem.makefile', return_value=self.config['tmplist']) as makefile_mock, \
-                patch('src.lib.reader.reader.process.execute') as execute_mock, \
+                patch('src.lib.reader.reader.filesystem.count_lines', return_value=15) as count_mock, \
+                patch('src.lib.reader.reader.shutil.which', return_value='/usr/bin/shuf'), \
+                patch('src.lib.reader.reader.subprocess.run') as run_mock, \
                 patch('src.lib.reader.reader.sys') as sys_mock:
             sys_mock.return_value.is_windows = False
             reader.randomize_list('directories', 'tmplist')
 
         makefile_mock.assert_called_once_with(self.config['tmplist'])
-        execute_mock.assert_called_once_with(
-            'shuf {0} -o {1}'.format(self.config['directories'], self.config['tmplist'])
+        count_mock.assert_called_once_with(self.config['directories'])
+        run_mock.assert_called_once_with(
+            ['shuf', self.config['directories'], '-o', self.config['tmplist']],
+            cwd=None,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
         )
 
     def test_randomize_list_uses_internal_shuffle_on_windows(self):
@@ -295,6 +304,27 @@ class TestReader(unittest.TestCase):
             output=self.config['tmplist'],
             total=15,
         )
+
+    def test_randomize_list_falls_back_to_python_shuffle_when_shuf_is_missing(self):
+        """Reader.randomize_list() should support macOS without GNU shuf installed."""
+
+        reader = self.create_reader(browser_config={})
+
+        with patch('src.lib.reader.reader.filesystem.makefile', return_value=self.config['tmplist']), \
+                patch('src.lib.reader.reader.filesystem.count_lines', return_value=15), \
+                patch('src.lib.reader.reader.filesystem.shuffle') as shuffle_mock, \
+                patch('src.lib.reader.reader.shutil.which', return_value=None), \
+                patch('src.lib.reader.reader.subprocess.run') as run_mock, \
+                patch('src.lib.reader.reader.sys') as sys_mock:
+            sys_mock.return_value.is_windows = False
+            reader.randomize_list('directories', 'tmplist')
+
+        shuffle_mock.assert_called_once_with(
+            target=self.config['directories'],
+            output=self.config['tmplist'],
+            total=15,
+        )
+        run_mock.assert_not_called()
 
     def test_randomize_list_raises_reader_error(self):
         """Reader.randomize_list() should wrap filesystem and process errors."""

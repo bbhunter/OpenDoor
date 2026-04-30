@@ -84,6 +84,22 @@ class TestBrowserConfig(unittest.TestCase):
         self.assertEqual(cfg.extensions, ['php', 'html'])
         self.assertEqual(cfg.ignore_extensions, ['jpg', 'png'])
 
+    def test_random_list_flag_requires_true_value(self):
+        """Config should not enable random list mode from explicit False or missing values."""
+
+        self.assertFalse(Config({'reports': 'std', 'random_list': False}).is_random_list)
+        self.assertTrue(Config({'reports': 'std', 'random_list': True}).is_random_list)
+
+    def test_empty_extension_filters_are_disabled(self):
+        """Config should not enable extension filters from empty CSV values."""
+
+        cfg = Config({'reports': 'std', 'extensions': ' , ', 'ignore_extensions': ',,'})
+
+        self.assertEqual(cfg.extensions, [])
+        self.assertEqual(cfg.ignore_extensions, [])
+        self.assertFalse(cfg.is_extension_filter)
+        self.assertFalse(cfg.is_ignore_extension_filter)
+
     def test_proxy_related_flags_are_derived_from_input(self):
         """Config should resolve standalone and tor proxy modes correctly."""
 

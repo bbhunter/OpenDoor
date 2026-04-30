@@ -17,12 +17,13 @@
 """
 
 import re
+import shutil
+import subprocess
 
 from src.core import FileSystemError
 from src.core import CoreSystemError
 from src.core import CoreConfig
 from src.core import filesystem
-from src.core import process
 from src.core import sys
 from src.core import helper
 from .config import Config
@@ -112,6 +113,70 @@ class Reader(object):
         escaped = [re.escape(extension) for extension in normalized]
         return r'^(?!.*\.({0})$).*$'.format('|'.join(escaped))
 
+    @staticmethod
+    def _has_system_shuf():
+        """
+        Check whether GNU shuf is available on the current system.
+
+        :return: bool
+        """
+
+        return shutil.which('shuf') is not None
+
+    @staticmethod
+    def _run_system_shuf(target_file, output_file):
+        """
+        Shuffle a wordlist through GNU shuf without shell interpolation.
+
+        :param str target_file: source wordlist path
+        :param str output_file: destination wordlist path
+        :raise CoreSystemError
+        :return: None
+        """
+
+        try:
+            subprocess.run(
+                ['shuf', target_file, '-o', output_file],
+                cwd=None,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            raise CoreSystemError(error)
+
+    def _get_base_wordlist_path(self, target=None):
+        """
+        Resolve the primary wordlist source before runtime transformations.
+
+        External wordlists must remain the source of truth when combined with
+        randomization or extension filters; otherwise the built-in scan list is
+        used.
+
+        :return: str
+        """
+
+        if True is self.__browser_config.get('is_external_wordlist'):
+            return self.__browser_config.get('wordlist')
+
+        return self.__config.get(target or self.__browser_config.get('list'))
+
+    def _get_filtered_wordlist_path(self, target=None):
+        """
+        Resolve the source after extension filtering and before randomization.
+
+        :return: str
+        """
+
+        if True is self.__browser_config.get('use_extensions') and 'directories' == self.__browser_config.get('list'):
+            return self.__config.get('extensionlist')
+
+        if True is self.__browser_config.get('use_ignore_extensions') and 'directories' == self.__browser_config.get('list'):
+            return self.__config.get('ignore_extensionlist')
+
+        return self._get_base_wordlist_path(target)
+
     def _get_dirlist_path(self):
         """
         Resolve the active wordlist path according to browser configuration.
@@ -122,16 +187,7 @@ class Reader(object):
         if True is self.__browser_config.get('use_random'):
             return self.__config.get('tmplist')
 
-        if True is self.__browser_config.get('use_extensions') and 'directories' == self.__browser_config.get('list'):
-            return self.__config.get('extensionlist')
-
-        if True is self.__browser_config.get('use_ignore_extensions') and 'directories' == self.__browser_config.get('list'):
-            return self.__config.get('ignore_extensionlist')
-
-        if True is self.__browser_config.get('is_external_wordlist'):
-            return self.__browser_config.get('wordlist')
-
-        return self.__config.get(self.__browser_config.get('list'))
+        return self._get_filtered_wordlist_path()
 
     def get_user_agents(self):
         """
@@ -285,12 +341,15 @@ class Reader(object):
         """
 
         try:
-            target_file = self.__config.get(target)
+            target_file = self._get_filtered_wordlist_path(target)
             tmp_file = self.__config.get(output)
             output_file = filesystem.makefile(tmp_file)
 
-            if False is sys().is_windows:
-                process.execute('shuf {target} -o {output}'.format(target=target_file, output=output_file))
+            if 0 == self.__counter:
+                self.__counter = filesystem.count_lines(target_file)
+
+            if False is sys().is_windows and self._has_system_shuf():
+                self._run_system_shuf(target_file, output_file)
             else:
                 filesystem.shuffle(target=target_file, output=output_file, total=self.total_lines)
         except (CoreSystemError, FileSystemError) as error:
@@ -311,7 +370,7 @@ class Reader(object):
         """
 
         try:
-            target_file = self.__config.get(target)
+            target_file = self._get_base_wordlist_path(target)
             output_file = self.__config.get(output)
 
             dirlist = filesystem.read(target_file)
@@ -340,7 +399,7 @@ class Reader(object):
         """
 
         try:
-            target_file = self.__config.get(target)
+            target_file = self._get_base_wordlist_path(target)
             output_file = self.__config.get(output)
             dirlist = filesystem.read(target_file)
             dirlist = [item.strip() for item in dirlist]
@@ -361,10 +420,7 @@ class Reader(object):
 
         try:
             if 0 == self.__counter:
-                if True is self.__browser_config.get('use_random'):
-                    dirlist = self.__config.get('tmplist')
-                else:
-                    dirlist = self._get_dirlist_path()
+                dirlist = self._get_filtered_wordlist_path()
                 self.__counter = filesystem.count_lines(dirlist)
 
             return self.__counter

@@ -92,16 +92,162 @@ class Fingerprint(object):
     SITE_BUILDER_CATEGORY = 'sitebuilder'
     STATIC_CATEGORY = 'static'
 
-    def __init__(self, config, client):
+    EXTENDED_CMS_GENERATOR_SIGNATURES = (
+        ('3dCart', ECOMMERCE_CATEGORY, ('3dcart', '3d cart', 'shift4shop')),
+        ('Adobe Business Catalyst', CMS_CATEGORY, ('adobe business catalyst', 'business catalyst')),
+        ('AEM', CMS_CATEGORY, ('adobe experience manager',)),
+        ('Ametys CMS', CMS_CATEGORY, ('ametys', 'ametys cms')),
+        ('Amiro.CMS', CMS_CATEGORY, ('amiro.cms', 'amiro cms')),
+        ('Apostrophe CMS', CMS_CATEGORY, ('apostrophecms', 'apostrophe cms')),
+        ('AsciiDoc', STATIC_CATEGORY, ('asciidoc',)),
+        ('BigCommerce', ECOMMERCE_CATEGORY, ('bigcommerce',)),
+        ('BigTree CMS', CMS_CATEGORY, ('bigtree cms', 'bigtreecms')),
+        ('Blogger', SITE_BUILDER_CATEGORY, ('blogger', 'blogger by google')),
+        ('BrowserCMS', CMS_CATEGORY, ('browsercms', 'browser cms')),
+        ('Bubble', SITE_BUILDER_CATEGORY, ('bubble', 'bubble.io')),
+        ('CKAN', CMS_CATEGORY, ('ckan',)),
+        ('CMS Made Simple', CMS_CATEGORY, ('cms made simple', 'cmsms')),
+        ('CMS CONTENIDO', CMS_CATEGORY, ('contenido', 'cms contenido')),
+        ('CMSimple', CMS_CATEGORY, ('cmsimple',)),
+        ('CS-Cart', ECOMMERCE_CATEGORY, ('cs-cart', 'cs cart', 'cscart')),
+        ('CubeCart', ECOMMERCE_CATEGORY, ('cubecart',)),
+        ('DataLife Engine', CMS_CATEGORY, ('datalife engine', 'dle')),
+        ('DNN Platform', CMS_CATEGORY, ('dnn platform', 'dotnetnuke', 'dnn')),
+        ('Dynamicweb', ECOMMERCE_CATEGORY, ('dynamicweb',)),
+        ('EC-CUBE', ECOMMERCE_CATEGORY, ('ec-cube', 'eccube')),
+        ('EPiServer', CMS_CATEGORY, ('episerver', 'optimizely cms')),
+        ('ExpressionEngine', CMS_CATEGORY, ('expressionengine', 'expression engine')),
+        ('Fork CMS', CMS_CATEGORY, ('fork cms',)),
+        ('GetSimple CMS', CMS_CATEGORY, ('getsimple cms', 'get-simple cms')),
+        ('GoDaddy Website Builder', SITE_BUILDER_CATEGORY, ('godaddy website builder', 'go central')),
+        ('Hippo CMS', CMS_CATEGORY, ('hippo cms', 'onehippo', 'bloomreach experience')),
+        ('ImpressPages CMS', CMS_CATEGORY, ('impresspages', 'impresspages cms')),
+        ('Jimdo', SITE_BUILDER_CATEGORY, ('jimdo',)),
+        ('Kooboo CMS', CMS_CATEGORY, ('kooboo', 'kooboo cms')),
+        ('Liferay', CMS_CATEGORY, ('liferay', 'liferay portal')),
+        ('Microsoft SharePoint', CMS_CATEGORY, ('microsoft sharepoint', 'sharepoint')),
+        ('Mura CMS', CMS_CATEGORY, ('mura cms', 'mura')),
+        ('Odoo', ECOMMERCE_CATEGORY, ('odoo',)),
+        ('OpenCms', CMS_CATEGORY, ('opencms', 'open cms')),
+        ('Orchard CMS', CMS_CATEGORY, ('orchard cms', 'orchard core')),
+        ('Percussion CMS', CMS_CATEGORY, ('percussion cms', 'percussion')),
+        ('phpCMS', CMS_CATEGORY, ('phpcms',)),
+        ('PencilBlue', CMS_CATEGORY, ('pencilblue',)),
+        ('Quick.Cms', CMS_CATEGORY, ('quick.cms', 'quick cms')),
+        ('RoundCube Webmail', CMS_CATEGORY, ('roundcube webmail', 'roundcube')),
+        ('Salesforce Commerce Cloud', ECOMMERCE_CATEGORY, ('salesforce commerce cloud', 'demandware')),
+        ('Serendipity', CMS_CATEGORY, ('serendipity', 's9y')),
+        ('ShopFA', ECOMMERCE_CATEGORY, ('shopfa',)),
+        ('Shoper', ECOMMERCE_CATEGORY, ('shoper',)),
+        ('Shopery', ECOMMERCE_CATEGORY, ('shopery',)),
+        ('Shoptet', ECOMMERCE_CATEGORY, ('shoptet',)),
+        ('SilverStripe', CMS_CATEGORY, ('silverstripe', 'silverstripe cms')),
+        ('Sitecore', CMS_CATEGORY, ('sitecore',)),
+        ('Sitefinity', CMS_CATEGORY, ('sitefinity', 'progress sitefinity')),
+        ('Smartstore', ECOMMERCE_CATEGORY, ('smartstore',)),
+        ('Spree', ECOMMERCE_CATEGORY, ('spree commerce', 'spree')),
+        ('Subrion CMS', CMS_CATEGORY, ('subrion', 'subrion cms')),
+        ('Sulu', CMS_CATEGORY, ('sulu cms', 'sulu')),
+        ('Textpattern CMS', CMS_CATEGORY, ('textpattern', 'textpattern cms')),
+        ('TiddlyWiki', CMS_CATEGORY, ('tiddlywiki',)),
+        ('Tiki Wiki CMS Groupware', CMS_CATEGORY, ('tiki wiki cms groupware', 'tiki wiki', 'tikiwiki')),
+        ('UMI.CMS', CMS_CATEGORY, ('umi.cms', 'umi cms')),
+        ('WebsiteBaker CMS', CMS_CATEGORY, ('websitebaker', 'websitebaker cms')),
+        ('WebGUI', CMS_CATEGORY, ('webgui',)),
+        ('Weebly', SITE_BUILDER_CATEGORY, ('weebly',)),
+        ('WHMCS', ECOMMERCE_CATEGORY, ('whmcs',)),
+        ('Wolf CMS', CMS_CATEGORY, ('wolf cms',)),
+        ('XpressEngine', CMS_CATEGORY, ('xpressengine', 'xe cms')),
+        ('XOOPS', CMS_CATEGORY, ('xoops',)),
+        ('Zen Cart CMS', ECOMMERCE_CATEGORY, ('zen cart', 'zencart')),
+        ('e107', CMS_CATEGORY, ('e107',)),
+        ('ePages', ECOMMERCE_CATEGORY, ('epages',)),
+        ('eZ Publish', CMS_CATEGORY, ('ez publish', 'ezpublish')),
+        ('phpWind', CMS_CATEGORY, ('phpwind',)),
+        ('sNews', CMS_CATEGORY, ('snews cms', 'snews')),
+    )
+
+    EXTENDED_CMS_BODY_SIGNATURES = (
+        ('3dCart', ECOMMERCE_CATEGORY, ('/3dcart/', '3dcartstores.com', 'powered by 3dcart')),
+        ('AEM', CMS_CATEGORY, ('/etc.clientlibs/', '/content/dam/', 'cq-wcm-edit', 'granite.author')),
+        ('Apostrophe CMS', CMS_CATEGORY, ('apos-before', 'apos-area', 'data-apos-')),
+        ('BigCommerce', ECOMMERCE_CATEGORY, ('cdn11.bigcommerce.com', 'stencilutils', 'bigcommerce.com/stencil')),
+        ('Blogger', SITE_BUILDER_CATEGORY, ('blogger.com/static/', 'blogger-template-style', 'blogger-js')),
+        ('Bubble', SITE_BUILDER_CATEGORY, ('bubble.is/static/', 'bubble.io/static/', 'bubble-element')),
+        ('CKAN', CMS_CATEGORY, ('ckanext', 'data-module="ckan-module"', "data-module='ckan-module'")),
+        ('CMS Made Simple', CMS_CATEGORY, ('cmsms_stylesheet', 'powered by cms made simple', '/modules/cms')),
+        ('CS-Cart', ECOMMERCE_CATEGORY, ('var tygh', 'index.php?dispatch=', '/design/themes/')),
+        ('CubeCart', ECOMMERCE_CATEGORY, ('cubecart', 'index.php?_a=', '/skins/')),
+        ('DataLife Engine', CMS_CATEGORY, ('datalife engine', 'engine/ajax/', 'index.php?do=')),
+        ('DNN Platform', CMS_CATEGORY, ('__dnnvariable', 'dnn_', '/portals/_default/')),
+        ('EC-CUBE', ECOMMERCE_CATEGORY, ('eccube', 'ec-cube', '/user_data/packages/')),
+        ('ExpressionEngine', CMS_CATEGORY, ('expressionengine', 'exp:channel', 'powered by expressionengine')),
+        ('GetSimple CMS', CMS_CATEGORY, ('getsimple', 'get-simple', '/data/uploads/')),
+        ('GoDaddy Website Builder', SITE_BUILDER_CATEGORY, ('wsimg.com', 'godaddy.com/websites/website-builder')),
+        ('ImpressPages CMS', CMS_CATEGORY, ('impresspages', 'ip_themes/', 'ip_content')),
+        ('Jimdo', SITE_BUILDER_CATEGORY, ('jimcdn.com', 'jimdo_layout_css', 'jimdo.com')),
+        ('Liferay', CMS_CATEGORY, ('liferay', '/o/frontend-js-', 'portlet-boundary')),
+        (
+            'Microsoft SharePoint',
+            CMS_CATEGORY,
+            ('/_layouts/', '/_catalogs/', 'spclienttemplates', 'ms-webpartzone-cell'),
+        ),
+        ('Odoo', ECOMMERCE_CATEGORY, ('odoo.define', '/web/assets/', 'website.assets_frontend')),
+        ('OpenCms', CMS_CATEGORY, ('opencms', '/opencms/', 'alkacon opencms')),
+        ('Orchard CMS', CMS_CATEGORY, ('orchard', 'powered by orchard', '/modules/orchard.')),
+        ('RoundCube Webmail', CMS_CATEGORY, ('roundcube', 'rcmail', '/program/js/app.js')),
+        ('Salesforce Commerce Cloud', ECOMMERCE_CATEGORY, ('demandware.static', 'dwac-', 'salesforce commerce cloud')),
+        ('Shoptet', ECOMMERCE_CATEGORY, ('shoptet', 'cdn.myshoptet.com', 'data-testid="shoptet"')),
+        ('SilverStripe', CMS_CATEGORY, ('silverstripe', 'framework/javascript/', 'security/loginform')),
+        ('Sitecore', CMS_CATEGORY, ('/sitecore/', 'sc_site=', 'sitecore.context')),
+        ('Sitefinity', CMS_CATEGORY, ('telerik.sitefinity', 'sf-content-block', '/sitefinity/')),
+        ('Spree', ECOMMERCE_CATEGORY, ('spreecommerce', 'spree commerce', '/assets/spree/')),
+        ('TiddlyWiki', CMS_CATEGORY, ('tiddlywiki', 'tiddlywiki.com/static/')),
+        ('Tiki Wiki CMS Groupware', CMS_CATEGORY, ('tiki-index.php', 'tikiwiki', 'tiki wiki cms groupware')),
+        ('WebGUI', CMS_CATEGORY, ('webgui', 'assetproxy', 'extras/webgui')),
+        ('Weebly', SITE_BUILDER_CATEGORY, ('weebly.com/uploads/', 'weeblysite.com', 'cdn2.editmysite.com')),
+        ('WHMCS', ECOMMERCE_CATEGORY, ('whmcs', 'whmcomplete solution', 'templates/six/')),
+        ('XOOPS', CMS_CATEGORY, ('xoops', '/modules/system/', 'xoops_url')),
+        ('Zen Cart CMS', ECOMMERCE_CATEGORY, ('zen cart', 'zencart', 'main_page=')),
+        ('e107', CMS_CATEGORY, ('e107', 'e107_files/', 'e107_handlers')),
+        ('ePages', ECOMMERCE_CATEGORY, ('epages', 'epages 6', 'epages.com')),
+    )
+
+    EXTENDED_CMS_HEADER_SIGNATURES = (
+        ('Microsoft SharePoint', CMS_CATEGORY, 'microsoftsharepointteamservices', None),
+        ('Microsoft SharePoint', CMS_CATEGORY, 'x-sharepointhealthscore', None),
+        ('Sitecore', CMS_CATEGORY, 'x-sitecore', None),
+        ('Sitecore', CMS_CATEGORY, 'x-generator', 'sitecore'),
+        ('Liferay', CMS_CATEGORY, 'liferay-portal', None),
+        ('DNN Platform', CMS_CATEGORY, 'x-compressed-by', 'dnn'),
+        ('Odoo', ECOMMERCE_CATEGORY, 'x-odoo', None),
+        ('Salesforce Commerce Cloud', ECOMMERCE_CATEGORY, 'x-dw-request-base-id', None),
+        ('Salesforce Commerce Cloud', ECOMMERCE_CATEGORY, 'x-dw-trace-id', None),
+        ('AEM', CMS_CATEGORY, 'x-dispatcher', None),
+    )
+
+    EXTENDED_CMS_COOKIE_SIGNATURES = (
+        ('RoundCube Webmail', CMS_CATEGORY, ('roundcube_sessid', 'roundcube_sessauth')),
+        ('Microsoft SharePoint', CMS_CATEGORY, ('fedauth', 'rtfa')),
+        ('Sitecore', CMS_CATEGORY, ('sitecore_device', 'sitecore_session')),
+        ('Liferay', CMS_CATEGORY, ('guest_language_id',)),
+        ('DNN Platform', CMS_CATEGORY, ('.dotnetnuke', 'dnnoutputcache')),
+        ('CS-Cart', ECOMMERCE_CATEGORY, ('sid_customer_',)),
+        ('WHMCS', ECOMMERCE_CATEGORY, ('whmcs', 'whmcs_user')),
+    )
+
+    def __init__(self, config, client, progress_callback=None):
         """
         Init fingerprint detector.
 
         :param config: browser config
         :param client: prepared HTTP client
+        :param callable|None progress_callback: optional progress reporter
         """
 
         self.__config = config
         self.__client = client
+        self.__progress_callback = progress_callback
         self.__scores = defaultdict(float)
         self.__signals = defaultdict(list)
         self.__categories = {}
@@ -121,9 +267,16 @@ class Fingerprint(object):
         self.__infra_scores = defaultdict(float)
         self.__infra_signals = defaultdict(list)
 
+        progress_total = len(self.PROBES) + 4
+        progress_current = 0
+        self._emit_progress(progress_current, progress_total, 'start')
+
         base_url = self._build_base_url()
         root_response = self._request(base_url, method='GET')
+        progress_current += 1
+        self._emit_progress(progress_current, progress_total, 'root')
         if root_response is None:
+            self._emit_progress(progress_total, progress_total, 'done')
             return dict(self.DEFAULT_RESULT)
 
         root_response, final_root_url = self._follow_redirects(root_response, base_url, method='GET')
@@ -132,8 +285,19 @@ class Fingerprint(object):
         headers = self._extract_headers(root_response)
         cookies = self._extract_cookies(root_response)
         generator = self._extract_generator(body)
-        probe_statuses = self._probe_endpoints(final_root_url)
+        progress_current += 1
+        self._emit_progress(progress_current, progress_total, 'metadata')
+
+        probe_statuses = self._probe_endpoints(
+            final_root_url,
+            progress_offset=progress_current,
+            progress_total=progress_total,
+        )
+        progress_current += len(self.PROBES)
+
         not_found_status, not_found_body, not_found_headers = self._probe_not_found_signature(final_root_url)
+        progress_current += 1
+        self._emit_progress(progress_current, progress_total, '404 baseline')
 
         self._apply_detection_rules(
             body=body,
@@ -148,12 +312,16 @@ class Fingerprint(object):
             not_found_headers=not_found_headers,
         )
 
+        progress_current += 1
+        self._emit_progress(progress_current, progress_total, 'analyze')
+
         app_candidates = self._build_candidates()
         infra_candidates = self._build_infrastructure_candidates()
 
         if len(app_candidates) <= 0:
             result = dict(self.DEFAULT_RESULT)
             result['infrastructure'] = self._build_infrastructure_result(infra_candidates)
+            self._emit_progress(progress_total, progress_total, 'done')
             return result
 
         top_candidate = app_candidates[0]
@@ -163,7 +331,7 @@ class Fingerprint(object):
 
         top_score = top_candidate['score']
         if top_score < 7:
-            return {
+            result = {
                 'category': self.CUSTOM_CATEGORY,
                 'name': 'Unknown custom stack',
                 'confidence': 45,
@@ -172,9 +340,11 @@ class Fingerprint(object):
                 'candidates': app_candidates[:5],
                 'infrastructure': self._build_infrastructure_result(infra_candidates),
             }
+            self._emit_progress(progress_total, progress_total, 'done')
+            return result
 
         confidence = self._calculate_confidence(top_score, top_score - second_score)
-        return {
+        result = {
             'category': top_candidate['category'],
             'name': top_candidate['name'],
             'confidence': confidence,
@@ -183,6 +353,26 @@ class Fingerprint(object):
             'candidates': app_candidates[:5],
             'infrastructure': self._build_infrastructure_result(infra_candidates),
         }
+        self._emit_progress(progress_total, progress_total, 'done')
+        return result
+
+    def _emit_progress(self, current, total, label):
+        """
+        Emit a safe progress event when a callback is configured.
+
+        :param int current: current progress position
+        :param int total: total progress positions
+        :param str label: human-readable current step
+        :return: None
+        """
+
+        if self.__progress_callback is None:
+            return
+
+        try:
+            self.__progress_callback(current, total, label)
+        except (AttributeError, TypeError, ValueError):
+            pass
 
     def _build_base_url(self):
         """
@@ -337,21 +527,28 @@ class Fingerprint(object):
             return ''
         return match.group(1).strip()
 
-    def _probe_endpoints(self, base_url):
+    def _probe_endpoints(self, base_url, progress_offset=0, progress_total=None):
         """
         Probe lightweight technology endpoints.
 
         :param str base_url:
+        :param int progress_offset: completed progress steps before endpoint probes
+        :param int|None progress_total: total progress steps for callback reporting
         :return: dict
         """
 
         statuses = {}
-        for probe_path in self.PROBES:
+        total = progress_total or len(self.PROBES)
+        for index, probe_path in enumerate(self.PROBES, start=1):
             response = self._request(urljoin(base_url, probe_path.lstrip('/')), method='HEAD')
             if response is not None and hasattr(response, 'status'):
                 statuses[probe_path] = int(getattr(response, 'status', 0))
+            self._emit_progress(
+                progress_offset + index,
+                total,
+                'probe {0}/{1} {2}'.format(index, len(self.PROBES), probe_path),
+            )
         return statuses
-
 
     def _probe_not_found_signature(self, base_url):
         """
@@ -424,6 +621,44 @@ class Fingerprint(object):
             'value': str(value),
             'weight': round(float(weight), 2),
         })
+
+    def _apply_extended_cms_catalog_rules(self, body_lower, headers, cookies, generator):
+        """
+        Apply extended catalog signals for CMSs not covered by dedicated rules.
+
+        :param str body_lower: normalized response body
+        :param dict headers: normalized response headers
+        :param list cookies: normalized cookie names
+        :param str generator: raw generator meta value
+        :return: None
+        """
+
+        generator_lower = str(generator).lower()
+
+        for technology, category, aliases in self.EXTENDED_CMS_GENERATOR_SIGNATURES:
+            for alias in aliases:
+                if alias in generator_lower:
+                    self._add_signal(technology, category, 'meta', 'generator={0}'.format(generator), 7)
+                    break
+
+        for technology, category, markers in self.EXTENDED_CMS_BODY_SIGNATURES:
+            for marker in markers:
+                if marker in body_lower:
+                    self._add_signal(technology, category, 'markup', marker, 6)
+                    break
+
+        for technology, category, header_name, header_value in self.EXTENDED_CMS_HEADER_SIGNATURES:
+            if header_name not in headers:
+                continue
+            if header_value is not None and header_value not in str(headers.get(header_name, '')).lower():
+                continue
+            self._add_signal(technology, category, 'header', header_name, 7)
+
+        for technology, category, cookie_markers in self.EXTENDED_CMS_COOKIE_SIGNATURES:
+            for cookie_marker in cookie_markers:
+                if any(cookie == cookie_marker or cookie.startswith(cookie_marker) for cookie in cookies):
+                    self._add_signal(technology, category, 'cookie', cookie_marker, 6)
+                    break
 
     @staticmethod
     def _header_contains(headers, name, needle):
@@ -958,6 +1193,14 @@ class Fingerprint(object):
             self._add_signal('Strapi', self.FRAMEWORK_CATEGORY, 'endpoint', '/admin', 4)
         if probe_statuses.get('/uploads/') in [200, 301, 302, 401, 403]:
             self._add_signal('Strapi', self.FRAMEWORK_CATEGORY, 'endpoint', '/uploads/', 4)
+
+        # Extended CMS catalog extension
+        self._apply_extended_cms_catalog_rules(
+            body_lower=body_lower,
+            headers=headers,
+            cookies=cookies,
+            generator=generator,
+        )
 
         # MkDocs / Jekyll / Hugo / VitePress
         if 'mkdocs' in generator_lower:

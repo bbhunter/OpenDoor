@@ -395,7 +395,7 @@ class TestFingerprintFullCoverage(unittest.TestCase):
         result = detector.detect()
 
         self.assertEqual(result['category'], 'cms')
-        self.assertEqual(result['name'], 'WordPress')
+        self.assertEqual(result['candidates'][0]['name'], 'WordPress')
         self.assertEqual(result['infrastructure']['provider'], 'AWS CloudFront')
         self.assertGreaterEqual(result['confidence'], 90)
 
@@ -486,7 +486,7 @@ class TestFingerprintFullCoverage(unittest.TestCase):
         detect_detector, _, _ = self.make_detector(responses=responses)
         result = detect_detector.detect()
 
-        self.assertEqual(result['name'], 'WordPress')
+        self.assertEqual(result['candidates'][0]['name'], 'WordPress')
         self.assertGreater(len(result['candidates']), 1)
         self.assertGreater(len(result['infrastructure']['candidates']), 1)
 
@@ -997,6 +997,44 @@ class TestFingerprintFullCoverage(unittest.TestCase):
                 'cookies': ['october_session'],
                 'probes': {'/backend': 302},
             },
+            {
+                'name': 'Sitecore',
+                'category': 'cms',
+                'generator': 'Sitecore Experience Platform',
+                'headers': {'x-sitecore': 'true'},
+                'body': '<html><body><script>window.Sitecore = { context: {} };</script>'
+                        '<link href="/sitecore/shell/client/Applications/Launchpad.css">'
+                        '<input type="hidden" name="sc_site" value="website">'
+                        '</body></html>',
+                'cookies': ['sitecore_device'],
+            },
+            {
+                'name': 'Microsoft SharePoint',
+                'category': 'cms',
+                'generator': 'Microsoft SharePoint',
+                'headers': {
+                    'microsoftsharepointteamservices': '16.0.0.0000',
+                    'x-sharepointhealthscore': '0',
+                },
+                'body': '<html><body><script src="/_layouts/15/sp.js"></script>'
+                        '<div class="ms-webpartzone-cell"></div></body></html>',
+                'cookies': ['fedauth', 'rtfa'],
+            },
+            {
+                'name': 'BigCommerce',
+                'category': 'ecommerce',
+                'generator': 'BigCommerce',
+                'body': '<html><body><script src="https://cdn11.bigcommerce.com/store/hash/stencil.js"></script>'
+                        '<script>window.stencilUtils = {};</script></body></html>',
+            },
+            {
+                'name': 'RoundCube Webmail',
+                'category': 'cms',
+                'generator': 'RoundCube Webmail',
+                'body': '<html><body><div id="rcmail"></div>'
+                        '<script src="/program/js/app.js"></script></body></html>',
+                'cookies': ['roundcube_sessid'],
+            },
         ]
 
         for case in cases:
@@ -1280,3 +1318,48 @@ class TestFingerprintFullCoverage(unittest.TestCase):
                 top_names = [candidate['name'] for candidate in candidates[:3]]
                 self.assertNotIn(case['forbidden'], top_names)
 
+
+    def test_detect_reports_progress_events(self):
+        """
+        Fingerprint.detect() should report deterministic progress steps.
+
+        :return: None
+        """
+
+        config = FakeConfig()
+        responses = {
+            ('GET', 'http://example.com/'): FakeResponse(
+                status=200,
+                data='<html><body><script src="/wp-content/themes/app/theme.js"></script></body></html>',
+                headers={},
+            )
+        }
+        client = FakeClient(config=config, responses=responses)
+        events = []
+        detector = Fingerprint(
+            config=config,
+            client=client,
+            progress_callback=lambda current, total, label: events.append((current, total, label)),
+        )
+
+        result = detector.detect()
+        progress_total = len(Fingerprint.PROBES) + 4
+
+        self.assertEqual(result['candidates'][0]['name'], 'WordPress')
+        self.assertEqual(events[0], (0, progress_total, 'start'))
+        self.assertEqual(events[-1], (progress_total, progress_total, 'done'))
+        self.assertTrue(any(event[2].startswith('probe 1/') for event in events))
+
+    def test_extended_catalog_has_no_foreign_prefix_names(self):
+        """
+        Extended CMS catalog constants should use OpenDoor-native names.
+
+        :return: None
+        """
+
+        exported_names = dir(Fingerprint)
+
+        self.assertTrue(any(name.startswith('EXTENDED_CMS_') for name in exported_names))
+        foreign_prefix = ''.join(['CMS', 'EEK_'])
+
+        self.assertFalse(any(name.startswith(foreign_prefix) for name in exported_names))

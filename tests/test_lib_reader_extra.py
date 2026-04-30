@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import subprocess
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from src.core import CoreSystemError, FileSystemError
+from src.core import FileSystemError
 from src.lib.reader.reader import Reader
 from src.lib.reader.exceptions import ReaderError
 
@@ -207,13 +208,11 @@ class TestReaderExtra(unittest.TestCase):
 
         with patch('src.lib.reader.reader.filesystem.makefile', return_value='/tmp/out.txt') as makefile_mock, \
                 patch('src.lib.reader.reader.filesystem.shuffle') as shuffle_mock, \
-                patch('src.lib.reader.reader.process.execute') as execute_mock, \
                 patch('src.lib.reader.reader.sys', return_value=SimpleNamespace(is_windows=True)):
             reader.randomize_list('directories', 'tmplist')
 
         makefile_mock.assert_called_once_with('/tmp/tmplist.txt')
         shuffle_mock.assert_called_once_with(target='/tmp/directories.txt', output='/tmp/out.txt', total=7)
-        execute_mock.assert_not_called()
 
     def test_randomize_list_wraps_makefile_errors(self):
         """Reader.randomize_list() should wrap filesystem failures into ReaderError."""
@@ -230,13 +229,15 @@ class TestReaderExtra(unittest.TestCase):
         reader = self.make_reader()
 
         with patch('src.lib.reader.reader.filesystem.makefile', return_value='/tmp/out.txt'), \
-                patch('src.lib.reader.reader.sys', return_value=SimpleNamespace(is_windows=False)), \
-                patch('src.lib.reader.reader.process.execute', side_effect=CoreSystemError('boom')):
+                patch('src.lib.reader.reader.filesystem.count_lines', return_value=7), \
+                patch('src.lib.reader.reader.shutil.which', return_value='/usr/bin/shuf'), \
+                patch('src.lib.reader.reader.subprocess.run', side_effect=subprocess.CalledProcessError(1, ['shuf'])), \
+                patch('src.lib.reader.reader.sys', return_value=SimpleNamespace(is_windows=False)):
             with self.assertRaises(ReaderError):
                 reader.randomize_list('directories', 'tmplist')
 
-    def test_count_total_lines_uses_random_tmp_list_and_caches_result(self):
-        """Reader.count_total_lines() should use tmplist in random mode and then reuse cached count."""
+    def test_count_total_lines_uses_random_source_list_before_shuffle_and_caches_result(self):
+        """Reader.count_total_lines() should count the source list before randomization and then reuse cached count."""
 
         reader = self.make_reader({
             'list': 'directories',
@@ -258,7 +259,7 @@ class TestReaderExtra(unittest.TestCase):
         self.assertEqual(first, 11)
         self.assertEqual(second, 11)
         self.assertEqual(reader.total_lines, 11)
-        count_mock.assert_called_once_with('/tmp/tmplist.txt')
+        count_mock.assert_called_once_with('/tmp/directories.txt')
 
     def test_count_total_lines_uses_existing_counter_without_filesystem_call(self):
         """Reader.count_total_lines() should return cached counter without recounting."""
@@ -369,6 +370,78 @@ class TestReaderExtra(unittest.TestCase):
         )
 
         self.assertEqual(result, 'https://example.com:8443/api/users')
+
+    def test_randomize_list_uses_external_wordlist_source(self):
+        """Reader.randomize_list() should shuffle the configured external wordlist."""
+
+        reader = self.make_reader({
+            'list': 'directories',
+            'torlist': 'external-tor.txt',
+            'use_random': True,
+            'use_extensions': False,
+            'use_ignore_extensions': False,
+            'is_external_wordlist': True,
+            'wordlist': '/tmp/external list.txt',
+            'is_standalone_proxy': False,
+            'is_external_torlist': False,
+            'prefix': '',
+        })
+
+        with patch('src.lib.reader.reader.filesystem.makefile', return_value='/tmp/out.txt'), \
+                patch('src.lib.reader.reader.filesystem.count_lines', return_value=3), \
+                patch.object(reader, '_has_system_shuf', return_value=True), \
+                patch.object(reader, '_run_system_shuf') as shuf_mock, \
+                patch('src.lib.reader.reader.sys', return_value=SimpleNamespace(is_windows=False)):
+            reader.randomize_list(target='directories', output='tmplist')
+
+        shuf_mock.assert_called_once_with('/tmp/external list.txt', '/tmp/out.txt')
+        self.assertEqual(reader.total_lines, 3)
+
+    def test_filter_by_extension_uses_external_wordlist_source(self):
+        """Reader.filter_by_extension() should filter the external wordlist, not the bundled one."""
+
+        reader = self.make_reader({
+            'list': 'directories',
+            'torlist': 'external-tor.txt',
+            'use_random': False,
+            'use_extensions': True,
+            'use_ignore_extensions': False,
+            'is_external_wordlist': True,
+            'wordlist': '/tmp/external.txt',
+            'is_standalone_proxy': False,
+            'is_external_torlist': False,
+            'prefix': '',
+        })
+
+        with patch('src.lib.reader.reader.filesystem.read', return_value=['admin.php\n', 'notes.txt\n']) as read_mock, \
+                patch('src.lib.reader.reader.filesystem.makefile'), \
+                patch('src.lib.reader.reader.filesystem.writelist') as write_mock:
+            reader.filter_by_extension('directories', 'extensionlist', ['php'])
+
+        read_mock.assert_called_once_with('/tmp/external.txt')
+        write_mock.assert_called_once_with('/tmp/extensionlist.txt', ['admin.php'], '\n')
+        self.assertEqual(reader.total_lines, 1)
+
+    def test_count_total_lines_uses_filtered_source_before_randomization(self):
+        """Reader.count_total_lines() should count the filtered source before tmplist exists."""
+
+        reader = self.make_reader({
+            'list': 'directories',
+            'torlist': 'external-tor.txt',
+            'use_random': True,
+            'use_extensions': True,
+            'use_ignore_extensions': False,
+            'is_external_wordlist': False,
+            'wordlist': '/tmp/external.txt',
+            'is_standalone_proxy': False,
+            'is_external_torlist': False,
+            'prefix': '',
+        })
+
+        with patch('src.lib.reader.reader.filesystem.count_lines', return_value=7) as count_mock:
+            self.assertEqual(reader.count_total_lines(), 7)
+
+        count_mock.assert_called_once_with('/tmp/extensionlist.txt')
 
 if __name__ == '__main__':
     unittest.main()

@@ -238,7 +238,7 @@ Short form:
 opendoor --host https://example.com -r 5
 ```
 
-### Threads
+### Threads (1 ~ 50)
 
 ```shell
 opendoor --host https://example.com --threads 20

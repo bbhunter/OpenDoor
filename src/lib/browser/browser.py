@@ -29,6 +29,7 @@ from src.core import request_proxy
 from src.core import request_https
 from src.core import response
 from src.core import socket
+from src.core import sys as output
 from src.lib.reader import Reader, ReaderError
 from src.lib.reporter import Reporter, ReporterError
 from src.lib.tpl import Tpl as tpl
@@ -212,6 +213,39 @@ class Browser(Filter):
                 tpl.warning(msg='Session checkpoint failed during interruption: {0}'.format(error))
             raise
 
+    @staticmethod
+    def __render_fingerprint_bar(current, total, width=24):
+        """
+        Render an ASCII progress bar for fingerprinting.
+
+        :param int current: current progress position
+        :param int total: total progress positions
+        :param int width: bar width in characters
+        :return: str
+        """
+
+        safe_total = max(int(total or 1), 1)
+        safe_current = min(max(int(current or 0), 0), safe_total)
+        filled = int(round(width * safe_current / float(safe_total)))
+        empty = max(width - filled, 0)
+        return '[{0}{1}] {2}'.format('#' * filled, '-' * empty, helper.percent(safe_current, safe_total))
+
+    def __fingerprint_progress(self, current, total, label):
+        """
+        Print fingerprinting progress on one dynamic console line.
+
+        :param int current: current progress position
+        :param int total: total progress positions
+        :param str label: current fingerprinting stage
+        :return: None
+        """
+
+        bar = self.__render_fingerprint_bar(current, total)
+        tpl.line_log(msg='Fingerprint {0} {1}'.format(bar, label), status='info')
+
+        if int(current or 0) >= int(total or 1):
+            output.writeln('')
+
     def fingerprint(self):
         """
         Run heuristic technology fingerprinting before the main scan.
@@ -233,7 +267,11 @@ class Browser(Filter):
             if self.__client is None:
                 self.__start_request_provider()
 
-            result = Fingerprint(config=self.__config, client=self.__client).detect()
+            result = Fingerprint(
+                config=self.__config,
+                client=self.__client,
+                progress_callback=self.__fingerprint_progress,
+            ).detect()
             self.__result['fingerprint'] = result
 
             tpl.debug(

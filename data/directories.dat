@@ -8708,6 +8708,7 @@ account/keys
 account/kyc
 account/languages
 account/localization
+Account/login
 account/login
 account/login.asp
 account/login.htm
@@ -15396,6 +15397,7 @@ adminphpMyAdmin
 adminpol_log.txt
 adminpool
 adminpool.php
+adminportal
 adminpp
 adminpp.php
 adminPR24

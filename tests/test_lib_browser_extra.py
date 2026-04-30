@@ -117,6 +117,40 @@ class TestBrowserExtra(unittest.TestCase):
 
         return br
 
+    def test_render_fingerprint_bar_clamps_values(self):
+        """Browser should render a bounded fingerprint progress bar."""
+
+        self.assertEqual(Browser._Browser__render_fingerprint_bar(0, 4, width=4), '[----] 0.0%')
+        self.assertEqual(Browser._Browser__render_fingerprint_bar(2, 4, width=4), '[##--] 50.0%')
+        self.assertEqual(Browser._Browser__render_fingerprint_bar(9, 4, width=4), '[####] 100.0%')
+        self.assertEqual(Browser._Browser__render_fingerprint_bar(-1, 0, width=4), '[----] 0.0%')
+
+    def test_fingerprint_progress_writes_line_without_final_newline(self):
+        """Browser fingerprint progress should update the inline console line."""
+
+        browser = self.make_browser()
+
+        with patch('src.lib.browser.browser.tpl.line_log') as line_log_mock, patch(
+            'src.lib.browser.browser.output.writeln'
+        ) as writeln_mock:
+            browser._Browser__fingerprint_progress(1, 4, 'root')
+
+        line_log_mock.assert_called_once_with(msg='Fingerprint [######------------------] 25.0% root', status='info')
+        writeln_mock.assert_not_called()
+
+    def test_fingerprint_progress_writes_final_newline(self):
+        """Browser fingerprint progress should finish the dynamic line on completion."""
+
+        browser = self.make_browser()
+
+        with patch('src.lib.browser.browser.tpl.line_log') as line_log_mock, patch(
+            'src.lib.browser.browser.output.writeln'
+        ) as writeln_mock:
+            browser._Browser__fingerprint_progress(4, 4, 'done')
+
+        line_log_mock.assert_called_once_with(msg='Fingerprint [########################] 100.0% done', status='info')
+        writeln_mock.assert_called_once_with('')
+
     def test_request_with_waf_safe_mode_active_without_sleep(self):
         """Browser should serialize through safe mode without sleeping when slot is already available."""
 

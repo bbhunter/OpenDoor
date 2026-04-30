@@ -104,6 +104,57 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - TYPO3
 - Umbraco
 - WordPress
+- 3dCart
+- Adobe Business Catalyst
+- AEM
+- Ametys CMS
+- Amiro.CMS
+- Apostrophe CMS
+- BigTree CMS
+- BrowserCMS
+- CKAN
+- CMS CONTENIDO
+- CMS Made Simple
+- CMSimple
+- DataLife Engine
+- DNN Platform
+- Dynamicweb
+- EPiServer
+- ExpressionEngine
+- Fork CMS
+- GetSimple CMS
+- Hippo CMS
+- ImpressPages CMS
+- Kooboo CMS
+- Liferay
+- Microsoft SharePoint
+- Mura CMS
+- OpenCms
+- Orchard CMS
+- Percussion CMS
+- PencilBlue
+- phpCMS
+- phpWind
+- Quick.Cms
+- RoundCube Webmail
+- Serendipity
+- SilverStripe
+- Sitecore
+- Sitefinity
+- Subrion CMS
+- Sulu
+- Textpattern CMS
+- TiddlyWiki
+- Tiki Wiki CMS Groupware
+- UMI.CMS
+- WebGUI
+- WebsiteBaker CMS
+- Wolf CMS
+- XOOPS
+- XpressEngine
+- e107
+- eZ Publish
+- sNews
 
 ### E-commerce
 
@@ -114,6 +165,21 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - Shopify
 - Shopware
 - WooCommerce
+- BigCommerce
+- CS-Cart
+- CubeCart
+- EC-CUBE
+- Odoo
+- Salesforce Commerce Cloud
+- ShopFA
+- Shoper
+- Shopery
+- Shoptet
+- Smartstore
+- Spree
+- WHMCS
+- Zen Cart CMS
+- ePages
 
 ### Frameworks and app platforms
 
@@ -148,6 +214,11 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - Tilda
 - Webflow
 - Wix
+- Blogger
+- Bubble
+- GoDaddy Website Builder
+- Jimdo
+- Weebly
 
 ### Static and docs generators
 
@@ -156,6 +227,7 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - Jekyll
 - MkDocs
 - VitePress
+- AsciiDoc
 
 ### Infrastructure providers and hosting edge signals
 

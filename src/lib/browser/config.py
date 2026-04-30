@@ -99,9 +99,9 @@ class Config(object):
         self._torlist = '' if 'torlist' not in params or params.get('torlist') is None else params.get('torlist')
         self._is_random_user_agent = params.get('random_agent')
         self._sniff = self._normalize_csv(params.get('sniff'))
-        self._is_random_list = params.get('random_list') is not None
-        self._is_extension_filter = params.get('extensions') is not None
-        self._is_ignore_extension_filter = params.get('ignore_extensions') is not None
+        self._is_random_list = params.get('random_list') is True
+        self._is_extension_filter = len(self._extensions or []) > 0
+        self._is_ignore_extension_filter = len(self._ignore_extensions or []) > 0
         self._user_agent = self.DEFAULT_USER_AGENT
         self._threads = self.DEFAULT_MIN_THREADS if params.get('threads') is None else params.get('threads')
         self._include_status = self._normalize_csv(params.get('include_status'))
@@ -564,13 +564,13 @@ class Config(object):
     def extensions(self):
         """Extensions resolver."""
 
-        return self._extensions
+        return [] if self._extensions is None else self._extensions
 
     @property
     def ignore_extensions(self):
         """Ignore extensions resolver."""
 
-        return self._ignore_extensions
+        return [] if self._ignore_extensions is None else self._ignore_extensions
 
     @property
     def is_recursive(self):
