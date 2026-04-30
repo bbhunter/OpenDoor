@@ -167,6 +167,39 @@ class HeaderBypassProbe(object):
         except (IndexError, TypeError, ValueError):
             return None
 
+    @staticmethod
+    def response_status(response_data):
+        """
+        Resolve normalized response status from handled response data.
+
+        :param tuple response_data: handled response data
+        :return: str
+        """
+
+        try:
+            return str(response_data[0])
+        except (IndexError, TypeError):
+            return ''
+
+    def is_waf_blocked_probe_candidate(self, response_data):
+        """
+        Check whether WAF detection should unlock bypass probes for this response.
+
+        This covers WAF/challenge responses that do not use classic 401/403 codes,
+        for example 301/302 challenge redirects.
+
+        :param tuple response_data: handled response data
+        :return: bool
+        """
+
+        if self.response_status(response_data) != 'blocked':
+            return False
+
+        return (
+            getattr(self.__config, 'is_waf_safe_mode', False) is True
+            or getattr(self.__config, 'is_waf_detect', False) is True
+        )
+
     def should_probe(self, response_data):
         """
         Decide whether header bypass probes should run for the response.
@@ -178,7 +211,10 @@ class HeaderBypassProbe(object):
         if True is not getattr(self.__config, 'is_header_bypass', False):
             return False
 
-        return self.response_code(response_data) in self.__config.header_bypass_status
+        if self.response_code(response_data) in self.__config.header_bypass_status:
+            return True
+
+        return self.is_waf_blocked_probe_candidate(response_data)
 
     def build_variants(self, url):
         """

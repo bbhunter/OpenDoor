@@ -1,6 +1,6 @@
 # 🧩 Header Injection Bypass
 
-Header Injection Bypass is an opt-in OpenDoor feature for authorized testing of blocked `401` and `403` resources.
+Header Injection Bypass is an opt-in OpenDoor feature for authorized testing of blocked `401` and `403` resources, plus WAF-classified blocked responses when WAF detection or WAF-safe mode is enabled.
 
 It sends controlled, temporary per-request headers and records exact evidence when a blocked response changes to a meaningful result.
 
@@ -17,7 +17,7 @@ opendoor \
   --header-bypass
 ```
 
-By default, OpenDoor probes `401` and `403` responses.
+By default, OpenDoor probes `401` and `403` responses. When a response is classified as `blocked` by WAF detection, `--header-bypass` can also probe it even if the HTTP status is a WAF/challenge redirect such as `301` or `302`. Regular redirects are not probed unless their status is explicitly added through `--header-bypass-status`.
 
 ---
 
@@ -35,6 +35,8 @@ opendoor \
 ```
 
 Use WAF-safe mode, lower thread counts, delays, and longer timeouts for cautious scans of protected authorized targets.
+
+With `--debug 1`, OpenDoor also reports the header-bypass lifecycle: enabled configuration, skipped WAF-blocked responses, probe start, candidate detection, and no-candidate completion. This makes it visible whether `--header-bypass` is active or simply not triggered by the current response.
 
 ---
 

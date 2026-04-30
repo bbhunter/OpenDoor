@@ -84,6 +84,19 @@ class Debug(DebugProvider):
 
         return True
 
+    def debug_header_bypass(self):
+        """Debug header-bypass configuration."""
+
+        if self.__level > 0 and self.__cfg.is_header_bypass is True:
+            tpl.debug(
+                key='header_bypass_enabled',
+                statuses=','.join([str(status) for status in self.__cfg.header_bypass_status]),
+                limit=self.__cfg.header_bypass_limit,
+                headers=len(self.__cfg.header_bypass_headers)
+            )
+
+        return True
+
     def debug_proxy_pool(self):
         """Debug proxy pool message."""
 
@@ -161,13 +174,22 @@ class Debug(DebugProvider):
             )
             self.__catched = True
         else:
+            request_uri = tpl.line(
+                msg=urlpath,
+                color='white'
+            )
+
             if self.__level != -1:
                 tpl.line_log(
-                    key='scan_progress',
+                    key='get_item',
                     percent=percentage,
                     current='{0:0{l}d}'.format(kwargs.get('items_size', 0), l=total_len),
                     total=kwargs.get('total_size', 1),
+                    item=request_uri,
+                    size=kwargs.get('content_size'),
+                    code=kwargs.get('response_code', '-'),
                 )
+
             self.__catched = False
             if kwargs.get('items_size', 0) == kwargs.get('total_size', 1):
                 sys.writels('', flush=True)

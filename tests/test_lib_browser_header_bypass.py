@@ -203,6 +203,31 @@ class TestHeaderBypassProbe(unittest.TestCase):
             ('not_found', 'https://example.com/admin', '40B', '404')
         ))
 
+    def test_probe_allows_waf_blocked_status_outside_configured_list(self):
+        """WAF detection should unlock probes for non-standard blocked status codes."""
+
+        cfg = self.make_config(
+            is_waf_safe_mode=True,
+            is_waf_detect=True,
+            header_bypass_status=[401, 403],
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        self.assertTrue(probe.should_probe(('blocked', 'https://example.com/admin', '0B', '301')))
+        self.assertFalse(probe.should_probe(('redirect', 'https://example.com/admin', '0B', '301')))
+
+    def test_probe_requires_waf_mode_for_blocked_status_override(self):
+        """Blocked non-standard statuses should not bypass configured codes without WAF mode."""
+
+        cfg = self.make_config(
+            is_waf_safe_mode=False,
+            is_waf_detect=False,
+            header_bypass_status=[401, 403],
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        self.assertFalse(probe.should_probe(('blocked', 'https://example.com/admin', '0B', '301')))
+
     def test_response_code_handles_malformed_response_data(self):
         """Response code resolver should tolerate malformed response tuples."""
 

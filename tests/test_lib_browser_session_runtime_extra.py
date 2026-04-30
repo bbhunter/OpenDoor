@@ -84,6 +84,7 @@ class TestBrowserSessionRuntimeExtra(unittest.TestCase):
         setattr(br, '_Browser__config', self.make_config(**config_overrides))
         setattr(br, '_Browser__debug', SimpleNamespace(
             debug_user_agents=MagicMock(),
+            debug_header_bypass=MagicMock(),
             debug_list=MagicMock(),
         ))
         setattr(br, '_Browser__pool', SimpleNamespace(

@@ -1,7 +1,7 @@
 CHANGELOG
 =======
 
-v5.13.2 (30.04.2026)
+v5.13.2 (31.04.2026)
 ---------------------------
 - (enhancement) added visible progress output for `--fingerprint`
 - (enhancement) extended CMS fingerprinting with a larger passive CMS catalog
@@ -10,6 +10,8 @@ v5.13.2 (30.04.2026)
 - (enhancement) kept extended fingerprinting lightweight without adding aggressive CMS probing
 - (enhancement) removed foreign project-specific prefixes from internal fingerprint catalog names
 - (enhancement) hardened wordlist orchestration for `--random-list`
+- (enhancement) replace json2html conversion with built-in HTML report renderer
+- (enhancement) preserve detailed report_items for WAF and header-bypass evidence
 - (fix) fixed `--random-list` behavior on macOS when GNU `shuf` is not installed
 - (fix) replaced shell-based `shuf` command construction with safe subprocess execution
 - (fix) added Python shuffle fallback for systems without `shuf`
@@ -17,11 +19,12 @@ v5.13.2 (30.04.2026)
 - (fix) preserved external wordlist handling when randomization is enabled
 - (fix) tightened boolean normalization for `random_list`, `extensions` and `ignore_extensions`
 - (docs) updated fingerprinting documentation with the expanded CMS coverage
+- (dependency) remove `json2html` from runtime and dev dependency checks
 - (tests) added regression coverage for fingerprint progress rendering and callback flow
 - (tests) added regression coverage for Sitecore, Microsoft SharePoint, BigCommerce and RoundCube Webmail detection
 - (tests) added regression coverage for wordlist randomization backend selection and fallback behavior
 - (tests) added regression coverage for external wordlist orchestration with randomization and extensions
-- (tests) full unittest suite passes after integration (`1189` tests)
+- (tests) full unittest suite passes after integration (`1201python -m coverage report -m` tests)
 - (tests) coverage gate passes at `99%`
 
 v5.13.1 (30.04.2026)

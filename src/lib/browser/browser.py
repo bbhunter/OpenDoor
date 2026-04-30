@@ -173,6 +173,7 @@ class Browser(Filter):
         """
 
         self.__debug.debug_user_agents()
+        self.__debug.debug_header_bypass()
         self.__debug.debug_list(total_lines=self.__pool.total_items_size)
         self.__ensure_session_runtime_state()
 
@@ -791,9 +792,25 @@ class Browser(Filter):
             return
 
         if True is not self.__header_bypass.should_probe(base_response_data):
+            if (
+                getattr(self.__config, 'is_header_bypass', False) is True
+                and HeaderBypassProbe.response_status(base_response_data) == 'blocked'
+            ):
+                tpl.debug(
+                    key='header_bypass_skipped',
+                    status=HeaderBypassProbe.response_code(base_response_data) or '-',
+                    statuses=','.join([str(status) for status in self.__config.header_bypass_status])
+                )
             return
 
-        for variant in self.__header_bypass.build_variants(url):
+        variants = self.__header_bypass.build_variants(url)
+        tpl.debug(
+            key='header_bypass_probing',
+            status=HeaderBypassProbe.response_code(base_response_data) or '-',
+            variants=len(variants)
+        )
+
+        for variant in variants:
             headers = {variant.get('header'): variant.get('value')}
             response_object = self.__request_with_waf_safe_mode(url, extra_headers=headers)
 
@@ -813,6 +830,12 @@ class Browser(Filter):
 
             if HeaderBypassProbe.is_promising(base_response_data, probe_response_data):
                 metadata = HeaderBypassProbe.metadata(variant, base_response_data, probe_response_data)
+                tpl.debug(
+                    key='header_bypass_candidate',
+                    header=metadata.get('bypass_header'),
+                    from_code=metadata.get('bypass_from_code') or '-',
+                    to_code=metadata.get('bypass_to_code') or '-'
+                )
                 self.__catch_report_data(
                     'bypass',
                     probe_response_data[1],
@@ -821,6 +844,8 @@ class Browser(Filter):
                     metadata=metadata
                 )
                 return
+
+        tpl.debug(key='header_bypass_finished')
 
     def __http_request(self, url, depth=0):
         """

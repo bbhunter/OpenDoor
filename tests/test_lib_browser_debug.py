@@ -84,6 +84,39 @@ class TestBrowserDebug(unittest.TestCase):
 
         self.assertEqual(debug_mock.call_count, 2)
 
+    def test_debug_header_bypass_logs_configuration_when_enabled(self):
+        """Debug.debug_header_bypass() should expose active header-bypass settings."""
+
+        cfg = Config({
+            'debug': 1,
+            'method': 'HEAD',
+            'header_bypass': True,
+            'header_bypass_status': ['401', '403'],
+            'header_bypass_limit': 12,
+            'header_bypass_headers': ['X-Original-URL', 'X-Forwarded-For'],
+            'reports': 'std',
+        })
+        with patch('sys.stdout', new=StringIO()):
+            debug = Debug(cfg)
+
+        with patch('src.lib.browser.debug.tpl.debug') as debug_mock:
+            self.assertTrue(debug.debug_header_bypass())
+
+        debug_mock.assert_called_once_with(
+            key='header_bypass_enabled',
+            statuses='401,403',
+            limit=12,
+            headers=2
+        )
+
+    def test_debug_header_bypass_noops_when_disabled(self):
+        """Debug.debug_header_bypass() should not log when header-bypass is disabled."""
+
+        with patch('src.lib.browser.debug.tpl.debug') as debug_mock:
+            self.assertTrue(self.debug.debug_header_bypass())
+
+        debug_mock.assert_not_called()
+
     def test_debug_proxy_pool_logs_matching_mode(self):
         """Debug.debug_proxy_pool() should log the selected proxy mode."""
 
@@ -138,15 +171,32 @@ class TestBrowserDebug(unittest.TestCase):
         info_mock.assert_called_once()
         writels_mock.assert_called()
 
-    def test_debug_request_uri_logs_hidden_statuses_as_progress_only(self):
-        """Debug.debug_request_uri() should hide scanned paths for unhandled statuses."""
+    def test_debug_request_uri_logs_unhandled_statuses_as_scan_items(self):
+        """Debug.debug_request_uri() should keep dictionary scan URI visible for unhandled statuses."""
 
         with patch('src.lib.browser.debug.tpl.line_log') as line_log_mock, \
-                patch('src.lib.browser.debug.tpl.line', side_effect=lambda *args, **kwargs: kwargs.get('msg') or 'line'), \
+                patch('src.lib.browser.debug.tpl.line', side_effect=lambda *args, **kwargs: kwargs.get('msg') or kwargs.get('url') or 'line'), \
                 patch('src.lib.browser.debug.sys.writels') as writels_mock:
-            self.assertTrue(self.debug.debug_request_uri('ignored', 'http://test.local/data/', items_size=1, total_size=1, content_size='0B', response_code='-'))
+            self.assertTrue(
+                self.debug.debug_request_uri(
+                    'ignored',
+                    'http://test.local/data/',
+                    items_size=1,
+                    total_size=1,
+                    content_size='28KB',
+                    response_code='404',
+                )
+            )
 
-        line_log_mock.assert_called_once_with(key='scan_progress', percent='100.0%', current='1', total=1)
+        line_log_mock.assert_called_once_with(
+            key='get_item',
+            percent='100.0%',
+            current='1',
+            total=1,
+            item='/data/',
+            size='28KB',
+            code='404',
+        )
         writels_mock.assert_called_once_with('', flush=True)
 
     def test_debug_load_sniffer_plugin_logs_description(self):

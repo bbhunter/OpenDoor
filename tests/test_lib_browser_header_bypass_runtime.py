@@ -218,6 +218,59 @@ class TestBrowserHeaderBypassRuntime(unittest.TestCase):
         self.assertEqual(result['total']['bypass'], 0)
         self.assertEqual(result['total']['forbidden'], 1)
 
+    def test_http_request_probes_waf_blocked_redirect_when_waf_safe_mode_enabled(self):
+        """WAF-blocked redirects should trigger header-bypass probes in WAF-safe mode."""
+
+        br = self.make_browser(
+            is_waf_safe_mode=True,
+            is_waf_detect=True,
+            header_bypass_headers=['X-Original-URL'],
+            header_bypass_status=[401, 403],
+            header_bypass_limit=1,
+        )
+        br._Browser__client.request.side_effect = [
+            SimpleNamespace(),
+            SimpleNamespace(),
+        ]
+        br._Browser__response.handle.side_effect = [
+            ('blocked', 'https://example.com/admin', '0B', '301'),
+            ('success', 'https://example.com/admin', '90B', '200'),
+        ]
+
+        br._Browser__http_request('https://example.com/admin', depth=0)
+
+        self.assertEqual(br._Browser__client.request.call_count, 2)
+        br._Browser__client.request.assert_any_call(
+            'https://example.com/admin',
+            extra_headers={'X-Original-URL': '/admin'}
+        )
+        result = getattr(br, '_Browser__result')
+        self.assertEqual(result['total']['bypass'], 1)
+        self.assertEqual(result['report_items']['bypass'][0]['bypass_from_code'], '301')
+
+    def test_http_request_does_not_probe_regular_redirect_outside_configured_status(self):
+        """Regular redirects should not trigger header-bypass probes by default."""
+
+        br = self.make_browser(
+            is_waf_safe_mode=True,
+            is_waf_detect=True,
+            header_bypass_status=[401, 403],
+        )
+        br._Browser__client.request.return_value = SimpleNamespace()
+        br._Browser__response.handle.return_value = (
+            'redirect',
+            'https://example.com/admin',
+            '0B',
+            '301',
+        )
+
+        br._Browser__http_request('https://example.com/admin', depth=0)
+
+        br._Browser__client.request.assert_called_once_with('https://example.com/admin')
+        result = getattr(br, '_Browser__result')
+        self.assertEqual(result['total']['bypass'], 0)
+        self.assertEqual(result['total']['redirect'], 1)
+
     def test_request_with_waf_safe_mode_preserves_old_call_shape_without_extra_headers(self):
         """WAF-safe wrapper should not pass extra_headers=None to regular requests."""
 
