@@ -16,6 +16,7 @@
     Development: Stanislav WEB
 """
 
+import ipaddress
 import os
 import re
 import sys
@@ -33,6 +34,9 @@ class Filter(object):
     URL_REGEX = r"^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|(?:[-A-Za-z0-9]+\.)+([-A-Za-z]|\w){2,8})$"
     STATUS_RANGE_REGEX = re.compile(r'^\d{3}(?:-\d{3})?$')
     INTEGER_RANGE_REGEX = re.compile(r'^\d+(?:-\d+)?$')
+    IPV4_CIDR_REGEX = re.compile(r'^\d{1,3}(?:\.\d{1,3}){3}/\d{1,3}$')
+    IPV4_RANGE_REGEX = re.compile(r'^(\d{1,3}(?:\.\d{1,3}){3})-(\d{1,3}(?:\.\d{1,3}){3})$')
+    TARGET_EXPANSION_LIMIT = 65536
     HEADER_NAME_REGEX = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
 
     TRANSPORTS = ('direct', 'proxy', 'openvpn', 'wireguard')
@@ -316,18 +320,20 @@ class Filter(object):
             cleaned = Filter._clean_target(raw_target)
             if not cleaned:
                 continue
-            if cleaned in seen:
-                continue
 
-            host = Filter.host(cleaned)
-            scheme = Filter.scheme(cleaned)
-            targets.append({
-                'host': host,
-                'scheme': scheme,
-                'ssl': Filter.ssl(scheme),
-                'source': cleaned,
-            })
-            seen.add(cleaned)
+            for expanded_target in Filter._expand_target(cleaned):
+                if expanded_target in seen:
+                    continue
+
+                host = Filter.host(expanded_target)
+                scheme = Filter.scheme(expanded_target)
+                targets.append({
+                    'host': host,
+                    'scheme': scheme,
+                    'ssl': Filter.ssl(scheme),
+                    'source': expanded_target,
+                })
+                seen.add(expanded_target)
 
         if len(targets) <= 0 and raw_request is not None and raw_request.get('host'):
             scheme = raw_request.get('scheme')
@@ -390,6 +396,132 @@ class Filter(object):
         if not value or value.startswith('#'):
             return ''
         return value
+
+    @staticmethod
+    def _expand_target(value):
+        """
+        Expand supported batch target expressions.
+
+        IPv4 CIDR and inclusive IPv4 ranges are expanded before normal host
+        normalization. Plain URLs, domains and single IPs are returned as-is.
+
+        :param str value:
+        :raise FilterError:
+        :return: list[str]
+        """
+
+        if Filter.IPV4_CIDR_REGEX.match(value):
+            return Filter._expand_ipv4_cidr(value)
+
+        range_match = Filter.IPV4_RANGE_REGEX.match(value)
+        if range_match:
+            return Filter._expand_ipv4_range(range_match.group(1), range_match.group(2))
+
+        return [value]
+
+    @staticmethod
+    def _expand_ipv4_cidr(value):
+        """
+        Expand an IPv4 CIDR expression into host addresses.
+
+        :param str value:
+        :raise FilterError:
+        :return: list[str]
+        """
+
+        try:
+            network = ipaddress.ip_network(value, strict=False)
+        except ValueError as error:
+            raise FilterError('"{0}" is invalid IPv4 CIDR target. {1}'.format(value, error))
+
+        if network.version != 4:
+            raise FilterError('"{0}" is invalid target. Only IPv4 CIDR expansion is supported'.format(value))
+
+        hosts_count = Filter._ipv4_network_hosts_count(network)
+        Filter._validate_target_expansion_size(value, hosts_count)
+
+        return [str(address) for address in network.hosts()]
+
+    @staticmethod
+    def _expand_ipv4_range(start_value, end_value):
+        """
+        Expand an inclusive IPv4 address range.
+
+        :param str start_value:
+        :param str end_value:
+        :raise FilterError:
+        :return: list[str]
+        """
+
+        try:
+            start = ipaddress.ip_address(start_value)
+            end = ipaddress.ip_address(end_value)
+        except ValueError as error:
+            raise FilterError('"{0}-{1}" is invalid IPv4 range target. {2}'.format(
+                start_value,
+                end_value,
+                error
+            ))
+
+        if start.version != 4 or end.version != 4:
+            raise FilterError('"{0}-{1}" is invalid target. Only IPv4 range expansion is supported'.format(
+                start_value,
+                end_value
+            ))
+
+        start_int = int(start)
+        end_int = int(end)
+
+        if start_int > end_int:
+            raise FilterError('"{0}-{1}" is invalid IPv4 range target. Start must be less than or equal to end'.format(
+                start_value,
+                end_value
+            ))
+
+        count = end_int - start_int + 1
+        Filter._validate_target_expansion_size('{0}-{1}'.format(start_value, end_value), count)
+
+        return [str(ipaddress.ip_address(address)) for address in range(start_int, end_int + 1)]
+
+    @staticmethod
+    def _ipv4_network_hosts_count(network):
+        """
+        Return the amount of addresses generated by network.hosts().
+
+        :param ipaddress.IPv4Network network:
+        :return: int
+        """
+
+        if network.prefixlen == 32:
+            return 1
+
+        if network.prefixlen == 31:
+            return 2
+
+        return max(int(network.num_addresses) - 2, 0)
+
+    @staticmethod
+    def _validate_target_expansion_size(value, count):
+        """
+        Guard against accidental huge batch expansions.
+
+        :param str value:
+        :param int count:
+        :raise FilterError:
+        :return: None
+        """
+
+        if count <= 0:
+            raise FilterError('"{0}" produced no scan targets'.format(value))
+
+        if count > Filter.TARGET_EXPANSION_LIMIT:
+            raise FilterError(
+                '"{0}" expands to {1} targets. Maximum supported expansion is {2}'.format(
+                    value,
+                    count,
+                    Filter.TARGET_EXPANSION_LIMIT
+                )
+            )
 
     @staticmethod
     def explicit_scheme(value, key='--scheme'):

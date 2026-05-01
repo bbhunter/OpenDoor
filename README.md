@@ -55,7 +55,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - recursive directory discovery;
 - subdomain enumeration;
 - multi-threading scans;
-- single target, target file, and stdin input modes;
+- single target, target file, stdin, IPv4 CIDR, and IPv4 range input modes;
 - custom wordlists, prefixes, and extension filters;
 - custom request headers, cookies, and raw HTTP request templates;
 - response filters by status, size, text, regex, and body length;
@@ -216,11 +216,23 @@ opendoor --host example.com --scan subdomains
 opendoor --hostlist targets.txt
 ```
 
+Target files may mix URLs, domains, IPv4 addresses, IPv4 CIDR blocks, and inclusive IPv4 ranges:
+
+```text
+https://example.com
+app.example.com
+192.168.1.10
+192.168.1.0/24
+192.168.1.10-192.168.1.50
+```
+
 ### Standard input
 
 ```bash
 cat targets.txt | opendoor --stdin
 ```
+
+The same mixed target format is supported through STDIN.
 
 ### Low-noise scan
 

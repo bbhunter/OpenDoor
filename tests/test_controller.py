@@ -311,6 +311,44 @@ class TestController(unittest.TestCase):
         browser_second.scan.assert_called_once_with()
         browser_second.done.assert_called_once_with()
 
+    def test_scan_action_should_continue_after_batch_target_error(self):
+        """Controller.scan_action() should continue multi-target scans after a target failure."""
+
+        browser_second = MagicMock()
+        browser_second.result = {'total': {'success': 1}}
+        params = {
+            'targets': [
+                {'host': 'broken.example.com', 'scheme': 'http://', 'ssl': False},
+                {'host': 'next.example.com', 'scheme': 'https://', 'ssl': True},
+            ],
+            'reports': 'std',
+        }
+
+        with patch('src.controller.browser', side_effect=[BrowserError('boom'), browser_second]) as browser_mock, \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.tpl.warning') as warning_mock, \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 1)
+        self.assertEqual(browser_mock.call_count, 2)
+        browser_second.scan.assert_called_once_with()
+        browser_second.done.assert_called_once_with()
+        self.assertEqual(warning_mock.call_count, 2)
+        warning_mock.assert_any_call(msg='Target scan failed: broken.example.com. str: boom')
+
+    def test_format_target_failures_should_handle_missing_values(self):
+        """Controller._format_target_failures() should format batch scan failures."""
+
+        self.assertEqual(
+            Controller._format_target_failures([
+                {'host': 'first.example.com', 'error': 'boom'},
+                {'host': None, 'error': ''},
+            ]),
+            'first.example.com: boom; -: -'
+        )
+
     def test_resolve_scan_targets_falls_back_to_single_host(self):
         """Controller._resolve_scan_targets() should preserve the single-host flow."""
 
@@ -659,6 +697,45 @@ class TestController(unittest.TestCase):
         self.assertEqual(transport.start.call_count, 2)
         self.assertEqual(transport.stop.call_count, 2)
         self.assertEqual(browser_mock.call_count, 2)
+
+    def test_scan_action_should_continue_after_per_target_transport_error(self):
+        """Controller.scan_action() should continue per-target transport batches after one failure."""
+
+        browser_second = MagicMock()
+        browser_second.result = {'total': {'success': 1}}
+
+        transport = MagicMock()
+        transport.transport = 'wireguard'
+        transport.rotate_mode = 'per-target'
+        transport.current_profile_name = 'nl.conf'
+        transport.start.side_effect = [NetworkTransportError('wg failed'), None]
+
+        params = {
+            'targets': [
+                {'host': 'first.example.com', 'scheme': 'http://', 'ssl': False},
+                {'host': 'second.example.com', 'scheme': 'https://', 'ssl': True},
+            ],
+            'reports': 'std',
+            'transport': 'wireguard',
+            'transport_profiles': '/tmp/profiles.txt',
+            'transport_rotate': 'per-target',
+        }
+
+        with patch('src.controller.NetworkTransportManager', return_value=transport), \
+                patch('src.controller.browser', return_value=browser_second) as browser_mock, \
+                patch('src.controller.reporter.is_reported', return_value=False), \
+                patch('src.controller.tpl.info'), \
+                patch('src.controller.tpl.warning') as warning_mock, \
+                patch('src.controller.reporter.default', 'std'):
+            actual = Controller.scan_action(params)
+
+        self.assertEqual(actual, 1)
+        self.assertEqual(transport.rotate.call_count, 2)
+        self.assertEqual(transport.start.call_count, 2)
+        transport.stop.assert_called_once_with()
+        browser_mock.assert_called_once()
+        browser_second.scan.assert_called_once_with()
+        warning_mock.assert_any_call(msg='Target scan failed: first.example.com. wg failed')
 
     def test_scan_action_should_stop_transport_when_scan_fails(self):
         """Controller.scan_action() should stop transport when browser scan fails."""

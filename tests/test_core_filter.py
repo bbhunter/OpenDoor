@@ -155,6 +155,66 @@ class TestFilter(unittest.TestCase):
             {'host': 'second.example.com', 'scheme': 'http://', 'ssl': False, 'source': 'second.example.com'},
         ])
 
+    def test_targets_should_expand_ipv4_cidr_from_hostlist(self):
+        """Filter.targets() should expand IPv4 CIDR entries and deduplicate expanded targets."""
+
+        with tempfile.NamedTemporaryFile('w+', delete=False, encoding='utf-8') as handle:
+            handle.write('192.168.1.0/30\n192.168.1.1\nhttps://example.com\n')
+            filepath = handle.name
+
+        try:
+            actual = Filter.targets({'hostlist': filepath})
+        finally:
+            os.unlink(filepath)
+
+        self.assertEqual(actual, [
+            {'host': '192.168.1.1', 'scheme': 'http://', 'ssl': False, 'source': '192.168.1.1'},
+            {'host': '192.168.1.2', 'scheme': 'http://', 'ssl': False, 'source': '192.168.1.2'},
+            {'host': 'example.com', 'scheme': 'https://', 'ssl': True, 'source': 'https://example.com'},
+        ])
+
+    def test_targets_should_expand_ipv4_range_from_stdin(self):
+        """Filter.targets() should expand inclusive IPv4 ranges from STDIN."""
+
+        with patch('src.core.options.filter.sys.stdin', io.StringIO('192.168.1.10-192.168.1.12\n')):
+            actual = Filter.targets({'stdin': True})
+
+        self.assertEqual(actual, [
+            {'host': '192.168.1.10', 'scheme': 'http://', 'ssl': False, 'source': '192.168.1.10'},
+            {'host': '192.168.1.11', 'scheme': 'http://', 'ssl': False, 'source': '192.168.1.11'},
+            {'host': '192.168.1.12', 'scheme': 'http://', 'ssl': False, 'source': '192.168.1.12'},
+        ])
+
+    def test_targets_should_reject_invalid_ipv4_expansions(self):
+        """Filter.targets() should reject malformed CIDR and descending IPv4 ranges."""
+
+        with self.assertRaises(FilterError):
+            Filter.targets({'host': '192.168.1.0/33'})
+
+        with self.assertRaises(FilterError):
+            Filter.targets({'host': '192.168.1.10-192.168.1.1'})
+
+        with self.assertRaises(FilterError):
+            Filter.targets({'host': '999.168.1.1-999.168.1.2'})
+
+    def test_target_expansion_helpers_should_guard_edge_cases(self):
+        """Filter expansion helpers should cover IPv4 edge networks and safety limits."""
+
+        self.assertEqual(Filter._expand_ipv4_cidr('192.168.1.9/32'), ['192.168.1.9'])
+        self.assertEqual(Filter._expand_ipv4_cidr('192.168.1.10/31'), ['192.168.1.10', '192.168.1.11'])
+
+        with self.assertRaises(FilterError):
+            Filter._expand_ipv4_cidr('2001:db8::/126')
+
+        with self.assertRaises(FilterError):
+            Filter._expand_ipv4_range('2001:db8::1', '2001:db8::2')
+
+        with self.assertRaises(FilterError):
+            Filter._validate_target_expansion_size('empty', 0)
+
+        with self.assertRaises(FilterError):
+            Filter._validate_target_expansion_size('huge', Filter.TARGET_EXPANSION_LIMIT + 1)
+
     def test_targets_should_raise_for_missing_hostlist(self):
         """Filter.targets() should raise a FilterError when hostlist cannot be read."""
 

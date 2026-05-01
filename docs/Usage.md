@@ -45,7 +45,13 @@ Example `targets.txt`:
 https://example.com
 https://app.example.com
 example.org
+192.168.1.10
+192.168.1.0/24
+192.168.1.10-192.168.1.50
 ```
+
+Target lists support mixed URLs, domains, IPv4 addresses, IPv4 CIDR blocks, and inclusive IPv4 ranges.
+Expanded targets are deduplicated before scanning.
 
 ### Standard input
 
@@ -53,7 +59,7 @@ example.org
 cat targets.txt | opendoor --stdin
 ```
 
-This is useful when OpenDoor is part of a larger pipeline.
+This is useful when OpenDoor is part of a larger pipeline. STDIN accepts the same mixed target format as `--hostlist`.
 
 ### Resume from session
 

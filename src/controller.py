@@ -231,6 +231,8 @@ class Controller(object):
 
             transport = NetworkTransportManager(params)
 
+            target_failures = []
+
             if transport.rotate_mode == 'per-target':
                 for target in targets:
                     target_params = dict(params)
@@ -254,6 +256,10 @@ class Controller(object):
                                     fail_on_buckets
                                 )
                             )
+                    except (AttributeError, BrowserError, ReporterError, TplError, NetworkTransportError) as error:
+                        if len(targets) <= 1:
+                            raise
+                        target_failures.append(cls._record_target_failure(target_params, error))
                     finally:
                         if transport_started is True:
                             transport.stop()
@@ -271,7 +277,13 @@ class Controller(object):
                         target_params = dict(params)
                         target_params.update(target)
 
-                        scan_result = cls._scan_target(target_params)
+                        try:
+                            scan_result = cls._scan_target(target_params)
+                        except (AttributeError, BrowserError, ReporterError, TplError, NetworkTransportError) as error:
+                            if len(targets) <= 1:
+                                raise
+                            target_failures.append(cls._record_target_failure(target_params, error))
+                            continue
 
                         if ci_mode_enabled is True:
                             fail_on_matches.extend(
@@ -296,6 +308,12 @@ class Controller(object):
                     return 1
 
                 tpl.info(msg='CI/CD fail-on passed: no matched buckets. Exit code: 0')
+
+            if len(target_failures) > 0:
+                tpl.warning(msg='Completed with target errors: {0}. Exit code: 1'.format(
+                    cls._format_target_failures(target_failures)
+                ))
+                return 1
 
             return 0
 
@@ -408,6 +426,45 @@ class Controller(object):
                 })
 
         return matches
+
+    @staticmethod
+    def _record_target_failure(target_params, error):
+        """
+        Record and log a failed target without aborting a batch scan.
+
+        :param dict target_params:
+        :param Exception error:
+        :return: dict
+        """
+
+        failure = {
+            'host': target_params.get('host') or '-',
+            'error': str(error),
+        }
+
+        tpl.warning(msg='Target scan failed: {0}. {1}'.format(
+            failure.get('host'),
+            failure.get('error')
+        ))
+
+        return failure
+
+    @staticmethod
+    def _format_target_failures(failures):
+        """
+        Format target failures for terminal output.
+
+        :param list[dict] failures:
+        :return: str
+        """
+
+        return '; '.join([
+            '{0}: {1}'.format(
+                item.get('host') or '-',
+                item.get('error') or '-'
+            )
+            for item in failures
+        ])
 
     @staticmethod
     def _format_fail_on_matches(matches):

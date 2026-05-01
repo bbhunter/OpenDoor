@@ -1,6 +1,14 @@
 CHANGELOG
 =======
 
+v5.14.1 (01.05.2026)
+---------------------------
+- (enhancement) expanded target input parsing with IPv4 CIDR support for batch scans
+- (enhancement) added inclusive IPv4 range expansion for `--hostlist` and `--stdin` workflows
+- (enhancement) preserved mixed URL/domain/IP target files with deterministic deduplication before scanning
+- (enhancement) multi-target scans now continue after per-target scan or transport errors and return exit code `1`
+- (fix) documented CSV in the `--reports` help text
+
 v5.14.0 (01.05.2026)
 ---------------------------
 - (feature) added official Docker image distribution via GitHub Container Registry
