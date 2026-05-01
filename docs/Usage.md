@@ -464,7 +464,8 @@ Use this mode when scanning authorized targets protected by WAF, CDN, or anti-bo
 
 Header Injection Bypass is an opt-in feature for authorized testing of blocked resources.
 
-When enabled, OpenDoor probes configured blocked statuses with controlled, temporary per-request headers. If a probe changes a blocked response into a meaningful result, OpenDoor records it in the `bypass` result bucket with exact evidence.
+When enabled, OpenDoor probes configured blocked statuses with controlled, temporary per-request headers. `--header-bypass` flow also tries safe path-manipulation variants after header probes. 
+If a probe changes a blocked response into a meaningful result, OpenDoor records it in the `bypass` result bucket with exact evidence.
 
 ### Enable header-bypass probes
 
@@ -548,6 +549,23 @@ opendoor \
   --header-bypass-limit 0
 ```
 
+### Path-manipulation probes
+
+Path-manipulation probes are enabled automatically when `--header-bypass` is enabled.
+
+OpenDoor tries header-injection variants first, then safe path variants such as:
+
+| Variant | Example |
+|---|---|
+| `trailing-slash` | `/admin` → `/admin/` |
+| `double-leading-slash` | `/admin` → `//admin` |
+| `dot-segment` | `/admin` → `/admin/.` |
+| `semicolon-suffix` | `/admin` → `/admin;/` |
+| `case-variation` | `/admin` → `/Admin` |
+| `url-encoded-segment` | `/admin panel` → `/admin%20panel` |
+
+Path probes are controlled by the same `--header-bypass-limit` option.
+
 ### Reported evidence
 
 Successful candidates are stored in the `bypass` bucket.
@@ -556,9 +574,11 @@ Detailed report items include:
 
 | Field | Meaning |
 |---|---|
-| `bypass` | Bypass type, currently `header` |
-| `bypass_header` | Header that produced the candidate |
-| `bypass_value` | Header value used for the probe |
+| `bypass` | Bypass type: `header` or `path` |
+| `bypass_header` | Header that produced the candidate for header-based probes |
+| `bypass_variant` | Path-manipulation variant name for path-based probes |
+| `bypass_value` | Header value or path value used for the probe |
+| `bypass_url` | Full probe URL for path-based probes |
 | `bypass_from_code` | Original blocked status code |
 | `bypass_to_code` | Resulting status code |
 
@@ -759,7 +779,7 @@ Available report formats:
 | `html`   | Human-readable report                         |
 | `sqlite` | Structured local database for post-processing |
 
-When `--header-bypass` is enabled and a candidate is found, report formats preserve bypass evidence:
+When `--header-bypass` is enabled and a header or path candidate is found, report formats preserve bypass evidence:
 
 | Report | Header-bypass evidence |
 |---|---|

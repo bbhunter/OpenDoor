@@ -136,9 +136,69 @@ class TestHeaderBypassProbe(unittest.TestCase):
         )
         probe = HeaderBypassProbe(cfg)
 
-        self.assertEqual(probe.build_variants('https://example.com/admin'), [
+        self.assertEqual(probe.build_header_variants('https://example.com/admin'), [
             {'header': 'X-Real-IP', 'value': '127.0.0.1'},
         ])
+
+    def test_probe_builds_path_manipulation_variants(self):
+        """Probe should build deterministic path-manipulation variants after header probes."""
+
+        cfg = self.make_config(
+            header_bypass_headers=[],
+            header_bypass_ips=[],
+            header_bypass_limit=0,
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        variants = probe.build_path_variants('https://example.com/admin?tab=1')
+
+        self.assertIn({
+            'type': 'path',
+            'variant': 'trailing-slash',
+            'url': 'https://example.com/admin/?tab=1',
+            'value': '/admin/?tab=1',
+        }, variants)
+        self.assertIn({
+            'type': 'path',
+            'variant': 'double-leading-slash',
+            'url': 'https://example.com//admin?tab=1',
+            'value': '//admin?tab=1',
+        }, variants)
+        self.assertIn({
+            'type': 'path',
+            'variant': 'dot-segment',
+            'url': 'https://example.com/admin/.?tab=1',
+            'value': '/admin/.?tab=1',
+        }, variants)
+        self.assertIn({
+            'type': 'path',
+            'variant': 'semicolon-suffix',
+            'url': 'https://example.com/admin;/?tab=1',
+            'value': '/admin;/?tab=1',
+        }, variants)
+        self.assertIn({
+            'type': 'path',
+            'variant': 'case-variation',
+            'url': 'https://example.com/Admin?tab=1',
+            'value': '/Admin?tab=1',
+        }, variants)
+
+    def test_probe_keeps_header_variants_before_path_variants(self):
+        """Combined probes should keep existing header order before path manipulations."""
+
+        cfg = self.make_config(
+            header_bypass_headers=['X-Original-URL'],
+            header_bypass_ips=[],
+            header_bypass_limit=0,
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        variants = probe.build_variants('https://example.com/admin')
+
+        self.assertEqual(variants[0], {'header': 'X-Original-URL', 'value': '/admin'})
+        self.assertEqual(variants[1], {'header': 'X-Original-URL', 'value': '/'})
+        self.assertEqual(variants[2]['type'], 'path')
+        self.assertEqual(variants[2]['variant'], 'trailing-slash')
 
     def test_probe_reports_only_promising_transitions(self):
         """Only meaningful status transitions should be treated as bypass candidates."""
@@ -191,9 +251,108 @@ class TestHeaderBypassProbe(unittest.TestCase):
         )
         probe = HeaderBypassProbe(cfg)
 
-        self.assertEqual(probe.build_variants('https://example.com/private/admin?debug=1'), [
+        self.assertEqual(probe.build_header_variants('https://example.com/private/admin?debug=1'), [
             {'header': 'X-Unknown-Bypass-Header', 'value': '/private/admin?debug=1'},
         ])
+
+    def test_probe_metadata_supports_path_variant_report_fields(self):
+        """Path-bypass metadata should contain stable report fields."""
+
+        metadata = HeaderBypassProbe.metadata(
+            {
+                'type': 'path',
+                'variant': 'trailing-slash',
+                'url': 'https://example.com/admin/',
+                'value': '/admin/',
+            },
+            ('forbidden', 'https://example.com/admin', '10B', '403'),
+            ('success', 'https://example.com/admin/', '100B', '200')
+        )
+
+        self.assertEqual(metadata, {
+            'bypass': 'path',
+            'bypass_from_code': 403,
+            'bypass_to_code': 200,
+            'bypass_variant': 'trailing-slash',
+            'bypass_value': '/admin/',
+            'bypass_url': 'https://example.com/admin/',
+        })
+
+    def test_response_status_handles_malformed_response_data(self):
+        """Response status resolver should tolerate malformed response tuples."""
+
+        self.assertEqual(HeaderBypassProbe.response_status(None), '')
+        self.assertEqual(HeaderBypassProbe.response_status(()), '')
+
+    def test_probe_builds_encoded_path_variant_for_special_segment(self):
+        """Path variants should include encoded last-segment values when useful."""
+
+        cfg = self.make_config(
+            header_bypass_headers=[],
+            header_bypass_ips=[],
+            header_bypass_limit=0,
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        variants = probe.build_path_variants('https://example.com/admin panel?x=1')
+
+        self.assertIn({
+            'type': 'path',
+            'variant': 'url-encoded-segment',
+            'url': 'https://example.com/admin%20panel?x=1',
+            'value': '/admin%20panel?x=1',
+        }, variants)
+
+    def test_probe_skips_case_and_encoded_path_variants_without_last_segment(self):
+        """Path variant builder should skip case/encoding mutations without a usable segment."""
+
+        cfg = self.make_config(
+            header_bypass_headers=[],
+            header_bypass_ips=[],
+            header_bypass_limit=0,
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        root_variants = probe.build_path_variants('https://example.com/')
+        root_names = [variant['variant'] for variant in root_variants]
+        self.assertNotIn('case-variation', root_names)
+        self.assertNotIn('url-encoded-segment', root_names)
+
+        slash_variants = probe.build_path_variants('https://example.com/admin/')
+        slash_names = [variant['variant'] for variant in slash_variants]
+        self.assertNotIn('trailing-slash', slash_names)
+        self.assertNotIn('case-variation', slash_names)
+        self.assertNotIn('url-encoded-segment', slash_names)
+
+    def test_probe_skips_case_variant_when_last_segment_is_already_uppercase(self):
+        """Case-variation should not duplicate already-uppercase path segments."""
+
+        cfg = self.make_config(
+            header_bypass_headers=[],
+            header_bypass_ips=[],
+            header_bypass_limit=0,
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        variants = probe.build_path_variants('https://example.com/ADMIN')
+        names = [variant['variant'] for variant in variants]
+
+        self.assertNotIn('case-variation', names)
+
+    def test_probe_skips_double_leading_slash_for_already_double_slash_path(self):
+        """Double-leading-slash variant should not duplicate paths that already start with //."""
+
+        cfg = self.make_config(
+            header_bypass_headers=[],
+            header_bypass_ips=[],
+            header_bypass_limit=0,
+        )
+        probe = HeaderBypassProbe(cfg)
+
+        variants = probe.build_path_variants('https://example.com//admin')
+        names = [variant['variant'] for variant in variants]
+
+        self.assertNotIn('double-leading-slash', names)
 
     def test_probe_rejects_non_blocked_base_non_success_transition(self):
         """Non-success transitions from non-blocked base statuses should not be reported."""

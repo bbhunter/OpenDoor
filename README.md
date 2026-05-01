@@ -62,7 +62,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - smart auto-calibration for soft-404, wildcard, and catch-all responses;
 - technology fingerprint detection CMS, ecommerce platforms, frameworks;
 - passive WAF detection and WAF-safe scan mode;
-- controlled Header Injection Bypass probes for blocked `401` and `403` paths;
+- controlled header and path bypass probes for blocked `401` and `403` resources;
 - resumable scan sessions with checkpoint autosave;
 - CI/CD fail-on result bucket rules;
 - official Docker image distribution via GitHub Container Registry;
@@ -84,7 +84,7 @@ OpenDoor focuses on **context-aware discovery** instead of blind enumeration.
 |---|---|
 | **Fingerprint-first scanning** | OpenDoor can identify probable CMS platforms, frameworks, infrastructure providers, and WAF signals before deeper discovery. This helps you scan with context instead of blindly throwing a generic wordlist at the target. |
 | **WAF-aware behavior** | OpenDoor can detect probable WAF / anti-bot behavior and switch to a safer runtime profile with `--waf-safe-mode`, reducing noisy blocked scans and making defensive responses easier to understand. |
-| **Controlled header-bypass evidence** | OpenDoor can optionally probe blocked `401` and `403` paths with controlled per-request header-injection variants. It records exact evidence such as the header name, value, original status code, and resulting status code without mutating global scan headers. |
+| **Controlled bypass evidence** | OpenDoor can optionally probe blocked `401` and `403` resources with controlled header-injection and path-manipulation variants. It records exact evidence such as bypass type, header or path variant, probe value, original status code, and resulting status code without mutating global scan headers. |
 | **Multi-signal auto-calibration** | OpenDoor does not rely only on status code or response size. It compares multiple response signals such as body hashes, HTML structure, titles, redirects, stable headers, word count, line count, and normalized dynamic tokens to reduce soft-404 and wildcard false positives. |
 | **Transport-level workflows** | OpenDoor supports direct, proxy, OpenVPN, and WireGuard transport modes. It can also rotate transport profiles per target in authorized batch scans, which is not the same as manually starting a VPN before running a scanner. |
 | **Resumable long scans** | OpenDoor can save scan checkpoints and resume later. This matters when scans are interrupted by crashes, unstable networks, blocked routes, terminal disconnects, or long multi-target jobs. |
@@ -269,9 +269,9 @@ opendoor \
   --retries 5 \
   --delay 0.5
 ```
-### Header Injection Bypass probes
+### Header and path bypass probes
 
-Use this only on systems you are authorized to test. The feature is opt-in and probes blocked paths with temporary per-request headers.
+Use this only on systems you are authorized to test. The feature is opt-in and probes blocked resources with controlled temporary headers and safe path variants.
 
 ```bash
 opendoor \
@@ -282,6 +282,7 @@ opendoor \
   --header-bypass-limit 32 \
   --reports std,json,csv,sqlite
 ```
+When --header-bypass is enabled, OpenDoor first tries configured header-injection variants and then safe path-manipulation variants such as trailing slash, dot segment, semicolon suffix, case variation, and URL-encoded segment.
 Customize trigger statuses, trusted IP values, and headers:
 
 ```bash
@@ -292,7 +293,7 @@ opendoor \
   --header-bypass-status 401,403 \
   --header-bypass-ips 127.0.0.1,10.0.0.1 \
   --header-bypass-headers X-Original-URL,X-Rewrite-URL,X-Forwarded-For,X-Real-IP \
-  --reports json,html,sqlite
+  --reports json,html,sqlite,csv
 ```
 
 ### Proxy routing

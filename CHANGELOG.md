@@ -1,6 +1,18 @@
 CHANGELOG
 =======
 
+v5.14.2 (01.05.2026)
+---------------------------
+- (enhancement) extended `--header-bypass` with controlled path-manipulation probes after header-injection probes
+- (enhancement) added safe path-bypass variants: trailing slash, double leading slash, dot segment, semicolon suffix, case variation and URL-encoded segment
+- (enhancement) path-bypass probes are strict opt-in through the existing `--header-bypass` flow and do not change default scan behaviour
+- (enhancement) successful path-bypass candidates are stored in the existing `bypass` result bucket
+- (enhancement) added path-bypass report metadata: `bypass=path`, `bypass_variant`, `bypass_value`, `bypass_url`, `bypass_from_code` and `bypass_to_code`
+- (enhancement) JSON, HTML, CSV and SQLite reports preserve path-bypass evidence through detailed report items
+- (tests) added regression coverage for path-bypass generation, runtime reporting and debug output branches
+- (tests) full unittest suite passes after integration (`1221` tests)
+- (tests) coverage gate passes at `99%`
+
 v5.14.1 (01.05.2026)
 ---------------------------
 - (enhancement) expanded target input parsing with IPv4 CIDR support for batch scans

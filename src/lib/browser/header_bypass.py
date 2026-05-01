@@ -16,7 +16,7 @@
     Development Team: Stanislav WEB
 """
 
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse, urlunparse
 
 
 class HeaderBypassProbe(object):
@@ -216,7 +216,88 @@ class HeaderBypassProbe(object):
 
         return self.is_waf_blocked_probe_candidate(response_data)
 
-    def build_variants(self, url):
+    @staticmethod
+    def __append_query(path, query):
+        """
+        Append an existing query string to a path value.
+
+        :param str path: request path
+        :param str query: request query
+        :return: str
+        """
+
+        if query:
+            return '{0}?{1}'.format(path, query)
+
+        return path
+
+    @staticmethod
+    def __replace_path(parsed_url, path):
+        """
+        Rebuild URL with a mutated request path.
+
+        :param urllib.parse.ParseResult parsed_url: parsed URL
+        :param str path: mutated URL path
+        :return: str
+        """
+
+        return urlunparse((
+            parsed_url.scheme,
+            parsed_url.netloc,
+            path,
+            parsed_url.params,
+            parsed_url.query,
+            parsed_url.fragment,
+        ))
+
+    @staticmethod
+    def __case_variant(path):
+        """
+        Build a conservative case-manipulation variant.
+
+        :param str path: original request path
+        :return: str | None
+        """
+
+        if path in ('', '/'):
+            return None
+
+        head, sep, tail = path.rpartition('/')
+        if not tail:
+            return None
+
+        mutated_tail = tail[:1].upper() + tail[1:]
+        if mutated_tail == tail:
+            mutated_tail = tail.upper()
+
+        if mutated_tail == tail:
+            return None
+
+        return '{0}{1}{2}'.format(head, sep, mutated_tail)
+
+    @staticmethod
+    def __encoded_segment_variant(path):
+        """
+        Build a conservative URL-encoded last-segment variant.
+
+        :param str path: original request path
+        :return: str | None
+        """
+
+        if path in ('', '/'):
+            return None
+
+        head, sep, tail = path.rpartition('/')
+        if not tail:
+            return None
+
+        encoded_tail = quote(tail, safe='')
+        if encoded_tail == tail:
+            return None
+
+        return '{0}{1}{2}'.format(head, sep, encoded_tail)
+
+    def build_header_variants(self, url):
         """
         Build deterministic header variants for one blocked URL.
 
@@ -228,9 +309,7 @@ class HeaderBypassProbe(object):
         seen = set()
         parsed = urlparse(url)
         path = parsed.path or '/'
-
-        if parsed.query:
-            path += '?' + parsed.query
+        path_with_query = self.__append_query(path, parsed.query)
 
         origin = '{0}://{1}'.format(parsed.scheme, parsed.netloc)
         full_url = parsed.geturl()
@@ -255,7 +334,7 @@ class HeaderBypassProbe(object):
 
         for header in headers:
             if header in self.PATH_HEADERS:
-                add(header, path)
+                add(header, path_with_query)
                 add(header, '/')
                 continue
 
@@ -288,7 +367,80 @@ class HeaderBypassProbe(object):
                 add(header, origin)
                 continue
 
-            add(header, path)
+            add(header, path_with_query)
+
+        return variants
+
+    def build_path_variants(self, url):
+        """
+        Build deterministic path-manipulation variants for one blocked URL.
+
+        :param str url: blocked target URL
+        :return: list[dict]
+        """
+
+        variants = []
+        seen = set()
+        parsed = urlparse(url)
+        path = parsed.path or '/'
+
+        def add(name, mutated_path):
+            """
+            Add unique path variant.
+
+            :param str name: variant name
+            :param str mutated_path: mutated request path
+            :return: None
+            """
+
+            if not mutated_path or mutated_path == path:
+                return
+
+            mutated_url = self.__replace_path(parsed, mutated_path)
+            key = (name, mutated_url)
+            if key in seen:
+                return
+
+            seen.add(key)
+            variants.append({
+                'type': 'path',
+                'variant': name,
+                'url': mutated_url,
+                'value': self.__append_query(mutated_path, parsed.query),
+            })
+
+        if path != '/' and not path.endswith('/'):
+            add('trailing-slash', path + '/')
+
+        if path.startswith('/') and not path.startswith('//'):
+            add('double-leading-slash', '/' + path)
+
+        if path != '/' and not path.endswith('/.'):
+            add('dot-segment', path.rstrip('/') + '/.')
+
+        if path != '/' and not path.endswith(';/'):
+            add('semicolon-suffix', path.rstrip('/') + ';/')
+
+        case_variant = self.__case_variant(path)
+        if case_variant is not None:
+            add('case-variation', case_variant)
+
+        encoded_variant = self.__encoded_segment_variant(path)
+        if encoded_variant is not None:
+            add('url-encoded-segment', encoded_variant)
+
+        return variants
+
+    def build_variants(self, url):
+        """
+        Build deterministic header and path variants for one blocked URL.
+
+        :param str url: blocked target URL
+        :return: list[dict]
+        """
+
+        variants = self.build_header_variants(url)
+        variants.extend(self.build_path_variants(url))
 
         limit = self.__config.header_bypass_limit
         if limit > 0:
@@ -331,10 +483,22 @@ class HeaderBypassProbe(object):
         :return: dict
         """
 
-        return {
-            'bypass': 'header',
-            'bypass_header': variant.get('header'),
-            'bypass_value': variant.get('value'),
+        metadata = {
+            'bypass': variant.get('type') or 'header',
             'bypass_from_code': HeaderBypassProbe.response_code(base_response_data),
             'bypass_to_code': HeaderBypassProbe.response_code(probe_response_data),
         }
+
+        if metadata['bypass'] == 'path':
+            metadata.update({
+                'bypass_variant': variant.get('variant'),
+                'bypass_value': variant.get('value'),
+                'bypass_url': variant.get('url'),
+            })
+            return metadata
+
+        metadata.update({
+            'bypass_header': variant.get('header'),
+            'bypass_value': variant.get('value'),
+        })
+        return metadata

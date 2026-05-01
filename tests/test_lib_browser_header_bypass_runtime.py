@@ -196,6 +196,40 @@ class TestBrowserHeaderBypassRuntime(unittest.TestCase):
         self.assertEqual(result['total']['bypass'], 1)
         self.assertEqual(result['report_items']['bypass'][0]['bypass_value'], '/')
 
+    def test_http_request_records_successful_path_bypass_candidate(self):
+        """Browser should probe path variants and record path-bypass metadata."""
+
+        br = self.make_browser(
+            header_bypass_headers=['X-Original-URL'],
+            header_bypass_limit=0,
+        )
+        br._Browser__client.request.side_effect = [
+            SimpleNamespace(),
+            SimpleNamespace(),
+            SimpleNamespace(),
+            SimpleNamespace(),
+        ]
+        br._Browser__response.handle.side_effect = [
+            ('forbidden', 'https://example.com/admin', '10B', '403'),
+            ('forbidden', 'https://example.com/admin', '11B', '403'),
+            ('forbidden', 'https://example.com/admin', '12B', '403'),
+            ('success', 'https://example.com/admin/', '90B', '200'),
+        ]
+
+        br._Browser__http_request('https://example.com/admin', depth=0)
+
+        br._Browser__client.request.assert_any_call('https://example.com/admin/')
+        result = getattr(br, '_Browser__result')
+        self.assertEqual(result['total']['bypass'], 1)
+
+        bypass_item = result['report_items']['bypass'][0]
+        self.assertEqual(bypass_item['bypass'], 'path')
+        self.assertEqual(bypass_item['bypass_variant'], 'trailing-slash')
+        self.assertEqual(bypass_item['bypass_value'], '/admin/')
+        self.assertEqual(bypass_item['bypass_url'], 'https://example.com/admin/')
+        self.assertEqual(bypass_item['bypass_from_code'], '403')
+        self.assertEqual(bypass_item['bypass_to_code'], '200')
+
     def test_http_request_ignores_empty_probe_response(self):
         """Browser should ignore probe responses that cannot be handled."""
 

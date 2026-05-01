@@ -1,8 +1,8 @@
-# 🧩 Header-bypass scans
+# 🧩 Header and path bypass scans
 
-This page contains practical Header Injection Bypass examples for authorized testing.
+This page contains practical bypass examples for authorized testing of blocked resources.
 
-Header Injection Bypass is opt-in and probes blocked resources with temporary per-request headers.
+Header-bypass mode is opt-in. It probes blocked resources with temporary per-request headers and safe path-manipulation variants.
 
 ---
 
@@ -16,6 +16,26 @@ opendoor \
 ```
 
 By default, OpenDoor probes `401` and `403` responses.
+
+---
+
+## Header and path probe order
+
+When `--header-bypass` is enabled, OpenDoor tries probes in a controlled order:
+
+1. configured header-injection variants;
+2. safe path-manipulation variants.
+
+Path variants include:
+
+- trailing slash;
+- double leading slash;
+- dot segment;
+- semicolon suffix;
+- case variation;
+- URL-encoded segment.
+
+All successful candidates are stored in the `bypass` bucket.
 
 ---
 
@@ -98,10 +118,33 @@ Use:
 
 ---
 
+## Report metadata
+
+Header-based candidates may include:
+
+- `bypass=header`;
+- `bypass_header`;
+- `bypass_value`;
+- `bypass_from_code`;
+- `bypass_to_code`.
+
+Path-based candidates may include:
+
+- `bypass=path`;
+- `bypass_variant`;
+- `bypass_value`;
+- `bypass_url`;
+- `bypass_from_code`;
+- `bypass_to_code`.
+
+---
+
 ## Notes
 
 - Header-bypass probes are disabled by default.
-- Probe headers are temporary per-request headers.
+- Header probes use temporary per-request headers.
+- Path probes use temporary probe URLs and do not mutate the original scan target.
 - Normal scan headers are not mutated.
 - Use `--header-bypass-limit` to keep probe volume controlled.
+- Method switching and large payload sets are intentionally deferred.
 - Use this only on systems you are authorized to test.

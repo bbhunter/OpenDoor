@@ -811,15 +811,20 @@ class Browser(Filter):
         )
 
         for variant in variants:
-            headers = {variant.get('header'): variant.get('value')}
-            response_object = self.__request_with_waf_safe_mode(url, extra_headers=headers)
+            probe_url = variant.get('url') if variant.get('type') == 'path' else url
+            extra_headers = None
+
+            if variant.get('type') != 'path':
+                extra_headers = {variant.get('header'): variant.get('value')}
+
+            response_object = self.__request_with_waf_safe_mode(probe_url, extra_headers=extra_headers)
 
             if response_object is None:
                 continue
 
             probe_response_data = self.__response.handle(
                 response_object,
-                request_url=url,
+                request_url=probe_url,
                 items_size=self.__pool.items_size,
                 total_size=self.__pool.total_items_size,
                 ignore_list=self.__reader.get_ignored_list()
@@ -832,7 +837,7 @@ class Browser(Filter):
                 metadata = HeaderBypassProbe.metadata(variant, base_response_data, probe_response_data)
                 tpl.debug(
                     key='header_bypass_candidate',
-                    header=metadata.get('bypass_header'),
+                    header=metadata.get('bypass_header') or metadata.get('bypass_variant'),
                     from_code=metadata.get('bypass_from_code') or '-',
                     to_code=metadata.get('bypass_to_code') or '-'
                 )
@@ -1186,6 +1191,10 @@ class Browser(Filter):
                 item['bypass_header'] = metadata.get('bypass_header')
             if metadata.get('bypass_value'):
                 item['bypass_value'] = metadata.get('bypass_value')
+            if metadata.get('bypass_variant'):
+                item['bypass_variant'] = metadata.get('bypass_variant')
+            if metadata.get('bypass_url'):
+                item['bypass_url'] = metadata.get('bypass_url')
             if metadata.get('bypass_from_code') is not None:
                 item['bypass_from_code'] = str(metadata.get('bypass_from_code'))
             if metadata.get('bypass_to_code') is not None:

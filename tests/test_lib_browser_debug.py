@@ -199,6 +199,90 @@ class TestBrowserDebug(unittest.TestCase):
         )
         writels_mock.assert_called_once_with('', flush=True)
 
+    def test_debug_user_agents_noops_when_debug_disabled(self):
+        """Debug.debug_user_agents() should not log when debug output is disabled."""
+
+        cfg = Config({
+            'debug': 0,
+            'method': 'HEAD',
+            'random_agent': True,
+            'reports': 'std',
+        })
+        with patch('sys.stdout', new=StringIO()):
+            debug = Debug(cfg)
+
+        with patch('src.lib.browser.debug.tpl.debug') as debug_mock:
+            self.assertTrue(debug.debug_user_agents())
+
+        debug_mock.assert_not_called()
+
+    def test_debug_list_noops_when_debug_disabled(self):
+        """Debug.debug_list() should not log scan-list details when debug output is disabled."""
+
+        cfg = Config({
+            'debug': 0,
+            'method': 'HEAD',
+            'random_list': True,
+            'extensions': 'php,html',
+            'threads': 2,
+            'reports': 'std',
+        })
+        with patch('sys.stdout', new=StringIO()):
+            debug = Debug(cfg)
+
+        with patch('src.lib.browser.debug.tpl.debug') as debug_mock:
+            self.assertTrue(debug.debug_list(10))
+
+        debug_mock.assert_not_called()
+
+    def test_debug_request_uri_uses_raw_uri_for_subdomain_scan(self):
+        """Debug.debug_request_uri() should not parse URL paths in subdomain scan mode."""
+
+        cfg = Config({
+            'debug': 1,
+            'method': 'HEAD',
+            'scan': 'subdomains',
+            'reports': 'std',
+        })
+        with patch('sys.stdout', new=StringIO()):
+            debug = Debug(cfg)
+
+        with patch('src.lib.browser.debug.tpl.info') as info_mock, \
+                patch('src.lib.browser.debug.tpl.line', side_effect=lambda *args, **kwargs: kwargs.get('msg') or kwargs.get('url') or 'line'), \
+                patch('src.lib.browser.debug.sys.writels'):
+            self.assertTrue(
+                debug.debug_request_uri(
+                    'success',
+                    'api.example.com',
+                    items_size=1,
+                    total_size=1,
+                    content_size='0B',
+                    response_code='200',
+                )
+            )
+
+        self.assertEqual(info_mock.call_args.kwargs['item'], 'api.example.com')
+
+    def test_debug_request_uri_does_not_flush_for_non_final_unhandled_status(self):
+        """Debug.debug_request_uri() should flush only after the last unhandled scan item."""
+
+        with patch('src.lib.browser.debug.tpl.line_log') as line_log_mock, \
+                patch('src.lib.browser.debug.tpl.line', side_effect=lambda *args, **kwargs: kwargs.get('msg') or kwargs.get('url') or 'line'), \
+                patch('src.lib.browser.debug.sys.writels') as writels_mock:
+            self.assertTrue(
+                self.debug.debug_request_uri(
+                    'ignored',
+                    'http://test.local/data/',
+                    items_size=1,
+                    total_size=2,
+                    content_size='28KB',
+                    response_code='404',
+                )
+            )
+
+        line_log_mock.assert_called_once()
+        writels_mock.assert_not_called()
+
     def test_debug_load_sniffer_plugin_logs_description(self):
         """Debug.debug_load_sniffer_plugin() should log the plugin description."""
 
