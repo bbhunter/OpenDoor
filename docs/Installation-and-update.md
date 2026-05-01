@@ -1,6 +1,6 @@
 # 📦 Installation and update
 
-OpenDoor is distributed as a Python CLI application. It can be installed with Arch Linux AUR, BlackArch Linux, Homebrew, pipx, pip, or run directly from a source checkout.
+OpenDoor is distributed as a Python CLI application and as an official project Docker image. It can be installed with Arch Linux AUR, BlackArch Linux, Homebrew, pipx, pip, Docker, or run directly from a source checkout.
 
 For most users, the recommended installation methods are:
 
@@ -9,6 +9,7 @@ For most users, the recommended installation methods are:
 | Arch Linux | AUR |
 | BlackArch Linux | pacman |
 | macOS | Homebrew |
+| Containerized usage | Docker / GHCR |
 | General CLI usage | pipx |
 | Existing Python environment | pip |
 | Development | editable source install |
@@ -115,6 +116,59 @@ If you maintain or use a custom tap, installation may look like this:
 
 ```shell
 brew install stanislav-web/opendoor/opendoor
+```
+---
+
+## 🐳 Docker / GitHub Container Registry
+
+OpenDoor is available as an official project Docker image via GitHub Container Registry.
+
+Pull the latest release image:
+
+```shell
+docker pull ghcr.io/stanislav-web/opendoor:latest
+```
+
+Verify the image:
+
+```shell
+docker run --rm ghcr.io/stanislav-web/opendoor:latest --version
+docker run --rm ghcr.io/stanislav-web/opendoor:latest --help
+```
+
+Run a scan and write reports to the host:
+
+```shell
+mkdir -p reports
+
+docker run --rm \
+  -v "$PWD/reports:/work/reports" \
+  ghcr.io/stanislav-web/opendoor:latest \
+  --host https://example.com \
+  --reports json,html \
+  --reports-dir reports
+```
+
+Run with a custom wordlist:
+
+```shell
+mkdir -p reports
+
+docker run --rm \
+  -v "$PWD/reports:/work/reports" \
+  -v "$PWD/wordlists:/work/wordlists:ro" \
+  ghcr.io/stanislav-web/opendoor:latest \
+  --host https://example.com \
+  --wordlist /work/wordlists/custom.txt \
+  --reports json,html \
+  --reports-dir reports
+```
+
+Use a pinned release tag for reproducible runs:
+
+```shell
+docker pull ghcr.io/stanislav-web/opendoor:5.14.0
+docker run --rm ghcr.io/stanislav-web/opendoor:5.14.0 --version
 ```
 
 ---
@@ -353,6 +407,7 @@ Use the same package manager that installed OpenDoor.
 | Manual AUR build | `git pull && makepkg -si` |
 | BlackArch / pacman | `sudo pacman -Syu opendoor` |
 | Homebrew | `brew update && brew upgrade opendoor` |
+| Docker / GHCR | `docker pull ghcr.io/stanislav-web/opendoor:latest` |
 | pipx | `pipx upgrade opendoor` |
 | pip | `python3 -m pip install --upgrade opendoor` |
 | Source checkout | `git pull` and reinstall dependencies if needed |

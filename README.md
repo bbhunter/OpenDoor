@@ -20,6 +20,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 
 [![Documentation Status](https://app.readthedocs.org/projects/opendoor/badge/?version=latest)](https://opendoor.readthedocs.io/)
 [![PyPI - Version](https://img.shields.io/pypi/v/opendoor)](https://pypi.org/project/opendoor/)
+[![Docker Image](https://github.com/stanislav-web/OpenDoor/actions/workflows/docker-image.yml/badge.svg?branch=master)](https://github.com/stanislav-web/OpenDoor/actions/workflows/docker-image.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-green.svg)](https://www.python.org/)
 [![codecov](https://codecov.io/github/stanislav-web/OpenDoor/graph/badge.svg?token=dyBxutYBso)](https://codecov.io/github/stanislav-web/OpenDoor)
 [![Codacy Security Scan](https://github.com/stanislav-web/OpenDoor/actions/workflows/codacy.yml/badge.svg)](https://github.com/stanislav-web/OpenDoor/actions/workflows/codacy.yml)
@@ -38,6 +39,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - [Practical examples](https://opendoor.readthedocs.io/examples/basic-scans/)
 - [Changelog](CHANGELOG.md)
 - [PyPI package](https://pypi.org/project/opendoor/)
+- [Docker image](https://github.com/users/stanislav-web/packages/container/package/opendoor)
 - [AUR package](https://aur.archlinux.org/packages/opendoor)
 - [BlackArch package](https://blackarch.org/webapp.html)
 - [Issues](https://github.com/stanislav-web/OpenDoor/issues)
@@ -60,6 +62,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - controlled Header Injection Bypass probes for blocked `401` and `403` paths;
 - resumable scan sessions with checkpoint autosave;
 - CI/CD fail-on result bucket rules;
+- official Docker image distribution via GitHub Container Registry;
 - reports in terminal, text, JSON, CSV, HTML, and SQLite formats;
 - proxy, OpenVPN, and WireGuard transport profiles;
 - sequential per-target transport rotation for batch workflows;
@@ -143,6 +146,28 @@ When the Homebrew formula is available:
 
 ```bash
 brew install opendoor
+```
+
+### Docker
+
+OpenDoor is available as an official project Docker image via GitHub Container Registry.
+
+```bash
+docker pull ghcr.io/stanislav-web/opendoor:latest
+docker run --rm ghcr.io/stanislav-web/opendoor:latest --version
+```
+
+Run a scan and write reports to the host:
+
+```bash
+mkdir -p reports
+
+docker run --rm \
+  -v "$PWD/reports:/work/reports" \
+  ghcr.io/stanislav-web/opendoor:latest \
+  --host https://example.com \
+  --reports json,html \
+  --reports-dir reports
 ```
 
 ### BlackArch Linux

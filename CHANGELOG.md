@@ -1,6 +1,23 @@
 CHANGELOG
 =======
 
+v5.14.0 (01.05.2026)
+---------------------------
+- (feature) added official Docker image distribution via GitHub Container Registry
+- (feature) added automated Docker image publishing through GitHub Actions
+- (feature) added multi-architecture Docker builds for `linux/amd64` and `linux/arm64`
+- (feature) added release-based Docker tags: `latest`, full SemVer, `major.minor`, and `major`
+- (feature) added SHA-based Docker tags for manual workflow runs
+- (enhancement) added a minimal non-root Docker runtime for the OpenDoor CLI
+- (enhancement) added `.dockerignore` to keep Docker build context clean and exclude local secrets, reports, caches and build artifacts
+- (docs) documented Docker installation, version checks, report volume mounts and custom wordlist mounts
+- (docs) updated installation and update documentation with Docker / GHCR usage
+- (verification) Docker build passes locally
+- (verification) GHCR workflow publish passes successfully
+- (verification) anonymous GHCR pull works
+- (verification) Dockerized `opendoor --version` works
+- (verification) Dockerized `opendoor --help` works
+
 v5.13.2 (01.05.2026)
 ---------------------------
 - (enhancement) added visible progress output for `--fingerprint`

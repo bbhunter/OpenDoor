@@ -56,6 +56,18 @@ Expected artifacts:
 
 Do not reintroduce legacy guidance based on `python setup.py install`.
 
+### Container image flow
+Prefer:
+- `docker build -t opendoor:local .`
+- `docker run --rm opendoor:local --version`
+- `docker run --rm opendoor:local --help`
+
+Official project images are published to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/stanislav-web/opendoor:latest
+```
+
 ---
 
 ## Required verification steps
