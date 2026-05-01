@@ -120,6 +120,7 @@ Recommended branch prefixes:
 | `release/` | Release preparation |
 
 Keep commits focused. If a change touches code, tests, and docs, that is fine when all changes support the same feature or fix.
+All contributors are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
