@@ -106,12 +106,15 @@ class Fingerprint(object):
         ('BrowserCMS', CMS_CATEGORY, ('browsercms', 'browser cms')),
         ('Bubble', SITE_BUILDER_CATEGORY, ('bubble', 'bubble.io')),
         ('CKAN', CMS_CATEGORY, ('ckan',)),
+        ('CMS.S3 / Megagroup', CMS_CATEGORY, ('cms.s3', 'cms s3', 'megagroup cms')),
         ('CMS Made Simple', CMS_CATEGORY, ('cms made simple', 'cmsms')),
         ('CMS CONTENIDO', CMS_CATEGORY, ('contenido', 'cms contenido')),
         ('CMSimple', CMS_CATEGORY, ('cmsimple',)),
         ('CS-Cart', ECOMMERCE_CATEGORY, ('cs-cart', 'cs cart', 'cscart')),
         ('CubeCart', ECOMMERCE_CATEGORY, ('cubecart',)),
         ('DataLife Engine', CMS_CATEGORY, ('datalife engine', 'dle')),
+        ('Discuz!', CMS_CATEGORY, ('discuz!', 'discuz')),
+        ('Duda', SITE_BUILDER_CATEGORY, ('duda', 'duda website builder')),
         ('DNN Platform', CMS_CATEGORY, ('dnn platform', 'dotnetnuke', 'dnn')),
         ('Dynamicweb', ECOMMERCE_CATEGORY, ('dynamicweb',)),
         ('EC-CUBE', ECOMMERCE_CATEGORY, ('ec-cube', 'eccube')),
@@ -121,12 +124,15 @@ class Fingerprint(object):
         ('GetSimple CMS', CMS_CATEGORY, ('getsimple cms', 'get-simple cms')),
         ('GoDaddy Website Builder', SITE_BUILDER_CATEGORY, ('godaddy website builder', 'go central')),
         ('Hippo CMS', CMS_CATEGORY, ('hippo cms', 'onehippo', 'bloomreach experience')),
+        ('Hostinger Website Builder', SITE_BUILDER_CATEGORY, ('hostinger website builder', 'zyro website builder')),
+        ('InstantCMS', CMS_CATEGORY, ('instantcms', 'instant cms')),
         ('ImpressPages CMS', CMS_CATEGORY, ('impresspages', 'impresspages cms')),
         ('Jimdo', SITE_BUILDER_CATEGORY, ('jimdo',)),
         ('Kooboo CMS', CMS_CATEGORY, ('kooboo', 'kooboo cms')),
         ('Liferay', CMS_CATEGORY, ('liferay', 'liferay portal')),
         ('Microsoft SharePoint', CMS_CATEGORY, ('microsoft sharepoint', 'sharepoint')),
         ('Mura CMS', CMS_CATEGORY, ('mura cms', 'mura')),
+        ('NetCat', CMS_CATEGORY, ('netcat cms', 'netcat')),
         ('Odoo', ECOMMERCE_CATEGORY, ('odoo',)),
         ('OpenCms', CMS_CATEGORY, ('opencms', 'open cms')),
         ('Orchard CMS', CMS_CATEGORY, ('orchard cms', 'orchard core')),
@@ -153,6 +159,7 @@ class Fingerprint(object):
         ('Tiki Wiki CMS Groupware', CMS_CATEGORY, ('tiki wiki cms groupware', 'tiki wiki', 'tikiwiki')),
         ('UMI.CMS', CMS_CATEGORY, ('umi.cms', 'umi cms')),
         ('WebsiteBaker CMS', CMS_CATEGORY, ('websitebaker', 'websitebaker cms')),
+        ('Webasyst / Shop-Script', ECOMMERCE_CATEGORY, ('webasyst', 'shop-script', 'shop script')),
         ('WebGUI', CMS_CATEGORY, ('webgui',)),
         ('Weebly', SITE_BUILDER_CATEGORY, ('weebly',)),
         ('WHMCS', ECOMMERCE_CATEGORY, ('whmcs',)),
@@ -175,15 +182,20 @@ class Fingerprint(object):
         ('Blogger', SITE_BUILDER_CATEGORY, ('blogger.com/static/', 'blogger-template-style', 'blogger-js')),
         ('Bubble', SITE_BUILDER_CATEGORY, ('bubble.is/static/', 'bubble.io/static/', 'bubble-element')),
         ('CKAN', CMS_CATEGORY, ('ckanext', 'data-module="ckan-module"', "data-module='ckan-module'")),
+        ('CMS.S3 / Megagroup', CMS_CATEGORY, ('cms.s3', 'megagroup.ru', 'мегагрупп', 'логотип мегагрупп')),
         ('CMS Made Simple', CMS_CATEGORY, ('cmsms_stylesheet', 'powered by cms made simple', '/modules/cms')),
         ('CS-Cart', ECOMMERCE_CATEGORY, ('var tygh', 'index.php?dispatch=', '/design/themes/')),
         ('CubeCart', ECOMMERCE_CATEGORY, ('cubecart', 'index.php?_a=', '/skins/')),
         ('DataLife Engine', CMS_CATEGORY, ('datalife engine', 'engine/ajax/', 'index.php?do=')),
+        ('Discuz!', CMS_CATEGORY, ('discuz_uid', 'discuz_tips', 'static/image/common/', 'powered by discuz')),
+        ('Duda', SITE_BUILDER_CATEGORY, ('static-cdn.multiscreensite.com', 'data-cmsid=', 'dmcdn.net')),
         ('DNN Platform', CMS_CATEGORY, ('__dnnvariable', 'dnn_', '/portals/_default/')),
         ('EC-CUBE', ECOMMERCE_CATEGORY, ('eccube', 'ec-cube', '/user_data/packages/')),
         ('ExpressionEngine', CMS_CATEGORY, ('expressionengine', 'exp:channel', 'powered by expressionengine')),
         ('GetSimple CMS', CMS_CATEGORY, ('getsimple', 'get-simple', '/data/uploads/')),
         ('GoDaddy Website Builder', SITE_BUILDER_CATEGORY, ('wsimg.com', 'godaddy.com/websites/website-builder')),
+        ('Hostinger Website Builder', SITE_BUILDER_CATEGORY, ('hostinger website builder', 'userapp.zyrosite.com', 'assets.zyrosite.com', 'zyrosite.com')),
+        ('InstantCMS', CMS_CATEGORY, ('instantcms', 'icms-', '/templates/default/')),
         ('ImpressPages CMS', CMS_CATEGORY, ('impresspages', 'ip_themes/', 'ip_content')),
         ('Jimdo', SITE_BUILDER_CATEGORY, ('jimcdn.com', 'jimdo_layout_css', 'jimdo.com')),
         ('Liferay', CMS_CATEGORY, ('liferay', '/o/frontend-js-', 'portlet-boundary')),
@@ -192,6 +204,7 @@ class Fingerprint(object):
             CMS_CATEGORY,
             ('/_layouts/', '/_catalogs/', 'spclienttemplates', 'ms-webpartzone-cell'),
         ),
+        ('NetCat', CMS_CATEGORY, ('/netcat/', 'netcat_template', 'netcat_files', 'nc-module')),
         ('Odoo', ECOMMERCE_CATEGORY, ('odoo.define', '/web/assets/', 'website.assets_frontend')),
         ('OpenCms', CMS_CATEGORY, ('opencms', '/opencms/', 'alkacon opencms')),
         ('Orchard CMS', CMS_CATEGORY, ('orchard', 'powered by orchard', '/modules/orchard.')),
@@ -204,6 +217,7 @@ class Fingerprint(object):
         ('Spree', ECOMMERCE_CATEGORY, ('spreecommerce', 'spree commerce', '/assets/spree/')),
         ('TiddlyWiki', CMS_CATEGORY, ('tiddlywiki', 'tiddlywiki.com/static/')),
         ('Tiki Wiki CMS Groupware', CMS_CATEGORY, ('tiki-index.php', 'tikiwiki', 'tiki wiki cms groupware')),
+        ('Webasyst / Shop-Script', ECOMMERCE_CATEGORY, ('wa-apps/', 'wa-content/', 'shop-script', 'webasyst')),
         ('WebGUI', CMS_CATEGORY, ('webgui', 'assetproxy', 'extras/webgui')),
         ('Weebly', SITE_BUILDER_CATEGORY, ('weebly.com/uploads/', 'weeblysite.com', 'cdn2.editmysite.com')),
         ('WHMCS', ECOMMERCE_CATEGORY, ('whmcs', 'whmcomplete solution', 'templates/six/')),
@@ -233,6 +247,8 @@ class Fingerprint(object):
         ('Liferay', CMS_CATEGORY, ('guest_language_id',)),
         ('DNN Platform', CMS_CATEGORY, ('.dotnetnuke', 'dnnoutputcache')),
         ('CS-Cart', ECOMMERCE_CATEGORY, ('sid_customer_',)),
+        ('Discuz!', CMS_CATEGORY, ('discuz_',)),
+        ('Webasyst / Shop-Script', ECOMMERCE_CATEGORY, ('shop-script', 'webasyst', 'waid')),
         ('WHMCS', ECOMMERCE_CATEGORY, ('whmcs', 'whmcs_user')),
     )
 
@@ -1434,6 +1450,17 @@ class Fingerprint(object):
             self._add_infrastructure_signal('Akamai', 'header', 'server=akamai|akamai-grn', 9)
         if 'openresty' in server:
             self._add_infrastructure_signal('OpenResty', 'header', 'server=openresty', 5)
+
+        # Hostinger / DDoS-Guard / Tencent Cloud
+        if self._header_contains(headers, 'server', 'hcdn') or 'x-hcdn-cache-status' in headers \
+                or self._header_contains(headers, 'platform', 'hostinger'):
+            self._add_infrastructure_signal('Hostinger', 'header', 'server=hcdn|x-hcdn-cache-status|platform=hostinger', 9)
+        if self._header_contains(headers, 'server', 'ddos-guard') or 'x-ddos-guard-request-id' in headers \
+                or 'x-ddg-cache-status' in headers:
+            self._add_infrastructure_signal('DDoS-Guard', 'header', 'server=ddos-guard|x-ddos-guard-request-id|x-ddg-cache-status', 9)
+        if 'x-cos-request-id' in headers or 'x-cos-hash-crc64ecma' in headers \
+                or self._header_contains(headers, 'server', 'tencent-cos'):
+            self._add_infrastructure_signal('Tencent Cloud', 'header', 'x-cos-request-id|x-cos-hash-crc64ecma|server=tencent-cos', 9)
 
     def _build_candidates(self):
         """

@@ -64086,6 +64086,7 @@ log/authorizenet.log
 log/debug.log
 log/development.dat
 log/development.log
+log/err_log.xml
 log/error.dat
 log/error.log
 log/error_log
@@ -64631,6 +64632,7 @@ logs/data.txt
 logs/debug.dat
 logs/debug.log
 logs/development.log
+logs/err_log.xml
 logs/error.dat
 logs/error.log
 logs/error_log

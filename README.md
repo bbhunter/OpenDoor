@@ -97,12 +97,12 @@ OpenDoor includes a heuristic fingerprint engine for detecting probable applicat
 
 | Category | Examples |
 |---|---|
-| CMS | WordPress, Drupal, Joomla, TYPO3, Open Journal Systems, Moodle, Nextcloud, ownCloud, phpMyAdmin |
-| E-commerce | Magento, WooCommerce, Shopify, PrestaShop, OpenCart, Shopware |
+| CMS | WordPress, Drupal, Joomla, TYPO3, Open Journal Systems, InstantCMS, CMS.S3 / Megagroup, Discuz!, NetCat |
+| E-commerce | Magento, WooCommerce, Shopify, PrestaShop, OpenCart, Shopware, Webasyst / Shop-Script |
 | Frameworks / app platforms | Laravel, Symfony, Django, Flask, FastAPI, Express, NestJS, Next.js, Nuxt, Rails, Spring |
-| Site builders | Wix, Webflow, Squarespace, Tilda |
+| Site builders | Wix, Webflow, Squarespace, Tilda, Duda, Hostinger Website Builder |
 | Static / docs generators | MkDocs, Docusaurus, Hugo, Jekyll, VitePress |
-| Infrastructure / hosting | Cloudflare, AWS, Vercel, Netlify, GitHub Pages, GitLab Pages, Heroku, Azure, Google Cloud, Fastly, Akamai |
+| Infrastructure / hosting | Cloudflare, AWS, Vercel, Netlify, GitHub Pages, GitLab Pages, Heroku, Azure, Google Cloud, Fastly, Akamai, Hostinger, DDoS-Guard, Tencent Cloud |
 | WAF / anti-bot | Cloudflare, AWS WAF, Azure Front Door, Akamai, Imperva, Sucuri, ModSecurity, DataDome, Kasada, F5 BIG-IP ASM |
 
 Full list of supported technologies:

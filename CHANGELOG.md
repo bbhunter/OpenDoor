@@ -1,6 +1,17 @@
 CHANGELOG
 =======
 
+v5.14.5 (01.05.2026)
+---------------------------
+- (enhancement) expanded the passive `--fingerprint` catalog with selected regional CMS and site-builder signatures
+- (enhancement) added InstantCMS, Duda, Hostinger Website Builder, CMS.S3 / Megagroup, Webasyst / Shop-Script, Discuz! and NetCat detection
+- (enhancement) added strong HTTP-visible infrastructure signatures for Hostinger, DDoS-Guard and Tencent Cloud
+- (enhancement) intentionally skipped DNS/ASN-only and weak URL-only providers to avoid false positives
+- (docs) updated fingerprinting documentation and recognized technology examples
+- (tests) added regression coverage for every new fingerprint signature
+- (tests) full unittest suite passes after integration
+- (tests) coverage gate passes at `99%`
+
 v5.14.4 (01.05.2026)
 ---------------------------
 - (enhancement) improved `--auto-calibrate` for subdomain scans with DNS wildcard calibration

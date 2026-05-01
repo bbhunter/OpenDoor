@@ -140,6 +140,127 @@ class TestFingerprint(unittest.TestCase):
         self.assertEqual(result['category'], 'sitebuilder')
         self.assertEqual(result['name'], 'Webflow')
 
+    def test_detects_5145_regional_cms_and_sitebuilder_catalog(self):
+        """Fingerprint should detect regional CMS and site-builder catalog additions."""
+
+        cases = [
+            (
+                'InstantCMS',
+                'cms',
+                '<html><head><meta name="generator" content="InstantCMS"></head>'
+                '<body><script src="/templates/default/js/icms.js"></script></body></html>',
+                {},
+            ),
+            (
+                'Duda',
+                'sitebuilder',
+                '<html><head><meta name="generator" content="Duda"></head>'
+                '<body><script src="https://static-cdn.multiscreensite.com/site.js"></script>'
+                '<div data-cmsid="abc"></div></body></html>',
+                {},
+            ),
+            (
+                'Hostinger Website Builder',
+                'sitebuilder',
+                '<html><head><meta name="generator" content="Hostinger Website Builder"></head>'
+                '<body><script src="https://assets.zyrosite.com/app.js"></script></body></html>',
+                {},
+            ),
+            (
+                'CMS.S3 / Megagroup',
+                'cms',
+                '<html><head><meta name="generator" content="CMS.S3"></head>'
+                '<body><footer>Создание сайта — Мегагрупп.ру</footer>'
+                '<a href="https://megagroup.ru">Логотип Мегагрупп</a></body></html>',
+                {},
+            ),
+            (
+                'Webasyst / Shop-Script',
+                'ecommerce',
+                '<html><head><meta name="generator" content="Webasyst"></head>'
+                '<body><script src="/wa-apps/shop/js/shop-script.js"></script>'
+                '<link href="/wa-content/css/site.css"></body></html>',
+                {'Set-Cookie': 'shop-script=1; Path=/'},
+            ),
+            (
+                'Discuz!',
+                'cms',
+                '<html><head><meta name="generator" content="Discuz!"></head>'
+                '<body><script>var discuz_uid = 1;</script>'
+                '<img src="static/image/common/logo.png"></body></html>',
+                {'Set-Cookie': 'discuz_test=1; Path=/'},
+            ),
+            (
+                'NetCat',
+                'cms',
+                '<html><head><meta name="generator" content="NetCat CMS"></head>'
+                '<body><script src="/netcat/modules/default.js"></script>'
+                '<div class="netcat_template"></div></body></html>',
+                {},
+            ),
+        ]
+
+        for expected_name, expected_category, body, headers in cases:
+            with self.subTest(expected_name=expected_name):
+                config = FakeConfig()
+                base = 'http://example.com/'
+                responses = {
+                    ('GET', base): FakeResponse(200, body, headers),
+                    ('GET', 'http://example.com/.opendoor-fingerprint-not-found-probe'): FakeResponse(404, 'Not Found', {}),
+                }
+
+                detector = Fingerprint(config=config, client=self._make_client(config, responses))
+                result = detector.detect()
+
+                self.assertEqual(result['category'], expected_category)
+                self.assertEqual(result['name'], expected_name)
+                self.assertGreaterEqual(result['confidence'], 70)
+
+    def test_detects_5145_infrastructure_catalog_additions(self):
+        """Fingerprint should detect strong HTTP-visible infrastructure additions."""
+
+        cases = [
+            (
+                'Hostinger',
+                {
+                    'Server': 'hcdn',
+                    'X-Hcdn-Cache-Status': 'HIT',
+                    'Platform': 'hostinger',
+                },
+            ),
+            (
+                'DDoS-Guard',
+                {
+                    'Server': 'ddos-guard',
+                    'X-DDoS-Guard-Request-Id': 'abc',
+                },
+            ),
+            (
+                'Tencent Cloud',
+                {
+                    'Server': 'tencent-cos',
+                    'X-Cos-Request-Id': 'abc',
+                    'X-Cos-Hash-Crc64ecma': '123',
+                },
+            ),
+        ]
+
+        for expected_provider, headers in cases:
+            with self.subTest(expected_provider=expected_provider):
+                config = FakeConfig()
+                base = 'http://example.com/'
+                responses = {
+                    ('GET', base): FakeResponse(200, '<html><body>plain app</body></html>', headers),
+                    ('GET', 'http://example.com/.opendoor-fingerprint-not-found-probe'): FakeResponse(404, 'Not Found', {}),
+                }
+
+                detector = Fingerprint(config=config, client=self._make_client(config, responses))
+                result = detector.detect()
+
+                self.assertEqual(result['category'], 'custom')
+                self.assertEqual(result['infrastructure']['provider'], expected_provider)
+                self.assertGreaterEqual(result['infrastructure']['confidence'], 70)
+
     def test_detects_aws_cloudfront_as_infrastructure(self):
         """Fingerprint should detect AWS CloudFront as infrastructure."""
 

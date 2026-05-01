@@ -113,6 +113,10 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - BigTree CMS
 - BrowserCMS
 - CKAN
+- CMS.S3 / Megagroup
+- Discuz!
+- InstantCMS
+- NetCat
 - CMS CONTENIDO
 - CMS Made Simple
 - CMSimple
@@ -165,6 +169,7 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - Shopify
 - Shopware
 - WooCommerce
+- Webasyst / Shop-Script
 - BigCommerce
 - CS-Cart
 - CubeCart
@@ -216,7 +221,9 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - Wix
 - Blogger
 - Bubble
+- Duda
 - GoDaddy Website Builder
+- Hostinger Website Builder
 - Jimdo
 - Weebly
 
@@ -239,6 +246,7 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - AWS S3
 - Akamai
 - Cloudflare
+- DDoS-Guard
 - Fastly
 - GitHub Pages
 - GitLab Pages
@@ -251,6 +259,7 @@ The heuristic fingerprint engine currently recognizes the following platform fam
 - Microsoft Azure App Service
 - Netlify
 - OpenResty
+- Tencent Cloud
 - Vercel
 
 ---
