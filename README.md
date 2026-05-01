@@ -454,4 +454,11 @@ See [LICENSE](LICENSE).
 
 ---
 
+## Support
+
+If OpenDoor helps your authorized security work, you can support ongoing maintenance through Giveth.
+
+[Support OpenDoor on Giveth](https://giveth.io/project/opendoor)
+
+---
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stanislav-web/OpenDoor)
