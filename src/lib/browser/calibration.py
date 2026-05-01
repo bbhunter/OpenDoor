@@ -54,22 +54,30 @@ class Calibration(object):
         'unknown page',
     )
 
-    def __init__(self, signatures=None, threshold=None):
+    def __init__(self, signatures=None, threshold=None, dns_wildcard_addresses=None):
         """
         Constructor.
 
         :param list[dict]|None signatures:
         :param float|None threshold:
+        :param list[str]|None dns_wildcard_addresses:
         """
 
         self.signatures = signatures or []
         self.threshold = self.DEFAULT_THRESHOLD if threshold is None else float(threshold)
+        self.dns_wildcard_addresses = self._normalize_dns_addresses(dns_wildcard_addresses or [])
 
     @property
     def is_enabled(self):
         """Return True when baseline has at least one usable signature."""
 
-        return len(self.signatures) > 0
+        return len(self.signatures) > 0 or self.has_dns_wildcard is True
+
+    @property
+    def has_dns_wildcard(self):
+        """Return True when DNS wildcard baseline addresses are available."""
+
+        return len(self.dns_wildcard_addresses) > 0
 
     def to_dict(self):
         """
@@ -78,10 +86,15 @@ class Calibration(object):
         :return: dict
         """
 
-        return {
+        state = {
             'threshold': self.threshold,
             'signatures': list(self.signatures),
         }
+
+        if self.has_dns_wildcard is True:
+            state['dnsWildcardAddresses'] = list(self.dns_wildcard_addresses)
+
+        return state
 
     @classmethod
     def from_dict(cls, payload):
@@ -97,11 +110,19 @@ class Calibration(object):
 
         signatures = payload.get('signatures') or []
         threshold = payload.get('threshold', cls.DEFAULT_THRESHOLD)
+        dns_wildcard_addresses = payload.get('dnsWildcardAddresses') or []
 
         if not isinstance(signatures, list):
             return None
 
-        return cls(signatures=signatures, threshold=threshold)
+        if not isinstance(dns_wildcard_addresses, list):
+            dns_wildcard_addresses = []
+
+        return cls(
+            signatures=signatures,
+            threshold=threshold,
+            dns_wildcard_addresses=dns_wildcard_addresses
+        )
 
     @classmethod
     def build_signature(cls, response, response_data):
@@ -139,6 +160,35 @@ class Calibration(object):
             'text_density': cls._text_density(body),
             'header_fingerprint': cls._header_fingerprint(response),
         }
+
+    def match_dns_wildcard(self, hostname, addresses):
+        """
+        Match resolved subdomain addresses against DNS wildcard baseline.
+
+        :param str hostname:
+        :param list[str] addresses:
+        :return: dict|None
+        """
+
+        if self.has_dns_wildcard is not True:
+            return None
+
+        candidate_addresses = self._normalize_dns_addresses(addresses or [])
+        if len(candidate_addresses) <= 0:
+            return None
+
+        wildcard_set = set(self.dns_wildcard_addresses)
+        candidate_set = set(candidate_addresses)
+
+        if candidate_set and candidate_set.issubset(wildcard_set):
+            return {
+                'calibration_score': 1.0,
+                'calibration_reason': 'dns-wildcard',
+                'dns_wildcard_host': str(hostname),
+                'dns_wildcard_addresses': candidate_addresses,
+            }
+
+        return None
 
     def match(self, response, response_data):
         """
@@ -321,6 +371,23 @@ class Calibration(object):
 
         value = re.sub(r'\s+', ' ', value)
         return value.strip()
+
+    @staticmethod
+    def _normalize_dns_addresses(addresses):
+        """
+        Normalize DNS addresses for stable wildcard matching.
+
+        :param list[str] addresses:
+        :return: list[str]
+        """
+
+        normalized = []
+        for address in addresses or []:
+            value = str(address or '').strip().lower()
+            if value:
+                normalized.append(value)
+
+        return sorted(set(normalized))
 
     @classmethod
     def _visible_text(cls, body):

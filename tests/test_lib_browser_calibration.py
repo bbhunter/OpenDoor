@@ -561,5 +561,50 @@ class TestCalibration(unittest.TestCase):
         )
 
 
+    def test_calibration_should_export_and_restore_dns_wildcard_addresses(self):
+        """Calibration state should preserve DNS wildcard baseline addresses."""
+
+        calibration = Calibration(
+            signatures=[],
+            threshold=0.95,
+            dns_wildcard_addresses=['203.0.113.10', '203.0.113.10', '2001:db8::1']
+        )
+
+        restored = Calibration.from_dict(calibration.to_dict())
+
+        self.assertTrue(calibration.is_enabled)
+        self.assertTrue(calibration.has_dns_wildcard)
+        self.assertEqual(calibration.dns_wildcard_addresses, ['2001:db8::1', '203.0.113.10'])
+        self.assertIsNotNone(restored)
+        self.assertTrue(restored.has_dns_wildcard)
+        self.assertEqual(restored.dns_wildcard_addresses, ['2001:db8::1', '203.0.113.10'])
+
+    def test_calibration_should_match_dns_wildcard_subset(self):
+        """DNS wildcard matcher should match candidates covered by baseline IPs."""
+
+        calibration = Calibration(
+            dns_wildcard_addresses=['203.0.113.10', '203.0.113.11']
+        )
+
+        actual = calibration.match_dns_wildcard('ghost.example.com', ['203.0.113.10'])
+
+        self.assertIsNotNone(actual)
+        self.assertEqual(actual['calibration_score'], 1.0)
+        self.assertEqual(actual['calibration_reason'], 'dns-wildcard')
+        self.assertEqual(actual['dns_wildcard_host'], 'ghost.example.com')
+        self.assertEqual(actual['dns_wildcard_addresses'], ['203.0.113.10'])
+
+    def test_calibration_should_not_match_dns_wildcard_when_candidate_has_real_ip(self):
+        """DNS wildcard matcher should not match candidates with addresses outside baseline."""
+
+        calibration = Calibration(dns_wildcard_addresses=['203.0.113.10'])
+
+        self.assertIsNone(
+            calibration.match_dns_wildcard('real.example.com', ['203.0.113.10', '198.51.100.5'])
+        )
+        self.assertIsNone(calibration.match_dns_wildcard('empty.example.com', []))
+        self.assertIsNone(Calibration().match_dns_wildcard('empty.example.com', ['203.0.113.10']))
+
+
 if __name__ == '__main__':
     unittest.main()

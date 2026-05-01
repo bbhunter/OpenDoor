@@ -17,6 +17,7 @@
 """
 
 import copy
+import socket as net_socket
 import threading
 import time
 import uuid
@@ -322,6 +323,7 @@ class Browser(Filter):
                 )
             )
 
+            dns_wildcard_addresses = self.__build_dns_wildcard_addresses()
             signatures = []
             for url in self.__build_calibration_urls():
                 try:
@@ -349,11 +351,24 @@ class Browser(Filter):
 
             self.__calibration = Calibration(
                 signatures=signatures,
-                threshold=self.__config.calibration_threshold
+                threshold=self.__config.calibration_threshold,
+                dns_wildcard_addresses=dns_wildcard_addresses
             )
 
+            if self.__calibration.has_dns_wildcard is True:
+                tpl.info(
+                    msg='DNS wildcard calibration ready: addresses={0}'.format(
+                        ','.join(self.__calibration.dns_wildcard_addresses)
+                    )
+                )
+
             if self.__calibration.is_enabled is True:
-                tpl.info(msg='Auto-calibration baseline ready: signatures={0}'.format(len(signatures)))
+                tpl.info(
+                    msg='Auto-calibration baseline ready: signatures={0}, dns_wildcard_addresses={1}'.format(
+                        len(signatures),
+                        len(self.__calibration.dns_wildcard_addresses)
+                    )
+                )
                 self.__mark_session_dirty()
                 return self.__calibration
 
@@ -363,6 +378,80 @@ class Browser(Filter):
         except (AttributeError, TypeError, ValueError) as error:
             tpl.warning(msg='Auto-calibration skipped: {0}'.format(error))
             return None
+
+    def __is_subdomain_dns_calibration_enabled(self):
+        """Return True when DNS wildcard calibration should run."""
+
+        return (
+            getattr(self.__config, 'is_auto_calibrate', False) is True
+            and self.__config.scan == self.__config.SUBDOMAINS_SCAN
+        )
+
+    def __resolve_dns_addresses(self, hostname):
+        """
+        Resolve hostname addresses for DNS wildcard calibration.
+
+        :param str hostname:
+        :return: list[str]
+        """
+
+        try:
+            records = net_socket.getaddrinfo(str(hostname), None)
+        except (OSError, TypeError, UnicodeError, ValueError):
+            return []
+
+        addresses = []
+        for record in records:
+            try:
+                address = record[4][0]
+            except (IndexError, TypeError):
+                continue
+
+            if address:
+                addresses.append(str(address))
+
+        return Calibration._normalize_dns_addresses(addresses)
+
+    def __build_dns_wildcard_hosts(self):
+        """
+        Build impossible subdomain names for DNS wildcard baseline probes.
+
+        :return: list[str]
+        """
+
+        sample_count = max(2, min(int(self.__config.calibration_samples or 2), 5))
+        token = uuid.uuid4().hex[:12]
+        base_host = str(self.__config.host).strip().strip('.')
+
+        return [
+            '__opendoor_dns_calibrate_{0}_{1}.{2}'.format(token, index, base_host)
+            for index in range(sample_count)
+        ]
+
+    def __build_dns_wildcard_addresses(self):
+        """
+        Resolve random subdomains and build DNS wildcard address baseline.
+
+        :return: list[str]
+        """
+
+        if self.__is_subdomain_dns_calibration_enabled() is not True:
+            return []
+
+        resolved_samples = []
+        for hostname in self.__build_dns_wildcard_hosts():
+            addresses = self.__resolve_dns_addresses(hostname)
+            if len(addresses) > 0:
+                resolved_samples.append(addresses)
+
+        if len(resolved_samples) < 2:
+            return []
+
+        wildcard_addresses = []
+        for addresses in resolved_samples:
+            wildcard_addresses.extend(addresses)
+
+        return Calibration._normalize_dns_addresses(wildcard_addresses)
 
     def __build_calibration_urls(self):
         """
@@ -758,6 +847,34 @@ class Browser(Filter):
             and response_status == 'blocked'
         )
 
+    def __match_dns_wildcard_response(self, url):
+        """
+        Match subdomain URL hostname against active DNS wildcard baseline.
+
+        :param str url:
+        :return: dict|None
+        """
+
+        self.__ensure_session_runtime_state()
+
+        if self.__is_subdomain_dns_calibration_enabled() is not True:
+            return None
+
+        if self.__calibration is None or self.__calibration.has_dns_wildcard is not True:
+            return None
+
+        parsed = helper.parse_url(url)
+        hostname = getattr(parsed, 'hostname', None)
+
+        if not hostname:
+            return None
+
+        if str(hostname).strip('.').lower() == str(self.__config.host).strip('.').lower():
+            return None
+
+        addresses = self.__resolve_dns_addresses(hostname)
+        return self.__calibration.match_dns_wildcard(hostname, addresses)
+
     def __match_calibrated_response(self, response_object, response_data):
         """
         Match response against active calibration baseline.
@@ -863,6 +980,17 @@ class Browser(Filter):
         self.__ensure_session_runtime_state()
 
         try:
+            dns_calibration_match = self.__match_dns_wildcard_response(url)
+            if dns_calibration_match is not None:
+                self.__catch_report_data(
+                    'calibrated',
+                    url,
+                    '0B',
+                    'DNS',
+                    metadata=dns_calibration_match
+                )
+                return
+
             resp = self.__request_with_waf_safe_mode(url)
 
             response_data = self.__response.handle(
@@ -1185,6 +1313,10 @@ class Browser(Filter):
                 item['calibration_score'] = float(metadata.get('calibration_score'))
             if metadata.get('calibration_reason'):
                 item['calibration_reason'] = metadata.get('calibration_reason')
+            if metadata.get('dns_wildcard_host'):
+                item['dns_wildcard_host'] = metadata.get('dns_wildcard_host')
+            if metadata.get('dns_wildcard_addresses'):
+                item['dns_wildcard_addresses'] = list(metadata.get('dns_wildcard_addresses'))
             if metadata.get('bypass'):
                 item['bypass'] = metadata.get('bypass')
             if metadata.get('bypass_header'):

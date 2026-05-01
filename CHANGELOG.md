@@ -1,6 +1,17 @@
 CHANGELOG
 =======
 
+v5.14.4 (01.05.2026)
+---------------------------
+- (enhancement) improved `--auto-calibrate` for subdomain scans with DNS wildcard calibration
+- (enhancement) added random subdomain baseline probes to detect wildcard and catch-all DNS responses
+- (enhancement) subdomain candidates that resolve only to wildcard baseline addresses are classified into the `calibrated` bucket before HTTP probing
+- (enhancement) DNS wildcard calibration remains opt-in through `--scan subdomains --auto-calibrate` and does not change default scan behaviour
+- (enhancement) DNS wildcard baseline addresses are preserved in session calibration state
+- (tests) added regression coverage for DNS wildcard baseline detection, candidate matching and runtime filtering
+- (tests) full unittest suite passes after integration
+- (tests) coverage gate passes at `99%`
+
 v5.14.3 (01.05.2026)
 ---------------------------
 - (enhancement) improved `--auto-calibrate` with lightweight semantic response diffing for soft-404 detection

@@ -135,3 +135,20 @@ This helps detect dynamic soft-404 templates where the HTML wrapper changes but 
 
 The feature is part of the existing `--auto-calibrate` flow. It does not run unless auto-calibration is explicitly enabled.
 
+## DNS wildcard calibration
+
+OpenDoor 5.14.4 extends auto-calibration for subdomain scans.
+
+```shell
+opendoor --host example.com --scan subdomains --auto-calibrate
+```
+
+When this mode is enabled, OpenDoor generates random impossible subdomains under the target domain and resolves them before the scan. If at least two random subdomains resolve, their addresses become the DNS wildcard baseline.
+
+During subdomain scanning, candidates that resolve only to those wildcard baseline addresses are classified into the `calibrated` bucket before HTTP probing. Candidates that resolve to different addresses are scanned normally.
+
+This remains opt-in and only runs when both options are present:
+
+- `--scan subdomains`
+- `--auto-calibrate`
+

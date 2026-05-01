@@ -399,6 +399,7 @@ opendoor \
 
 Auto-calibration helps classify soft-404, wildcard, and catch-all responses.
 Starting with OpenDoor 5.14.3, it also uses lightweight semantic response-diff signals such as visible text, soft-404 phrases, DOM-token structure, text density, and normalized dynamic fragments.
+Starting with OpenDoor 5.14.4, subdomain scans can also use DNS wildcard calibration when `--scan subdomains --auto-calibrate` is enabled.
 
 ```shell
 opendoor --host https://example.com --auto-calibrate
@@ -420,6 +421,17 @@ The threshold accepts values from `0.01` to `1.0`.
 
 Use auto-calibration when a target returns similar pages for invalid and valid paths.
 It is especially useful when dynamic 404 templates contain changing tokens, timestamps, trace IDs, A/B wrappers, or personalized fragments.
+
+
+### DNS wildcard calibration for subdomains
+
+```shell
+opendoor --host example.com --scan subdomains --auto-calibrate
+```
+
+When subdomain auto-calibration is enabled, OpenDoor resolves random impossible subdomains first. If those random names resolve, OpenDoor treats the returned addresses as a wildcard DNS baseline.
+
+During the scan, candidates that resolve only to the wildcard baseline are classified into the `calibrated` bucket before HTTP probing. This reduces catch-all DNS noise while keeping default subdomain scanning unchanged unless `--auto-calibrate` is explicitly enabled.
 
 ---
 
