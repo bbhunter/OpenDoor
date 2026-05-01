@@ -61,7 +61,8 @@ class TestPackage(unittest.TestCase):
         self.assertIn('Browsers: 30', banner)
         self.assertIn('Proxies: 40', banner)
         self.assertIn('License: GPL', banner)
-        self.assertIn('scan through the open door', banner)
+        self.assertIn('fingerprints | waf-awareness | auto-calibration | smart scans', banner)
+        self.assertNotIn('scan through the open door', banner)
         self.assertFalse(banner.startswith('#'))
 
     def test_banner_wraps_internal_errors(self):
@@ -317,7 +318,8 @@ class TestPackage(unittest.TestCase):
         lines = banner.splitlines()
 
         self.assertGreaterEqual(len(lines), 10)
-        self.assertIn('scan through the open door', banner)
+        self.assertIn('fingerprints | waf-awareness | auto-calibration | smart scans', banner)
+        self.assertNotIn('scan through the open door', banner)
         self.assertFalse(banner.startswith('#'))
         self.assertIn('Line A', banner)
         self.assertIn('Line B', banner)
