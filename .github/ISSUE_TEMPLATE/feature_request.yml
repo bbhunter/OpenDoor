@@ -1,0 +1,138 @@
+name: Feature request
+description: Suggest a safe improvement or new capability for OpenDoor
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement to OpenDoor.
+
+        OpenDoor supports authorized reconnaissance, directory discovery, exposure assessment, reporting, fingerprinting, WAF detection, and controlled transport workflows.
+
+        Please keep feature requests focused on safe, auditable, authorized security-testing use cases. Requests that enable abuse, unauthorized access, credential theft, stealth persistence, or harmful evasion are out of scope.
+
+  - type: checkboxes
+    id: responsible-use
+    attributes:
+      label: Responsible use confirmation
+      options:
+        - label: This feature is intended for authorized testing, defensive validation, CI regression checks, or local development.
+          required: true
+        - label: This request does not require sharing private targets, credentials, tokens, cookies, or sensitive reports.
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature category
+      options:
+        - Scanner behavior / enumeration
+        - Target input / host lists / stdin / CIDR / ranges
+        - HTTP behavior / headers / authentication
+        - Fingerprinting
+        - WAF detection / safe mode
+        - Header injection bypass
+        - Auto-calibration / filtering
+        - Reports / SQLite / CSV / stdout
+        - Sessions / resume workflows
+        - Proxy / OpenVPN / WireGuard transports
+        - CLI UX / output / progress
+        - Docker / packaging / distributions
+        - Documentation
+        - Tests / CI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What workflow is hard, missing, unsafe, or repetitive today?
+      placeholder: "When running authorized batch scans, I need..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, CLI flags, report fields, or docs you expect.
+      placeholder: |
+        Add `--example-flag` that ...
+        Expected behavior:
+        - ...
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workaround or alternative design did you consider?
+      placeholder: "Currently this can be approximated by..., but it is limited because..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: compatibility
+    attributes:
+      label: Compatibility impact
+      description: Does this change existing behavior?
+      options:
+        - Backward-compatible
+        - May change existing behavior
+        - Breaking change
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: semver
+    attributes:
+      label: Suggested release type
+      description: Best-effort classification. Maintainers may change this.
+      options:
+        - Patch - improves existing behavior
+        - Minor - adds a new capability
+        - Major - changes platform or breaks behavior
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Example usage
+      description: Show the expected command or config. Use placeholder domains and fake data only.
+      render: shell
+      placeholder: |
+        opendoor --host https://example.test --example-flag value
+    validations:
+      required: false
+
+  - type: textarea
+    id: tests-docs
+    attributes:
+      label: Tests and documentation expectations
+      description: Suggest what should be covered by tests/docs.
+      placeholder: |
+        Tests:
+        - unittest for ...
+        - report regression for ...
+
+        Docs:
+        - README option table
+        - docs/Usage.md example
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra-context
+    attributes:
+      label: Additional context
+      description: Add links, prior art, or screenshots if helpful. Avoid sensitive targets and secrets.
+    validations:
+      required: false

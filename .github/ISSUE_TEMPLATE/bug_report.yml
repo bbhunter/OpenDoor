@@ -1,0 +1,166 @@
+name: Bug report
+description: Report a reproducible problem in OpenDoor
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug in OpenDoor.
+
+        Before submitting, please make sure this report is about OpenDoor itself and not about a third-party target discovered during a scan.
+
+        Do not include real credentials, API keys, cookies, authorization headers, private VPN profiles, private target URLs, customer data, or full reports containing sensitive data.
+
+        Security vulnerabilities must be reported privately according to `SECURITY.md`, not through a public issue.
+
+  - type: checkboxes
+    id: responsible-use
+    attributes:
+      label: Responsible use confirmation
+      description: OpenDoor is intended only for authorized security testing.
+      options:
+        - label: I confirm this issue is related to authorized testing or local development.
+          required: true
+        - label: I have removed secrets, tokens, cookies, private targets, and sensitive report data from this issue.
+          required: true
+        - label: This is not a private security vulnerability report.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: OpenDoor version
+      description: Run `opendoor --version` or `python opendoor.py --version`.
+      placeholder: "5.14.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation-method
+    attributes:
+      label: Installation method
+      options:
+        - Source checkout
+        - PyPI
+        - Docker image
+        - Homebrew
+        - Debian/Kali package
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: Run `python --version`.
+      placeholder: "Python 3.14.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Docker / container
+        - CI environment
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected area
+      options:
+        - CLI options / argument parsing
+        - Scanner process / enumeration
+        - HTTP requests / response handling
+        - Fingerprinting
+        - WAF detection / safe mode
+        - Header injection bypass
+        - Auto-calibration / filtering
+        - Reports / SQLite / CSV / stdout
+        - Sessions
+        - Proxy / OpenVPN / WireGuard transports
+        - Docker / packaging / installation
+        - Documentation
+        - Tests / CI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command used
+      description: Paste the minimal command that reproduces the issue. Redact real targets and secrets.
+      render: shell
+      placeholder: |
+        python opendoor.py --host https://example.test --threads 5 --timeout 10
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: What happened?
+      placeholder: "The scan exits with..., report path is..., output shows..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: "The scan should..., report should..., output should..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Provide a minimal reproducible case.
+      placeholder: |
+        1. Install OpenDoor using ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or output
+      description: Paste only the relevant sanitized output. Use `--debug 1` or higher if useful.
+      render: text
+      placeholder: |
+        [12:00:00] info: ...
+        [12:00:01] error: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: regression
+    attributes:
+      label: Regression information
+      description: If known, tell us whether this worked in an older version.
+      placeholder: "Worked in 5.13.x, broken in 5.14.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra-context
+    attributes:
+      label: Additional context
+      description: Add any other useful details. Keep sensitive data redacted.
+    validations:
+      required: false
