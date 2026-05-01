@@ -13,7 +13,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-    Development Team: Brain Storm Team
+    Development: Stanislav WEB
 """
 
 from urllib.error import URLError
@@ -360,57 +360,25 @@ class Package(object):
     @staticmethod
     def __render_banner(info_lines):
         """
-        Render fixed-width banner.
+        Render the console startup banner without an outer frame.
 
         :param list[str] info_lines:
         :return: str
         """
 
-        width = 58
-        border = "#" * (width + 2)
-
         art_lines = [
-            "#   _____  ____  ____  _  _    ____   _____  _____  ____   #",
-            "#  (  _  )(  _ \\( ___)( \\( )  (  _ \\ (  _  )(  _  )(  _ \\  #",
-            "#   )(_)(  )___/ )__)  )  (    )(_) ) )(_)(  )(_)(  )   /  #",
-            "#  (_____)(__)  (____)(_ )_)  (____/ (_____)(_____)(_ )_)  #",
+            "        .... ---------+-------------------------------+--------- ....",
+            "    ____   _____  ______ _   _        .----.        _____    ____    ____   _____",
+            "  / __ \\ |  __ \\|  ____| \\ | |      / .--. \\      |  __ \\  / __ \\  / __ \\ |  __ \\",
+            " | |  | || |__) | |__   |  \\| |     | |    | |     | |  | || |  | || |  | || |__) |",
+            " | |  | ||  ___/|  __|  | . ` |     | | () | |     | |  | || |  | || |  | ||  _  /",
+            " | |__| || |    | |____ | |\\  |     | |____| |     | |__| || |__| || |__| || | \\ \\",
+            "  \\____/ |_|    |______||_| \\_|      \\____/      |_____/  \\____/  \\____/ |_|  \\_\\",
+            "        .... -----+----- scan through the open door -----+----- ....",
         ]
 
-        def normalize_line(line):
-            """
-            Normalize banner art line to the expected width.
-
-            :param str line:
-            :return: str
-            """
-
-            content = line[1:-1] if line.startswith("#") and line.endswith("#") else line
-            return "#" + content.ljust(width)[:width] + "#"
-
-        def framed_text(text):
-            """
-            Render text line inside banner frame.
-
-            :param str text:
-            :return: str
-            """
-
-            return "#  " + text.ljust(width - 2)[: width - 2] + "#"
-
-        result = [
-            border,
-            "#" + (" " * width) + "#",
-        ]
-
-        for line in art_lines:
-            result.append(normalize_line(line))
-
-        result.append("#" + (" " * width) + "#")
-
-        for line in info_lines:
-            result.append(framed_text(line))
-
-        result.append(border)
+        result = [*art_lines, ""]
+        result.extend(str(line) for line in info_lines)
 
         return "\n".join(result)
 

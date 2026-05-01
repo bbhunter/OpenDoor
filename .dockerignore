@@ -1,0 +1,92 @@
+# Git / GitHub
+.git
+.github
+.gitignore
+
+# IDE / OS
+.idea
+.DS_Store
+__MACOSX
+
+# Python environments
+.venv
+venv
+env
+.docs-venv
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Tool caches
+.ruff_cache
+.pytest_cache
+.mypy_cache
+
+# Coverage
+.coverage
+.coveragerc
+coverage.xml
+htmlcov
+
+# Build artifacts
+build
+dist
+.eggs
+*.egg-info
+pip-wheel-metadata
+
+# Runtime/project-generated files
+tmp
+reports
+syslog
+site
+*.log
+
+# Local binaries / keys
+opendoor
+opendoor.pub
+
+# Tokens / generated scan outputs
+.tokens
+results.sarif
+
+# Local transport profiles may contain secrets
+data/wireguard-profiles/*.conf
+!data/wireguard-profiles/example.conf
+
+data/openvpn-profiles/*.ovpn
+data/openvpn-profiles/*.conf
+!data/openvpn-profiles/example.ovpn
+
+# Benchmarks / docs / tests are not needed in runtime image
+benchmarks
+docs
+tests
+
+# Local helper scripts are not needed in runtime image
+scripts
+release.sh
+
+# Debian/Kali packaging build artifacts
+.pybuild
+.pc
+debian/.debhelper
+debian/tmp
+debian/opendoor
+debian/debhelper-build-stamp
+debian/files
+debian/*.debhelper
+debian/*.substvars
+*.deb
+*.ddeb
+*.build
+*.buildinfo
+*.changes
+*.dsc
+*.tar.xz
+
+# Misc
+TODO

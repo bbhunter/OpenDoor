@@ -61,7 +61,8 @@ class TestPackage(unittest.TestCase):
         self.assertIn('Browsers: 30', banner)
         self.assertIn('Proxies: 40', banner)
         self.assertIn('License: GPL', banner)
-        self.assertTrue(banner.startswith('#'))
+        self.assertIn('scan through the open door', banner)
+        self.assertFalse(banner.startswith('#'))
 
     def test_banner_wraps_internal_errors(self):
         """Package.banner() should wrap package/file errors into PackageError."""
@@ -309,14 +310,15 @@ class TestPackage(unittest.TestCase):
             with self.assertRaises(PackageError):
                 Package._Package__directories_count()
 
-    def test_render_banner_returns_framed_banner(self):
-        """Package.__render_banner() should render a framed multi-line banner."""
+    def test_render_banner_returns_unframed_banner(self):
+        """Package.__render_banner() should render an unframed multi-line banner."""
 
         banner = Package._Package__render_banner(['Line A', 'Line B'])
         lines = banner.splitlines()
 
-        self.assertGreaterEqual(len(lines), 8)
-        self.assertTrue(all(line.startswith('#') and line.endswith('#') for line in lines))
+        self.assertGreaterEqual(len(lines), 10)
+        self.assertIn('scan through the open door', banner)
+        self.assertFalse(banner.startswith('#'))
         self.assertIn('Line A', banner)
         self.assertIn('Line B', banner)
 
