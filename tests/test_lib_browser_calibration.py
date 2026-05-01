@@ -458,5 +458,108 @@ class TestCalibration(unittest.TestCase):
 
         self.assertFalse(Calibration._is_exact_shape_match(baseline, candidate))
 
+    def test_calibration_should_match_semantic_soft_404_with_different_html_wrappers(self):
+        """Calibration.match() should match semantically identical soft-404 templates."""
+
+        baseline_response = self.make_response(
+            status=200,
+            body=(
+                '<html><head><title>Not Found</title></head>'
+                '<body><main><h1>Page Not Found</h1>'
+                '<p>The requested page /random-a does not exist.</p>'
+                '<span>Trace 123456</span></main></body></html>'
+            ),
+        )
+        candidate_response = self.make_response(
+            status=200,
+            body=(
+                '<!doctype html><html><head><title>Not Found</title></head>'
+                '<body><section><article><h1>Page Not Found</h1>'
+                '<p>The requested page /admin does not exist.</p>'
+                '<em>Trace 987654</em></article></section></body></html>'
+            ),
+        )
+
+        baseline_signature = Calibration.build_signature(
+            baseline_response,
+            ('success', 'http://example.com/random-a', '170B', '200')
+        )
+        calibration = Calibration(signatures=[baseline_signature], threshold=0.92)
+
+        actual = calibration.match(
+            candidate_response,
+            ('success', 'http://example.com/admin', '190B', '200')
+        )
+
+        self.assertIsNotNone(actual)
+        self.assertGreaterEqual(actual['calibration_score'], 0.92)
+        self.assertIn('visible-text', actual['calibration_reason'])
+        self.assertIn('semantic-phrases', actual['calibration_reason'])
+        self.assertIn('semantic-terms', actual['calibration_reason'])
+
+    def test_calibration_signature_should_include_semantic_response_fields(self):
+        """Calibration.build_signature() should include semantic diffing fields."""
+
+        response = self.make_response(
+            body=(
+                '<html><body><h1>Page Not Found</h1>'
+                '<p>The requested resource /missing/123456 does not exist.</p>'
+                '</body></html>'
+            ),
+        )
+
+        signature = Calibration.build_signature(
+            response,
+            ('success', 'http://example.com/random-a', '120B', '200')
+        )
+
+        self.assertEqual(signature['content_kind'], 'html')
+        self.assertIn('page not found', signature['semantic_phrases'])
+        self.assertIn('does not exist', signature['semantic_phrases'])
+        self.assertIn('resource', signature['semantic_terms'])
+        self.assertIn('dom_tokens', signature)
+        self.assertIn('dom_token_hash', signature)
+        self.assertIn('text_density', signature)
+        self.assertIn('visible_text_hash', signature)
+
+    def test_calibration_semantic_helpers_should_normalize_visible_dynamic_fragments(self):
+        """Semantic helpers should normalize dynamic fragments before matching."""
+
+        body = (
+            '<html><head><script>var token = "abc";</script></head>'
+            '<body><h1>Page Not Found</h1>'
+            '<p>Contact test@example.com for /private/missing-123456.</p>'
+            '<p>Nonce 2f0f4e6d9a1b4c7e8d9a0b1c2d3e4f5a</p>'
+            '</body></html>'
+        )
+
+        visible = Calibration._visible_text(body)
+
+        self.assertIn('page not found', visible)
+        self.assertIn('<dynamic>', visible)
+        self.assertNotIn('test@example.com', visible)
+        self.assertNotIn('var token', visible)
+        self.assertEqual(Calibration._content_kind(body), 'html')
+        self.assertEqual(Calibration._content_kind('{"error":"not found"}'), 'json')
+        self.assertEqual(Calibration._content_kind('plain not found'), 'text')
+        self.assertEqual(Calibration._content_kind(''), 'empty')
+        self.assertGreater(Calibration._text_density(body), 0.0)
+
+    def test_calibration_semantic_similarity_helpers_should_cover_edges(self):
+        """Semantic similarity helpers should cover empty, invalid and partial inputs."""
+
+        self.assertEqual(Calibration._ratio_similarity('bad', 1.0), 0.0)
+        self.assertEqual(Calibration._ratio_similarity(0.5, 0.5), 1.0)
+        self.assertEqual(Calibration._jaccard_similarity([], []), 0.0)
+        self.assertEqual(Calibration._jaccard_similarity(['a'], ['b']), 0.0)
+        self.assertEqual(Calibration._jaccard_similarity(['a', 'b'], ['b', 'c']), 1 / 3)
+        self.assertEqual(Calibration._sequence_similarity([], []), 0.0)
+        self.assertEqual(Calibration._sequence_similarity(['html'], []), 0.0)
+        self.assertGreater(
+            Calibration._sequence_similarity(['html', 'body', 'main'], ['html', 'body', 'section']),
+            0.0
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

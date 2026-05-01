@@ -59,7 +59,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - custom wordlists, prefixes, and extension filters;
 - custom request headers, cookies, and raw HTTP request templates;
 - response filters by status, size, text, regex, and body length;
-- smart auto-calibration for soft-404, wildcard, and catch-all responses;
+- smart auto-calibration for soft-404, wildcard, catch-all, and semantic response-diff cases;
 - technology fingerprint detection CMS, ecommerce platforms, frameworks;
 - passive WAF detection and WAF-safe scan mode;
 - controlled header and path bypass probes for blocked `401` and `403` resources;
@@ -85,7 +85,7 @@ OpenDoor focuses on **context-aware discovery** instead of blind enumeration.
 | **Fingerprint-first scanning** | OpenDoor can identify probable CMS platforms, frameworks, infrastructure providers, and WAF signals before deeper discovery. This helps you scan with context instead of blindly throwing a generic wordlist at the target. |
 | **WAF-aware behavior** | OpenDoor can detect probable WAF / anti-bot behavior and switch to a safer runtime profile with `--waf-safe-mode`, reducing noisy blocked scans and making defensive responses easier to understand. |
 | **Controlled bypass evidence** | OpenDoor can optionally probe blocked `401` and `403` resources with controlled header-injection and path-manipulation variants. It records exact evidence such as bypass type, header or path variant, probe value, original status code, and resulting status code without mutating global scan headers. |
-| **Multi-signal auto-calibration** | OpenDoor does not rely only on status code or response size. It compares multiple response signals such as body hashes, HTML structure, titles, redirects, stable headers, word count, line count, and normalized dynamic tokens to reduce soft-404 and wildcard false positives. |
+| **Multi-signal auto-calibration** | OpenDoor does not rely only on status code or response size. It compares multiple response signals such as body hashes, visible text, semantic soft-404 phrases, DOM-token structure, titles, redirects, stable headers, word count, line count, text density, and normalized dynamic tokens to reduce soft-404 and wildcard false positives. |
 | **Transport-level workflows** | OpenDoor supports direct, proxy, OpenVPN, and WireGuard transport modes. It can also rotate transport profiles per target in authorized batch scans, which is not the same as manually starting a VPN before running a scanner. |
 | **Resumable long scans** | OpenDoor can save scan checkpoints and resume later. This matters when scans are interrupted by crashes, unstable networks, blocked routes, terminal disconnects, or long multi-target jobs. |
 | **CI/CD-ready results** | OpenDoor can return a failing exit code only when selected result buckets are found, making it usable as a release gate or exposure regression check without custom post-processing scripts. |

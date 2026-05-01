@@ -1,6 +1,16 @@
 CHANGELOG
 =======
 
+v5.14.3 (01.05.2026)
+---------------------------
+- (enhancement) improved `--auto-calibrate` with lightweight semantic response diffing for soft-404 detection
+- (enhancement) added visible-text, semantic phrase, semantic term, DOM-token and text-density calibration signals
+- (enhancement) improved dynamic body normalization for emails, path-like fragments and long encoded tokens
+- (enhancement) semantic calibration remains opt-in through the existing `--auto-calibrate` flow and does not change default scan behaviour
+- (tests) added regression coverage for semantic soft-404 matching and calibration helper edge cases
+- (tests) full unittest suite passes after integration
+- (tests) coverage gate passes at `99%`
+
 v5.14.2 (01.05.2026)
 ---------------------------
 - (enhancement) extended `--header-bypass` with controlled path-manipulation probes after header-injection probes

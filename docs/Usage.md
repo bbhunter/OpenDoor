@@ -398,6 +398,7 @@ opendoor \
 ## 🧠 Auto-calibration
 
 Auto-calibration helps classify soft-404, wildcard, and catch-all responses.
+Starting with OpenDoor 5.14.3, it also uses lightweight semantic response-diff signals such as visible text, soft-404 phrases, DOM-token structure, text density, and normalized dynamic fragments.
 
 ```shell
 opendoor --host https://example.com --auto-calibrate
@@ -418,6 +419,7 @@ opendoor --host https://example.com --auto-calibrate --calibration-threshold 0.8
 The threshold accepts values from `0.01` to `1.0`.
 
 Use auto-calibration when a target returns similar pages for invalid and valid paths.
+It is especially useful when dynamic 404 templates contain changing tokens, timestamps, trace IDs, A/B wrappers, or personalized fragments.
 
 ---
 

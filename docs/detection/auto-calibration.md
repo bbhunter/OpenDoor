@@ -116,3 +116,22 @@ opendoor \
   --sniff skipempty,collation,indexof,file \
   --exclude-size-range 0-256
 ```
+
+## Semantic response diffing
+
+OpenDoor 5.14.3 extends auto-calibration with lightweight semantic response-diff signals.
+
+When `--auto-calibrate` is enabled, calibration signatures include:
+
+- normalized visible text;
+- known soft-404 phrases;
+- stable semantic terms;
+- bounded DOM-tag tokens;
+- content kind (`html`, `json`, `text`, or `empty`);
+- visible-text density;
+- existing status, bucket, size, title, redirect, body hash, skeleton hash, word count, line count, and stable headers.
+
+This helps detect dynamic soft-404 templates where the HTML wrapper changes but the response has the same meaning, such as “page not found”, “requested resource does not exist”, changing trace IDs, CSRF-like values, timestamps, or path echoes.
+
+The feature is part of the existing `--auto-calibrate` flow. It does not run unless auto-calibration is explicitly enabled.
+
