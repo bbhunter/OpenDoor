@@ -106,7 +106,7 @@ OpenDoor includes a heuristic fingerprint engine for detecting probable applicat
 | WAF / anti-bot | Cloudflare, AWS WAF, Azure Front Door, Akamai, Imperva, Sucuri, ModSecurity, DataDome, Kasada, F5 BIG-IP ASM |
 
 Full list of supported technologies:
-[Fingerprinting technologies](https://github.com/stanislav-web/OpenDoor/blob/master/opendoor/fingerprints/technologies.py)
+[Fingerprinting technologies](https://opendoor.readthedocs.io/detection/fingerprinting)
 
 Run fingerprint detection:
 
