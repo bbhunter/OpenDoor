@@ -10,6 +10,7 @@ v5.14.6 (02.05.2026)
 - (fix) blocked responses no longer trigger recursive expansion before safe mode activation
 - (fix) preserved WAF safe-mode block-window state in session snapshots
 - (tests) added regression coverage for passive Cloudflare CDN responses, isolated WAF blocks, threshold activation and immediate challenge/rate-limit activation
+  
 v5.14.5 (01.05.2026)
 ---------------------------
 - (enhancement) expanded the passive `--fingerprint` catalog with selected regional CMS and site-builder signatures
