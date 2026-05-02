@@ -347,6 +347,27 @@ More examples:
 
 ---
 
+### SARIF reports for CI/CD
+
+OpenDoor can export findings as SARIF 2.1.0 for GitHub Code Scanning and SARIF-compatible security pipelines.
+
+```bash
+opendoor \
+  --host https://example.com \
+  --reports sarif,json \
+  --reports-dir ./reports
+```
+
+GitHub Actions upload example:
+
+```yaml
+- name: Upload OpenDoor SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: reports/example.com/example.com.sarif
+    category: opendoor
+```
+
 ## 📚 Documentation
 
 The full documentation is available on ReadTheDocs:
@@ -476,26 +497,3 @@ If OpenDoor helps your authorized security work, you can support ongoing mainten
 
 ---
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stanislav-web/OpenDoor)
-
-
-
-### SARIF reports for CI/CD
-
-OpenDoor can export findings as SARIF 2.1.0 for GitHub Code Scanning and SARIF-compatible security pipelines.
-
-```bash
-opendoor \
-  --host https://example.com \
-  --reports sarif,json \
-  --reports-dir ./reports
-```
-
-GitHub Actions upload example:
-
-```yaml
-- name: Upload OpenDoor SARIF
-  uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: reports/example.com/example.com.sarif
-    category: opendoor
-```
