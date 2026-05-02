@@ -239,6 +239,8 @@
 1ogin
 1oueosyu.php
 1p2o3i
+1panel
+1panel.php
 1password
 1password.env
 1portfolio.htm
@@ -475,9 +477,12 @@
 4b.html
 4c7sx10x.php
 4d
+4DHTMLSTATS
 4dm1n
 4dm1n.php
 4dmin.php
+4DSTATS
+4DWEBTEST
 4e693f40.php
 4g4i7n6o7
 4homepages
@@ -6750,6 +6755,7 @@
 .well-known/host-meta
 .well-known/host-meta.json
 .well-known/http-opportunistic
+.well-known/humans.txt
 .well-known/idp-proxy
 .well-known/jmap
 .well-known/jwks
@@ -6770,6 +6776,7 @@
 .well-known/okta-organization
 .well-known/openai-plugin.json
 .well-known/openid-configuration
+.well-known/openid-federation
 .well-known/openorg
 .well-known/openpgpkey
 .well-known/pki-validation
@@ -7398,6 +7405,7 @@ _fpclass
 _fpdb
 _fr
 _fragment
+_framework/wasm/dotnet.wasm
 _frconten.htm
 _frontlook
 _ftp
@@ -17286,6 +17294,7 @@ alison
 alissa
 alist
 alisveristr
+alive
 alive.html
 alive.php
 aliveinyear.php
@@ -17738,6 +17747,7 @@ android.html
 android.php
 android.phtml
 android/app/google-services.json
+android/config
 android_app/.env
 androidmanage.php
 andromache
@@ -18929,6 +18939,8 @@ api/error_log
 api/events
 api/events/definitions
 api/exchanges
+api/experiments
+api/experiments/configurations
 api/explore/chat/designation
 api/explore/chat/record
 api/explore/chat/records/show
@@ -30886,6 +30898,7 @@ client_account
 client_admin
 client_admin.php
 client_area
+client_configs
 client_data
 client_files
 client_login
@@ -33839,6 +33852,7 @@ Contacts.php
 contacts.php
 contacts.phtml
 contacts.shtml
+contacts.txt
 contacts.xml
 contacts_confirm
 contactsadd_ajx.php
@@ -34936,6 +34950,8 @@ corwin
 cos
 cos.php
 cosas
+cosign.key
+cosign.pub
 cosita
 cosmetics
 cosmic
@@ -36870,6 +36886,7 @@ dalejr
 dalil
 dallas
 dalnet
+daloradius
 dalton
 dam
 dam.php
@@ -40438,6 +40455,7 @@ dnn
 dnr
 dnrd
 dns
+dns-query?dns=q80BAAABAAAAAAAAA3d3dwdleGFtcGxlA2NvbQAAAQAB
 dns.alpha.kubernetes.io
 DNS.php
 dns.php
@@ -46870,6 +46888,7 @@ febrero
 fechar.aspx
 fechar_final.aspx
 federate
+federation/clients
 federazione.php
 federico
 fedex
@@ -53053,6 +53072,7 @@ H
 h
 h1.php
 h2
+h2-console
 h2-h3.php
 h2console
 h2opolo
@@ -53489,6 +53509,8 @@ health.html
 health.json
 Health.php
 health.php
+health/live
+health/ready
 healthcare
 healthcare.html
 healthcare.php
@@ -58810,6 +58832,7 @@ ionela
 ionutz
 iopus
 ios
+ios/config
 iOSInjectionProject
 ioudex.php
 iowa
@@ -63699,6 +63722,7 @@ livehelp_step3.php
 liveique_macros.vm
 livejournal
 livelife
+liveness
 livepages
 liveperson
 liveprices
@@ -64339,6 +64363,7 @@ login_adminasp
 login_adminphp
 login_admins
 login_and_go.html
+login_check
 login_check.asp
 login_check.php
 login_custnum.cfm
@@ -67305,6 +67330,8 @@ mcore_old.php
 mcp
 mcp.php
 mcp.php.bak
+mcp/message
+mcp/transport
 mcp_album.php
 mcp_details.php
 mcp_functions.php
@@ -68849,6 +68876,7 @@ mexico.html
 mezuak
 mf
 mfa
+mfa/challenge
 mfg
 mfg.php
 mfgvsmodularhomes.x
@@ -74036,10 +74064,13 @@ oauth.phtml
 oauth/admin
 oauth/authorization
 oauth/authorize
+oauth/device/code
 oauth/enter
 oauth/login
+oauth/revoke
 oauth/signin
 oauth/token
+oauth/token/info
 ob
 ob.lib.php
 obb_profiles
@@ -74491,6 +74522,7 @@ ohio
 ohio.html
 ohlala
 oht_login.cfm
+oidc/register
 oit
 oja
 ojitos
@@ -80322,6 +80354,7 @@ pipermail
 pipermail.php
 pipes
 Pipfile
+Pipfile.lock
 pippin
 pippo.html
 piranha
@@ -85896,6 +85929,7 @@ readfile.aspx
 readfile.php
 readfiles.php
 readfolder
+readiness
 reading
 reading.php
 reading_eco.php
@@ -87259,6 +87293,7 @@ Reports/Pages/Folder.aspx
 Reports/PagesFolder.aspx
 reports/Webalizer
 reports_list
+reportserver
 ReportServer
 ReportServer/Pages/ReportViewer.aspx
 ReportServer/PagesReportViewer.aspx
@@ -92208,6 +92243,7 @@ servlet/ControllerServlet.aspx
 servlet/DMSDump
 servlet/ErrorReporter
 servlet/ErrorReporter.aspx
+servlet/GetProductVersion
 servlet/hello
 servlet/hello.aspx
 servlet/HelloWorldServlet
@@ -92841,6 +92877,7 @@ shi.php
 shia
 shiba-design
 shibboleth.sso
+Shibboleth.sso/Metadata
 shibboleth/.env
 shibby
 shiela
@@ -96162,6 +96199,7 @@ sscart.jsp
 ssd
 ssdefs
 ssdynamicproduct
+sse
 sses.php
 SsEs.php
 ssfm
@@ -96811,6 +96849,7 @@ STATUS.txt
 status.txt
 status.xml
 status.xsl
+status/ready
 status/selfDiscovered/status
 status/selfDiscoveredstatus
 status?full=true
@@ -102405,6 +102444,8 @@ token
 token.json
 Token.php
 token.php
+token/introspect
+token/revoke
 TokenFactory.php
 tokenlite.zip
 tokens
@@ -103948,6 +103989,7 @@ ui/.env
 ui/login.action
 ui/vault
 ui/vault/auth
+ui_config.properties
 uid
 uim
 uimat
@@ -106665,6 +106707,7 @@ v1/chat-messages
 v1/chat/completions
 v1/check-phone-exist
 v1/client
+v1/client_configs
 v1/company/subscriptions
 v1/completion-messages
 v1/completions
@@ -106971,6 +107014,7 @@ v2/api-docs
 v2/api/graphql
 v2/assets
 v2/candles
+v2/client_configs
 v2/explorer
 v2/graph
 v2/graphiql

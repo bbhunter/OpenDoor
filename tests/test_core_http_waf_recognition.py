@@ -61,8 +61,8 @@ class TestWafRecognition(unittest.TestCase):
         self.assertEqual(provider.waf_detection['name'], 'Anubis')
         self.assertEqual(provider.waf_detection['confidence'], 95)
 
-    def test_detect_cloudflare_from_headers(self):
-        """ResponseProvider should detect Cloudflare from strong response headers."""
+    def test_detect_cloudflare_challenge_from_header(self):
+        """ResponseProvider should detect Cloudflare from active challenge headers."""
 
         provider = ResponseProvider(self.make_config())
         response = DummyResponse(
@@ -70,6 +70,7 @@ class TestWafRecognition(unittest.TestCase):
             headers={
                 'Server': 'cloudflare',
                 'CF-Ray': 'abc123',
+                'CF-Mitigated': 'challenge',
                 'Content-Length': '0',
             },
             body=b'',
@@ -78,6 +79,58 @@ class TestWafRecognition(unittest.TestCase):
         self.assertEqual(provider.detect('https://example.com', response), 'blocked')
         self.assertEqual(provider.waf_detection['name'], 'Cloudflare')
         self.assertEqual(provider.waf_detection['confidence'], 92)
+
+    def test_detect_cloudflare_cdn_404_as_failed(self):
+        """ResponseProvider should not classify passive Cloudflare CDN 404 as blocked."""
+
+        provider = ResponseProvider(self.make_config())
+        response = DummyResponse(
+            status=404,
+            headers={
+                'Server': 'cloudflare',
+                'CF-Ray': 'abc123',
+                'CF-Cache-Status': 'DYNAMIC',
+                'Content-Length': '193536',
+            },
+            body=b'ordinary not found page with Cloudflare Ray ID footer',
+        )
+
+        self.assertEqual(provider.detect('https://example.com/missing', response), 'failed')
+        self.assertIsNone(provider.waf_detection)
+
+    def test_detect_cloudflare_cdn_301_as_redirect(self):
+        """ResponseProvider should not classify passive Cloudflare CDN redirects as blocked."""
+
+        provider = ResponseProvider(self.make_config())
+        response = DummyResponse(
+            status=301,
+            headers={
+                'Server': 'cloudflare',
+                'CF-Ray': 'abc123',
+                'Content-Length': '0',
+            },
+            redirect='https://example.com/target',
+        )
+
+        self.assertEqual(provider.detect('https://example.com/source', response), 'redirect')
+        self.assertIsNone(provider.waf_detection)
+
+    def test_detect_cloudflare_rate_limit_from_passive_headers(self):
+        """ResponseProvider should still classify Cloudflare 429 as blocked."""
+
+        provider = ResponseProvider(self.make_config())
+        response = DummyResponse(
+            status=429,
+            headers={
+                'Server': 'cloudflare',
+                'CF-Ray': 'abc123',
+                'Content-Length': '0',
+            },
+            body=b'',
+        )
+
+        self.assertEqual(provider.detect('https://example.com/rate-limited', response), 'blocked')
+        self.assertEqual(provider.waf_detection['name'], 'Cloudflare')
 
     def test_detect_sucuri_from_header_and_body(self):
         """ResponseProvider should detect Sucuri from vendor markers."""

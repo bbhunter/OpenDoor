@@ -58,10 +58,10 @@ class ResponseProvider(object):
             'name': 'Cloudflare',
             'confidence': 92,
             'strong_header_markers': [
-                'cf-ray',
                 'cf-mitigated: challenge',
             ],
             'header_markers': [
+                'cf-ray',
                 'cf-chl-',
                 'server: cloudflare',
                 '__cf_bm',
@@ -781,6 +781,46 @@ class ResponseProvider(object):
             'signals': signals[:5],
         }
 
+    @staticmethod
+    def __cloudflare_has_active_block_signal(
+            response,
+            strong_header_signals,
+            header_signals,
+            strong_body_signals,
+            body_signals,
+    ):
+        """
+        Return True when Cloudflare signals describe an active block/challenge.
+
+        Passive CDN headers such as cf-ray or server: cloudflare are not enough
+        to mark an otherwise normal response as blocked.
+
+        :param urllib3.response.HTTPResponse response: response object
+        :param list strong_header_signals:
+        :param list header_signals:
+        :param list strong_body_signals:
+        :param list body_signals:
+        :return: bool
+        """
+
+        if len(strong_header_signals) > 0 or len(strong_body_signals) > 0:
+            return True
+
+        if 'header:cf-chl-' in header_signals:
+            return True
+
+        active_body_signals = [
+            signal for signal in body_signals
+            if signal not in ['body:cloudflare ray id']
+        ]
+        if len(active_body_signals) > 0:
+            return True
+
+        try:
+            return int(response.status) == 429 and len(header_signals) > 0
+        except (AttributeError, TypeError, ValueError):
+            return False
+
     def __detect_waf(self, response):
         """
         Detect known WAF or anti-bot vendors.
@@ -822,6 +862,15 @@ class ResponseProvider(object):
                 body_blob,
                 signature.get('body_markers', [])
             )
+
+            if signature.get('name') == 'Cloudflare' and not self.__cloudflare_has_active_block_signal(
+                    response,
+                    strong_header_signals,
+                    header_signals,
+                    strong_body_signals,
+                    body_signals
+            ):
+                continue
 
             if len(strong_header_signals) > 0:
                 return self.__build_waf_result(

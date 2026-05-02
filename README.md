@@ -70,6 +70,7 @@ It helps security researchers, penetration testers, bug bounty hunters, DevSecOp
 - proxy, OpenVPN, and WireGuard transport profiles;
 - sequential per-target transport rotation for batch workflows;
 - configuration wizard for repeatable scan profiles.
+- built-in wordlists
 
 ---
 

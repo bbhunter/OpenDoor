@@ -114,6 +114,7 @@ class TestBrowserExtra(unittest.TestCase):
         setattr(br, '_Browser__waf_safe_delay', 0.75)
         setattr(br, '_Browser__waf_safe_vendor', None)
         setattr(br, '_Browser__waf_safe_confidence', None)
+        setattr(br, '_Browser__waf_safe_block_events', [])
 
         return br
 
@@ -208,6 +209,18 @@ class TestBrowserExtra(unittest.TestCase):
         with patch('src.lib.browser.browser.tpl.warning') as warning_mock:
             br._Browser__activate_waf_safe_mode({'name': 'Cloudflare', 'confidence': 92})
 
+        warning_mock.assert_not_called()
+
+    def test_activate_waf_safe_mode_counts_non_immediate_blocks(self):
+        """Browser should defer safe mode for isolated ordinary WAF blocks."""
+
+        br = self.make_browser()
+
+        with patch('src.lib.browser.browser.tpl.warning') as warning_mock:
+            br._Browser__activate_waf_safe_mode({'name': 'Cloudflare', 'confidence': 92})
+
+        self.assertFalse(br._Browser__waf_safe_active)
+        self.assertEqual(len(br._Browser__waf_safe_block_events), 1)
         warning_mock.assert_not_called()
 
     def test_http_request_records_ignored_when_response_is_filtered_out(self):
@@ -338,7 +351,7 @@ class TestBrowserExtra(unittest.TestCase):
         br = self.make_browser()
 
         with patch('src.lib.browser.browser.tpl.warning') as warning_mock:
-            br._Browser__activate_waf_safe_mode({'name': 'Cloudflare', 'confidence': 92})
+            br._Browser__activate_waf_safe_mode({'name': 'Cloudflare', 'confidence': 92}, immediate=True)
 
         warning_mock.assert_called_once_with(
             key='waf_safe_mode_activated',

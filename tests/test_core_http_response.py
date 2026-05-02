@@ -356,6 +356,41 @@ class TestResponse(unittest.TestCase):
         with self.assertRaises(ResponseError):
             response_handler.handle(response, 'http://example.com', 1, 2, [])
 
+    def test_init_loads_plugins_without_debug_output_when_debug_disabled(self):
+        """Response should load sniff plugins without debug output when debug level is zero."""
+
+        cfg = self.make_cfg(is_sniff=True, sniffers=['file'])
+        debug = self.make_debug(level=0)
+
+        response = Response(cfg, debug, tpl=MagicMock())
+
+        self.assertEqual(len(response._response_plugins), 1)
+        debug.debug_load_sniffer_plugin.assert_not_called()
+
+    def test_handle_debug_response_uses_items_when_headers_are_jsonable(self):
+        """Response.handle() should pass header items directly when they are JSON-serializable."""
+
+        class JsonableHeaders(dict):
+            """Headers mapping whose items() result is JSON-serializable."""
+
+            def items(self):
+                """Return list items instead of dict_items."""
+
+                return list(super().items())
+
+        cfg = self.make_cfg(scan='directories')
+        debug = self.make_debug(level=3)
+        response_handler = Response(cfg, debug, tpl=MagicMock())
+        response = SimpleNamespace(
+            status=200,
+            headers=JsonableHeaders({'Content-Length': '2'}),
+            data=b'ok',
+        )
+
+        status, url, size, code = response_handler.handle(response, 'http://example.com/path', 1, 2, [])
+
+        self.assertEqual((status, url, size, code), ('success', 'http://example.com/path', '2B', '200'))
+        debug.debug_response.assert_called_once_with(response.headers.items())
 
 if __name__ == '__main__':
     unittest.main()

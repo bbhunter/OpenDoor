@@ -367,7 +367,7 @@ class Package(object):
         """
 
         art_lines = [
-            "   ======================================================================",
+            "   ",
             "      ____  ____  _____ _   _      ____   ___   ___  ____",
             "     / __ \\|  _ \\| ____| \\ | |    |  _ \\ / _ \\ / _ \\|  _ \\",
             "    | |  | | |_) |  _| |  \\| |    | | | | | | | | | | |_) |",
@@ -375,13 +375,13 @@ class Package(object):
             "     \\____/|_|   |_____|_| \\_|    |____/ \\___/ \\___/|_| \\_\\",
             "",
             "     fingerprints | waf-awareness | auto-calibration | smart scans",
-            "   ======================================================================",
+            "   ",
         ]
 
         result = [*art_lines, ""]
         result.extend(str(line) for line in info_lines)
 
-        return "\n".join(result)
+        return "\n".join(result) + "\n======================================================================\n"
 
     @staticmethod
     def __parse_version_boundary(raw_version):

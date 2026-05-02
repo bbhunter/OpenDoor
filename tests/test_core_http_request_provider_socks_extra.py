@@ -127,6 +127,41 @@ class TestRequestProviderExtra(unittest.TestCase):
         headers = provider._headers
         self.assertEqual(headers.get('Cookie'), 'sid=abc123; locale=en')
 
+
+    def test_init_applies_custom_request_cookies_from_plural_config(self):
+        """RequestProvider should prefer the plural cookies config when it is present."""
+
+        provider = RequestProvider(
+            self.make_cfg(cookies=['sid=abc123', 'locale=en'], cookie=['fallback=ignored']),
+            agent_list=['UA']
+        )
+
+        headers = provider._headers
+        self.assertEqual(headers.get('Cookie'), 'sid=abc123; locale=en')
+
+    def test_build_request_headers_falls_back_for_non_copyable_header_iterables(self):
+        """RequestProvider should build headers from iterable pairs when copy() is unavailable."""
+
+        provider = RequestProvider(self.make_cfg(), agent_list=['UA'])
+
+        headers = provider._build_request_headers(
+            (('Accept', 'text/html'),),
+            {'X-Test': '1'}
+        )
+
+        self.assertEqual(headers['Accept'], 'text/html')
+        self.assertEqual(headers['X-Test'], '1')
+
+    def test_cookies_middleware_does_not_add_header_without_fetched_cookie(self):
+        """RequestProvider.cookies_middleware() should skip updates when no cookie pair is fetched."""
+
+        provider = RequestProvider(self.make_cfg(), agent_list=['UA'])
+
+        with patch.object(provider, 'add_header') as add_header_mock:
+            provider.cookies_middleware(True, SimpleNamespace(headers={'x-test': '1'}))
+
+        add_header_mock.assert_not_called()
+
 class TestSocketExtra(unittest.TestCase):
     """TestSocketExtra class."""
 

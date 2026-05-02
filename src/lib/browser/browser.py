@@ -52,6 +52,17 @@ class Browser(Filter):
     WAF_SAFE_BACKOFF_FACTOR = 2.0
     WAF_SAFE_RECOVERY_FACTOR = 2.0
     WAF_SAFE_RECOVERY_THRESHOLD = 5
+    WAF_SAFE_ACTIVATION_BLOCK_THRESHOLD = 3
+    WAF_SAFE_ACTIVATION_WINDOW_SEC = 120.0
+    WAF_SAFE_IMMEDIATE_SIGNAL_MARKERS = (
+        'challenge',
+        'captcha',
+        'proof-of-work',
+        'checking your browser',
+        'just a moment',
+        'cf-browser-verification',
+        'cf-chl-',
+    )
     WAF_SAFE_RATE_LIMIT_STATUSES = (429,)
     WAF_SAFE_RETRY_AFTER_STATUSES = (429, 503)
     WAF_SAFE_RETRY_AFTER_HEADER = 'retry-after'
@@ -82,6 +93,7 @@ class Browser(Filter):
             self.__waf_safe_recovery_count = 0
             self.__waf_safe_vendor = None
             self.__waf_safe_confidence = None
+            self.__waf_safe_block_events = []
             self.__calibration = None
             self.__header_bypass = HeaderBypassProbe(self.__config)
 
@@ -556,11 +568,50 @@ class Browser(Filter):
             self.__waf_safe_next_at = time.monotonic() + self.__waf_safe_delay
             return response
 
-    def __activate_waf_safe_mode(self, detection):
+    def __is_explicit_waf_safe_activation_detection(self, detection):
         """
-        Activate cautious scan profile after the first WAF detection.
+        Detect challenge/captcha-style WAF signals that must enable safe mode immediately.
+
+        Ordinary WAF 403 responses are counted by threshold instead.
 
         :param dict|None detection:
+        :return: bool
+        """
+
+        if False is isinstance(detection, dict):
+            return False
+
+        for signal in detection.get('signals', []):
+            normalized = str(signal).lower()
+            for marker in self.WAF_SAFE_IMMEDIATE_SIGNAL_MARKERS:
+                if marker in normalized:
+                    return True
+
+        return False
+
+    def __should_activate_waf_safe_mode_from_block(self):
+        """
+        Return True after repeated blocked responses in a short rolling window.
+
+        :return: bool
+        """
+
+        now = time.monotonic()
+        oldest_allowed = now - self.WAF_SAFE_ACTIVATION_WINDOW_SEC
+        self.__waf_safe_block_events = [
+            event_at for event_at in self.__waf_safe_block_events
+            if event_at >= oldest_allowed
+        ]
+        self.__waf_safe_block_events.append(now)
+
+        return len(self.__waf_safe_block_events) >= self.WAF_SAFE_ACTIVATION_BLOCK_THRESHOLD
+
+    def __activate_waf_safe_mode(self, detection, immediate=False):
+        """
+        Activate cautious scan profile after explicit or repeated WAF detections.
+
+        :param dict|None detection:
+        :param bool immediate:
         :return: None
         """
 
@@ -574,6 +625,9 @@ class Browser(Filter):
 
         with self.__waf_safe_lock:
             if True is self.__waf_safe_active:
+                return
+
+            if immediate is not True and False is self.__should_activate_waf_safe_mode_from_block():
                 return
 
             self.__waf_safe_active = True
@@ -843,7 +897,6 @@ class Browser(Filter):
 
         return (
             getattr(self.__config, 'is_waf_safe_mode', False) is True
-            and self.__waf_safe_active is True
             and response_status == 'blocked'
         )
 
@@ -1009,10 +1062,14 @@ class Browser(Filter):
 
             if response_data[0] == 'blocked':
                 waf_detection = getattr(self.__response, 'waf_detection', None)
-                self.__activate_waf_safe_mode(waf_detection)
+                self.__activate_waf_safe_mode(
+                    waf_detection,
+                    immediate=self.__is_explicit_waf_safe_activation_detection(waf_detection)
+                )
             elif self.__is_explicit_waf_safe_backoff_signal(resp, response_data):
                 self.__activate_waf_safe_mode(
-                    self.__build_waf_safe_backoff_detection(resp, response_data)
+                    self.__build_waf_safe_backoff_detection(resp, response_data),
+                    immediate=True
                 )
 
             self.__update_waf_safe_backoff(resp, response_data)
@@ -1430,6 +1487,7 @@ class Browser(Filter):
                 'confidence': self.__waf_safe_confidence,
                 'delay': self.__waf_safe_delay,
                 'recoveryCount': self.__waf_safe_recovery_count,
+                'blockEvents': list(self.__waf_safe_block_events),
             },
         }
 
@@ -1548,6 +1606,7 @@ class Browser(Filter):
         self.__waf_safe_confidence = waf_safe.get('confidence')
         self.__waf_safe_delay = float(waf_safe.get('delay', self.WAF_SAFE_MIN_DELAY))
         self.__waf_safe_recovery_count = int(waf_safe.get('recoveryCount', 0))
+        self.__waf_safe_block_events = [float(item) for item in waf_safe.get('blockEvents', [])]
         self.__waf_safe_next_at = 0.0
         self.__calibration = Calibration.from_dict(snapshot.get('calibration'))
         self.__session_dirty = False
@@ -1664,6 +1723,9 @@ class Browser(Filter):
 
         if not hasattr(self, '_Browser__waf_safe_confidence'):
             self.__waf_safe_confidence = None
+
+        if not hasattr(self, '_Browser__waf_safe_block_events'):
+            self.__waf_safe_block_events = []
 
         if not hasattr(self, '_Browser__calibration'):
             self.__calibration = None

@@ -56,8 +56,8 @@ class TestBrowserWafSafeModeExtra(unittest.TestCase):
 
         return br
 
-    def test_http_request_activates_safe_mode_and_suspends_recursive_expansion_for_blocked(self):
-        """Blocked responses should activate safe mode and stop recursive amplification."""
+    def test_http_request_counts_single_waf_block_without_activating_safe_mode(self):
+        """Single ordinary WAF 403 should be logged without globally slowing the scan."""
 
         br = self.make_browser()
         br._Browser__client.request.return_value = SimpleNamespace()
@@ -68,10 +68,48 @@ class TestBrowserWafSafeModeExtra(unittest.TestCase):
         with patch('src.lib.browser.browser.tpl.warning') as warning_mock:
             br._Browser__http_request('http://example.com/login', depth=0)
 
+        self.assertFalse(getattr(br, '_Browser__waf_safe_active'))
+        self.assertEqual(len(getattr(br, '_Browser__waf_safe_block_events')), 1)
+        br._Browser__enqueue_recursive_children.assert_not_called()
+        warning_mock.assert_not_called()
+
+    def test_http_request_activates_safe_mode_after_repeated_waf_blocks(self):
+        """Repeated ordinary WAF 403 responses should activate safe mode by threshold."""
+
+        br = self.make_browser()
+        br._Browser__client.request.return_value = SimpleNamespace()
+
+        setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
+
+        with patch('src.lib.browser.browser.tpl.warning') as warning_mock:
+            br._Browser__http_request('http://example.com/one.env', depth=0)
+            br._Browser__http_request('http://example.com/two.env', depth=0)
+            br._Browser__http_request('http://example.com/three.env', depth=0)
+
         self.assertTrue(getattr(br, '_Browser__waf_safe_active'))
         self.assertEqual(getattr(br, '_Browser__waf_safe_vendor'), 'Cloudflare')
         self.assertEqual(getattr(br, '_Browser__waf_safe_confidence'), 92)
-        br._Browser__enqueue_recursive_children.assert_not_called()
+        self.assertEqual(len(getattr(br, '_Browser__waf_safe_block_events')), 3)
+        warning_mock.assert_called_once()
+
+    def test_http_request_activates_safe_mode_immediately_for_challenge(self):
+        """Explicit challenge signals should bypass the WAF block threshold."""
+
+        br = self.make_browser()
+        br._Browser__client.request.return_value = SimpleNamespace()
+        br._Browser__response.waf_detection = {
+            'name': 'Cloudflare',
+            'confidence': 92,
+            'signals': ['header:cf-mitigated: challenge'],
+        }
+
+        setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
+
+        with patch('src.lib.browser.browser.tpl.warning') as warning_mock:
+            br._Browser__http_request('http://example.com/challenge', depth=0)
+
+        self.assertTrue(getattr(br, '_Browser__waf_safe_active'))
+        self.assertEqual(len(getattr(br, '_Browser__waf_safe_block_events')), 0)
         warning_mock.assert_called_once()
 
     def test_request_with_waf_safe_mode_waits_between_requests(self):
@@ -115,6 +153,7 @@ class TestBrowserWafSafeModeExtra(unittest.TestCase):
                 'confidence': 92,
                 'delay': 0.75,
                 'recoveryCount': 3,
+                'blockEvents': [1.0, 2.0],
             }
         }
 
@@ -126,9 +165,10 @@ class TestBrowserWafSafeModeExtra(unittest.TestCase):
         self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 0.75)
         self.assertEqual(getattr(br, '_Browser__waf_safe_next_at'), 0.0)
         self.assertEqual(getattr(br, '_Browser__waf_safe_recovery_count'), 3)
+        self.assertEqual(getattr(br, '_Browser__waf_safe_block_events'), [1.0, 2.0])
 
-    def test_adaptive_backoff_increases_delay_for_blocked_response(self):
-        """Blocked responses should increase safe-mode cooldown."""
+    def test_adaptive_backoff_increases_delay_after_threshold_activation(self):
+        """Blocked responses should increase cooldown after threshold activates safe mode."""
 
         br = self.make_browser()
         br._Browser__client.request.return_value = SimpleNamespace(status=403, headers={})
@@ -136,7 +176,9 @@ class TestBrowserWafSafeModeExtra(unittest.TestCase):
         setattr(br, '_Browser__should_expand_recursively', MagicMock(return_value=False))
 
         with patch('src.lib.browser.browser.tpl.warning'):
-            br._Browser__http_request('http://example.com/login', depth=0)
+            br._Browser__http_request('http://example.com/one.env', depth=0)
+            br._Browser__http_request('http://example.com/two.env', depth=0)
+            br._Browser__http_request('http://example.com/three.env', depth=0)
 
         self.assertTrue(getattr(br, '_Browser__waf_safe_active'))
         self.assertEqual(getattr(br, '_Browser__waf_safe_delay'), 1.5)

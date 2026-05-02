@@ -1,6 +1,15 @@
 CHANGELOG
 =======
 
+v5.14.6 (02.05.2026)
+---------------------------
+- (fix) avoided classifying passive Cloudflare CDN headers as blocked WAF responses
+- (fix) preserved normal `301` and `404` classification for Cloudflare CDN responses so `--auto-calibrate` can build a usable baseline
+- (fix) delayed `--waf-safe-mode` activation for isolated ordinary WAF blocks
+- (fix) safe mode now activates immediately only for explicit challenge/rate-limit signals or after repeated blocked responses in a short rolling window
+- (fix) blocked responses no longer trigger recursive expansion before safe mode activation
+- (fix) preserved WAF safe-mode block-window state in session snapshots
+- (tests) added regression coverage for passive Cloudflare CDN responses, isolated WAF blocks, threshold activation and immediate challenge/rate-limit activation
 v5.14.5 (01.05.2026)
 ---------------------------
 - (enhancement) expanded the passive `--fingerprint` catalog with selected regional CMS and site-builder signatures
