@@ -367,6 +367,7 @@ GitHub Actions upload example:
     sarif_file: reports/example.com/example.com.sarif
     category: opendoor
 ```
+---
 
 ## 📚 Documentation
 
